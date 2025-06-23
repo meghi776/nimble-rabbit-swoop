@@ -13,7 +13,9 @@ import ProductManagementPage from "./pages/admin/ProductManagementPage";
 import OrderManagementPage from "./pages/admin/OrderManagementPage";
 import CategoryManagementPage from "./pages/admin/CategoryManagementPage";
 import BrandManagementPage from "./pages/admin/BrandManagementPage";
-import ProductManagementByBrandPage from "./pages/admin/ProductManagementByBrandPage"; // Import ProductManagementByBrandPage
+import ProductManagementByBrandPage from "./pages/admin/ProductManagementByBrandPage";
+import BrandListingPage from "./pages/BrandListingPage"; // New import
+import ProductListingPage from "./pages/ProductListingPage"; // New import
 
 const queryClient = new QueryClient();
 
@@ -27,6 +29,11 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/customize-cover" element={<MobileCoverCustomizationPage />} />
           
+          {/* Public Listing Routes */}
+          <Route path="/categories/:categoryId/brands" element={<BrandListingPage />} />
+          <Route path="/categories/:categoryId/products" element={<ProductListingPage />} />
+          <Route path="/categories/:categoryId/brands/:brandId/products" element={<ProductListingPage />} />
+
           {/* Admin Routes */}
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
@@ -35,8 +42,9 @@ const App = () => (
             <Route path="orders" element={<OrderManagementPage />} />
             <Route path="categories" element={<CategoryManagementPage />} />
             <Route path="categories/:categoryId/brands" element={<BrandManagementPage />} />
-            <Route path="categories/:categoryId/brands/:brandId/products" element={<ProductManagementByBrandPage />} /> {/* New route for products by brand */}
-            <Route path="categories/:categoryId/products" element={<div>Product Listing for Category</div>} /> {/* Placeholder for product listing by category */}
+            <Route path="categories/:categoryId/brands/:brandId/products" element={<ProductManagementByBrandPage />} />
+            {/* The placeholder route below is now covered by the new ProductListingPage */}
+            {/* <Route path="categories/:categoryId/products" element={<div>Product Listing for Category</div>} /> */}
           </Route>
 
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
