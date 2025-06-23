@@ -1,5 +1,6 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Users, Package, ShoppingCart } from 'lucide-react'; // Added missing imports
 
 const AdminDashboard = () => {
   return (
