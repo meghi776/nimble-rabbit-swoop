@@ -6,11 +6,12 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import MobileCoverCustomizationPage from "./pages/MobileCoverCustomizationPage";
-import AdminLayout from "./components/AdminLayout"; // Import AdminLayout
-import AdminDashboard from "./pages/admin/AdminDashboard"; // Import AdminDashboard
-import UserManagementPage from "./pages/admin/UserManagementPage"; // Import UserManagementPage
-import ProductManagementPage from "./pages/admin/ProductManagementPage"; // Import ProductManagementPage
-import OrderManagementPage from "./pages/admin/OrderManagementPage"; // Import OrderManagementPage
+import AdminLayout from "./components/AdminLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import UserManagementPage from "./pages/admin/UserManagementPage";
+import ProductManagementPage from "./pages/admin/ProductManagementPage";
+import OrderManagementPage from "./pages/admin/OrderManagementPage";
+import CategoryManagementPage from "./pages/admin/CategoryManagementPage"; // Import CategoryManagementPage
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="users" element={<UserManagementPage />} />
             <Route path="products" element={<ProductManagementPage />} />
             <Route path="orders" element={<OrderManagementPage />} />
+            <Route path="categories" element={<CategoryManagementPage />} /> {/* New route for categories */}
           </Route>
 
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
