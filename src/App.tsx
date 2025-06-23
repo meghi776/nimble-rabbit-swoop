@@ -12,7 +12,8 @@ import UserManagementPage from "./pages/admin/UserManagementPage";
 import ProductManagementPage from "./pages/admin/ProductManagementPage";
 import OrderManagementPage from "./pages/admin/OrderManagementPage";
 import CategoryManagementPage from "./pages/admin/CategoryManagementPage";
-import BrandManagementPage from "./pages/admin/BrandManagementPage"; // Import BrandManagementPage
+import BrandManagementPage from "./pages/admin/BrandManagementPage";
+import ProductManagementByBrandPage from "./pages/admin/ProductManagementByBrandPage"; // Import ProductManagementByBrandPage
 
 const queryClient = new QueryClient();
 
@@ -33,7 +34,8 @@ const App = () => (
             <Route path="products" element={<ProductManagementPage />} />
             <Route path="orders" element={<OrderManagementPage />} />
             <Route path="categories" element={<CategoryManagementPage />} />
-            <Route path="categories/:categoryId/brands" element={<BrandManagementPage />} /> {/* New route for brands */}
+            <Route path="categories/:categoryId/brands" element={<BrandManagementPage />} />
+            <Route path="categories/:categoryId/brands/:brandId/products" element={<ProductManagementByBrandPage />} /> {/* New route for products by brand */}
             <Route path="categories/:categoryId/products" element={<div>Product Listing for Category</div>} /> {/* Placeholder for product listing by category */}
           </Route>
 

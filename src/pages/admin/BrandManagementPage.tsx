@@ -271,7 +271,11 @@ const BrandManagementPage = () => {
                     <TableBody>
                       {brands.map((brand) => (
                         <TableRow key={brand.id}>
-                          <TableCell className="font-medium">{brand.name}</TableCell>
+                          <TableCell className="font-medium">
+                            <Link to={`/admin/categories/${categoryId}/brands/${brand.id}/products`} className="text-blue-600 hover:underline">
+                              {brand.name}
+                            </Link>
+                          </TableCell>
                           <TableCell>{brand.description || 'N/A'}</TableCell>
                           <TableCell className="text-right">
                             <Button
