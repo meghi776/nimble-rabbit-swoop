@@ -11,7 +11,8 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import UserManagementPage from "./pages/admin/UserManagementPage";
 import ProductManagementPage from "./pages/admin/ProductManagementPage";
 import OrderManagementPage from "./pages/admin/OrderManagementPage";
-import CategoryManagementPage from "./pages/admin/CategoryManagementPage"; // Import CategoryManagementPage
+import CategoryManagementPage from "./pages/admin/CategoryManagementPage";
+import BrandManagementPage from "./pages/admin/BrandManagementPage"; // Import BrandManagementPage
 
 const queryClient = new QueryClient();
 
@@ -31,7 +32,9 @@ const App = () => (
             <Route path="users" element={<UserManagementPage />} />
             <Route path="products" element={<ProductManagementPage />} />
             <Route path="orders" element={<OrderManagementPage />} />
-            <Route path="categories" element={<CategoryManagementPage />} /> {/* New route for categories */}
+            <Route path="categories" element={<CategoryManagementPage />} />
+            <Route path="categories/:categoryId/brands" element={<BrandManagementPage />} /> {/* New route for brands */}
+            <Route path="categories/:categoryId/products" element={<div>Product Listing for Category</div>} /> {/* Placeholder for product listing by category */}
           </Route>
 
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

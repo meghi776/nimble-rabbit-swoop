@@ -70,10 +70,20 @@ const ProductManagementPage = () => {
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {categories.map((category) => (
-                    <Card key={category.id} className="p-4">
-                      <CardTitle className="text-lg mb-2">{category.name}</CardTitle>
-                      <p className="text-sm text-gray-600 dark:text-gray-300">{category.description || 'No description.'}</p>
-                      {/* You can add a button here to view products within this category later */}
+                    <Card key={category.id} className="p-4 flex flex-col justify-between">
+                      <div>
+                        <CardTitle className="text-lg mb-2">{category.name}</CardTitle>
+                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">{category.description || 'No description.'}</p>
+                      </div>
+                      {category.name.toLowerCase() === 'mobile cover' ? (
+                        <Link to={`/admin/categories/${category.id}/brands`}>
+                          <Button className="w-full">Manage Brands</Button>
+                        </Link>
+                      ) : (
+                        <Link to={`/admin/categories/${category.id}/products`}> {/* Placeholder for product listing */}
+                          <Button className="w-full" variant="secondary">Manage Products</Button>
+                        </Link>
+                      )}
                     </Card>
                   ))}
                 </div>
