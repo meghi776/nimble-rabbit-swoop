@@ -11,8 +11,8 @@ interface Product {
   description: string | null;
   image_url: string | null;
   price: number | null;
-  canvas_width: number | null; // Added
-  canvas_height: number | null; // Added
+  canvas_width: number | null;
+  canvas_height: number | null;
 }
 
 const ProductListingPage = () => {
@@ -27,7 +27,7 @@ const ProductListingPage = () => {
       setLoading(true);
       setError(null);
 
-      let query = supabase.from('products').select('id, name, description, image_url, price, canvas_width, canvas_height'); // Updated select
+      let query = supabase.from('products').select('id, name, description, image_url, price, canvas_width, canvas_height');
       let breadcrumbTitle = '';
       let backLink = '/';
 
@@ -139,6 +139,10 @@ const ProductListingPage = () => {
                       <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{product.description || 'No description.'}</p>
                       <p className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1">${product.price?.toFixed(2) || '0.00'}</p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">Canvas: {product.canvas_width || 'N/A'}x{product.canvas_height || 'N/A'}</p>
+                      {/* Add the Customize button here */}
+                      <Link to="/customize-cover" className="mt-4 block">
+                        <Button className="w-full">Customize</Button>
+                      </Link>
                     </CardContent>
                   </Card>
                 ))}
