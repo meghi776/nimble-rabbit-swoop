@@ -24,8 +24,10 @@ import {
   LayoutTemplate, // For Readymade
   Image, // For Your Photo
   ArrowLeft,
-  Check,
+  Eye, // For Preview
+  Download, // For Download
 } from 'lucide-react';
+import html2canvas from 'html2canvas'; // Import html2canvas
 import { useIsMobile } from '@/hooks/use-mobile'; // Import the useIsMobile hook
 
 interface Product {
@@ -75,12 +77,15 @@ const MobileCoverCustomizationPage = () => {
   const [fontSize, setFontSize] = useState<number[]>([24]);
   const [textColor, setTextColor] = useState('#000000');
   const designAreaRef = useRef<HTMLDivElement>(null);
+  const canvasContentRef = useRef<HTMLDivElement>(null); // New ref for the actual canvas content
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-  const isMobile = useIsMobile(); // Use the hook to detect mobile
+  const isMobile = useIsMobile();
 
   // Modals state
   const [isAddTextModalOpen, setIsAddTextModalOpen] = useState(false);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false); // New state for preview modal
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null); // State to store the generated image URL
 
   // Ref to store touch state for ongoing gestures
   const touchState = useRef<TouchState>({
@@ -185,7 +190,7 @@ const MobileCoverCustomizationPage = () => {
     setDesignElements(prev => {
       const elementToDelete = prev.find(el => el.id === id);
       if (elementToDelete && elementToDelete.type === 'image' && elementToDelete.value.startsWith('blob:')) {
-        URL.revokeObjectURL(elementToDelete.value);
+        URL.revokeObjectURL(el.value);
       }
       return prev.filter(el => el.id !== id);
     });
@@ -347,6 +352,10 @@ const MobileCoverCustomizationPage = () => {
   };
 
   const handleSaveDesign = async () => {
+    // This function is now primarily for saving design data, not image.
+    // The "Check" icon will be replaced by "Preview".
+    // If a separate "Save Design" button is needed, it can be added elsewhere.
+    // For now, let's keep the logic here but note its new context.
     if (!product) return;
 
     setLoading(true);
@@ -435,18 +444,68 @@ const MobileCoverCustomizationPage = () => {
     }
   }, [selectedElement]);
 
+  // New functions for Preview and Download
+  const handlePreviewClick = async () => {
+    if (!canvasContentRef.current) {
+      toast({ title: "Error", description: "Design area not found for preview.", variant: "destructive" });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Temporarily hide borders for capture
+      const selectedElementDiv = document.querySelector(`[data-element-id="${selectedElementId}"]`);
+      if (selectedElementDiv) {
+        selectedElementDiv.classList.remove('border-2', 'border-blue-500');
+      }
+
+      const canvas = await html2canvas(canvasContentRef.current, {
+        useCORS: true, // Important for images loaded from external URLs (like Supabase storage)
+        allowTaint: true, // Allow tainting canvas for cross-origin images (might not work for all cases)
+        backgroundColor: null, // Make background transparent if needed, or match product background
+      });
+      const dataUrl = canvas.toDataURL('image/png');
+      setPreviewImageUrl(dataUrl);
+      setIsPreviewModalOpen(true);
+    } catch (err) {
+      console.error("Error generating preview:", err);
+      toast({ title: "Error", description: "Failed to generate preview image.", variant: "destructive" });
+    } finally {
+      // Restore borders
+      const selectedElementDiv = document.querySelector(`[data-element-id="${selectedElementId}"]`);
+      if (selectedElementDiv) {
+        selectedElementDiv.classList.add('border-2', 'border-blue-500');
+      }
+      setLoading(false);
+    }
+  };
+
+  const handleDownloadImage = () => {
+    if (previewImageUrl) {
+      const link = document.createElement('a');
+      link.href = previewImageUrl;
+      link.download = `${product?.name || 'custom_design'}_preview.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast({ title: "Success", description: "Image downloaded successfully!" });
+    } else {
+      toast({ title: "Error", description: "No image to download. Please generate a preview first.", variant: "destructive" });
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <header className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 shadow-md">
+      <header className="flex items-center justify-between py-2 px-4 bg-white dark:bg-gray-800 shadow-md"> {/* Changed p-4 to py-2 px-4 */}
         <Link to={-1} className="text-gray-600 dark:text-gray-300">
           <ArrowLeft className="h-6 w-6" />
         </Link>
         <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
           {product?.name || 'Loading Product...'}
         </h1>
-        <Button onClick={handleSaveDesign} variant="ghost" size="icon">
-          <Check className="h-6 w-6 text-green-600" />
+        <Button onClick={handlePreviewClick} variant="ghost" size="icon"> {/* Replaced Check with Eye for Preview */}
+          <Eye className="h-6 w-6 text-blue-600" />
         </Button>
       </header>
 
@@ -462,7 +521,7 @@ const MobileCoverCustomizationPage = () => {
       )}
 
       {!loading && !error && product && (
-        <div className="flex-1 flex flex-col md:flex-row overflow-y-auto pb-24"> {/* Increased pb-20 to pb-24 */}
+        <div className="flex-1 flex flex-col md:flex-row overflow-y-auto pb-24">
           {/* Left: Design Area */}
           <div
             ref={designAreaRef}
@@ -483,6 +542,7 @@ const MobileCoverCustomizationPage = () => {
           >
             {/* The actual design canvas, centered within its flex container */}
             <div
+              ref={canvasContentRef} {/* Apply the new ref here */}
               className="relative bg-white shadow-lg overflow-hidden"
               style={{
                 width: `${product.canvas_width}px`,
@@ -497,6 +557,7 @@ const MobileCoverCustomizationPage = () => {
               {designElements.map(el => (
                 <div
                   key={el.id}
+                  data-element-id={el.id} // Add data attribute for easy selection
                   className={`absolute cursor-grab ${selectedElementId === el.id ? 'border-2 border-blue-500' : ''}`}
                   style={{
                     left: el.x,
@@ -609,6 +670,28 @@ const MobileCoverCustomizationPage = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddTextModalOpen(false)}>Cancel</Button>
             <Button onClick={addTextElement}>Add Text</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview Modal */}
+      <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Design Preview</DialogTitle>
+          </DialogHeader>
+          <div className="flex justify-center items-center py-4">
+            {previewImageUrl ? (
+              <img src={previewImageUrl} alt="Design Preview" className="max-w-full h-auto border rounded-md" />
+            ) : (
+              <p>No preview available. Please try again.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPreviewModalOpen(false)}>Close</Button>
+            <Button onClick={handleDownloadImage} disabled={!previewImageUrl}>
+              <Download className="mr-2 h-4 w-4" /> Download Image
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
