@@ -10,8 +10,8 @@ import AdminLayout from "./components/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import UserManagementPage from "./pages/admin/UserManagementPage";
 import ProductManagementPage from "./pages/admin/ProductManagementPage";
-import UserOrderListingPage from "./pages/admin/UserOrderListingPage"; // Updated import
-import UserOrdersPage from "./pages/admin/UserOrdersPage"; // New import
+import UserOrderListingPage from "./pages/admin/UserOrderListingPage";
+import UserOrdersPage from "./pages/admin/UserOrdersPage";
 import CategoryManagementPage from "./pages/admin/CategoryManagementPage";
 import BrandManagementPage from "./pages/admin/BrandManagementPage";
 import ProductManagementByBrandPage from "./pages/admin/ProductManagementByBrandPage";
@@ -21,6 +21,7 @@ import Login from "./pages/Login";
 import { SessionContextProvider } from "./contexts/SessionContext";
 import PublicLayout from "./components/PublicLayout";
 import OrderHistoryPage from "./pages/OrderHistoryPage";
+import DemoOrderListingPage from "./pages/admin/DemoOrderListingPage"; // New import
 
 const queryClient = new QueryClient();
 
@@ -50,11 +51,12 @@ const App = () => (
               <Route index element={<AdminDashboard />} />
               <Route path="users" element={<UserManagementPage />} />
               <Route path="products" element={<ProductManagementPage />} />
-              <Route path="orders" element={<UserOrderListingPage />} /> {/* Updated route */}
-              <Route path="orders/:userId" element={<UserOrdersPage />} /> {/* New route for specific user orders */}
+              <Route path="orders" element={<UserOrderListingPage />} />
+              <Route path="orders/:userId" element={<UserOrdersPage />} />
               <Route path="categories" element={<CategoryManagementPage />} />
               <Route path="categories/:categoryId/brands" element={<BrandManagementPage />} />
               <Route path="categories/:categoryId/brands/:brandId/products" element={<ProductManagementByBrandPage />} />
+              <Route path="demo-orders" element={<DemoOrderListingPage />} /> {/* New route for Demo Orders */}
             </Route>
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

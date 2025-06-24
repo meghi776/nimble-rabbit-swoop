@@ -10,7 +10,8 @@ const AdminLayout = () => {
     { name: 'Dashboard', href: '/admin', icon: Home },
     { name: 'Users', href: '/admin/users', icon: Users },
     { name: 'Products', href: '/admin/products', icon: Package },
-    { name: 'Orders', href: '/admin/orders', icon: ShoppingCart }, // Updated href
+    { name: 'Orders', href: '/admin/orders', icon: ShoppingCart },
+    { name: 'Demo Orders', href: '/admin/demo-orders', icon: ShoppingCart }, // New item for Demo Orders
   ];
 
   return (
@@ -37,8 +38,8 @@ const AdminLayout = () => {
 
       {/* Main Content */}
       <main className="flex-1 p-6">
-        <ScrollArea className="h-[calc(100vh-48px)]"> {/* Adjust height as needed */}
-          <Outlet /> {/* This is where nested routes will render */}
+        <ScrollArea className="h-[calc(100vh-48px)]">
+          <Outlet />
         </ScrollArea>
       </main>
     </div>
