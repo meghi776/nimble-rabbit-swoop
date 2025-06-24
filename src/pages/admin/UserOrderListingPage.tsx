@@ -32,6 +32,7 @@ interface Order {
   profiles: { first_name: string | null; last_name: string | null; } | null;
   user_id: string; // Add user_id to link to user's orders page
   user_email?: string | null; // Add user_email from Edge Function
+  type: string; // Add type to Order interface
 }
 
 const OrderManagementPage = () => {
@@ -45,6 +46,7 @@ const OrderManagementPage = () => {
   const [newStatus, setNewStatus] = useState<string>('');
   const [sortColumn, setSortColumn] = useState<string>('created_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [orderTypeFilter, setOrderTypeFilter] = useState<string>('all'); // New state for order type filter
   const { toast } = useToast();
 
   const orderStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
@@ -55,7 +57,7 @@ const OrderManagementPage = () => {
 
     try {
       const { data, error: invokeError } = await supabase.functions.invoke('get-orders-with-user-email', {
-        body: JSON.stringify({ sortColumn, sortDirection }),
+        body: JSON.stringify({ sortColumn, sortDirection, orderType: orderTypeFilter }), // Pass orderTypeFilter
         headers: {
           'Content-Type': 'application/json',
         },
@@ -105,7 +107,7 @@ const OrderManagementPage = () => {
 
   useEffect(() => {
     fetchOrders();
-  }, [sortColumn, sortDirection]); // Re-fetch when sort options change
+  }, [sortColumn, sortDirection, orderTypeFilter]); // Re-fetch when sort or filter options change
 
   const openImageModal = (imageUrl: string | null) => {
     if (imageUrl) {
@@ -203,32 +205,48 @@ const OrderManagementPage = () => {
       <Card>
         <CardHeader className="flex flex-row justify-between items-center">
           <CardTitle>All Orders</CardTitle>
-          <div className="flex items-center space-x-2">
-            <Label htmlFor="sort-by">Sort by:</Label>
-            <Select value={sortColumn} onValueChange={(value) => setSortColumn(value)}>
-              <SelectTrigger id="sort-by" className="w-[180px]">
-                <SelectValue placeholder="Select column" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="created_at">Order Date</SelectItem>
-                <SelectItem value="customer_name">Customer Name</SelectItem>
-                <SelectItem value="customer_phone">Phone Number</SelectItem>
-                <SelectItem value="user_email">User Email</SelectItem> {/* New sort option */}
-                <SelectItem value="total_price">Total Price</SelectItem>
-                <SelectItem value="status">Status</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
-            >
-              {sortDirection === 'asc' ? (
-                <ArrowUpWideNarrow className="h-4 w-4" />
-              ) : (
-                <ArrowDownWideNarrow className="h-4 w-4" />
-              )}
-            </Button>
+          <div className="flex items-center space-x-4"> {/* Adjusted spacing */}
+            <div className="flex items-center space-x-2">
+              <Label htmlFor="order-type-filter">Type:</Label>
+              <Select value={orderTypeFilter} onValueChange={(value) => setOrderTypeFilter(value)}>
+                <SelectTrigger id="order-type-filter" className="w-[150px]">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Orders</SelectItem>
+                  <SelectItem value="normal">Normal Orders</SelectItem>
+                  <SelectItem value="demo">Demo Orders</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Label htmlFor="sort-by">Sort by:</Label>
+              <Select value={sortColumn} onValueChange={(value) => setSortColumn(value)}>
+                <SelectTrigger id="sort-by" className="w-[180px]">
+                  <SelectValue placeholder="Select column" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="created_at">Order Date</SelectItem>
+                  <SelectItem value="customer_name">Customer Name</SelectItem>
+                  <SelectItem value="customer_phone">Phone Number</SelectItem>
+                  <SelectItem value="user_email">User Email</SelectItem>
+                  <SelectItem value="total_price">Total Price</SelectItem>
+                  <SelectItem value="status">Status</SelectItem>
+                  <SelectItem value="type">Type</SelectItem> {/* New sort option */}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
+              >
+                {sortDirection === 'asc' ? (
+                  <ArrowUpWideNarrow className="h-4 w-4" />
+                ) : (
+                  <ArrowDownWideNarrow className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -254,9 +272,10 @@ const OrderManagementPage = () => {
                         <TableHead>Order ID</TableHead>
                         <TableHead>Date</TableHead>
                         <TableHead>Customer Name</TableHead>
-                        <TableHead>User Email</TableHead> {/* New column */}
+                        <TableHead>User Email</TableHead>
                         <TableHead>Product</TableHead>
                         <TableHead>Design</TableHead>
+                        <TableHead>Type</TableHead> {/* New TableHead for Type */}
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Total</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
@@ -272,7 +291,7 @@ const OrderManagementPage = () => {
                               {order.profiles?.first_name || 'N/A'} {order.profiles?.last_name || ''}
                             </Link>
                           </TableCell>
-                          <TableCell>{order.user_email || 'N/A'}</TableCell> {/* Display user email */}
+                          <TableCell>{order.user_email || 'N/A'}</TableCell>
                           <TableCell>{order.products?.name || 'N/A'}</TableCell>
                           <TableCell>
                             {order.ordered_design_image_url ? (
@@ -283,6 +302,7 @@ const OrderManagementPage = () => {
                               'N/A'
                             )}
                           </TableCell>
+                          <TableCell>{order.type}</TableCell> {/* Display order type */}
                           <TableCell>{order.status}</TableCell>
                           <TableCell className="text-right">${order.total_price?.toFixed(2)}</TableCell>
                           <TableCell className="text-right">

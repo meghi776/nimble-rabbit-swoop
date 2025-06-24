@@ -615,6 +615,7 @@ const MobileCoverCustomizationPage = () => {
           total_price: product.price, // Use product's price for now
           ordered_design_image_url: orderedDesignImageUrl,
           ordered_design_data: designElements, // Save the design elements JSON
+          type: 'normal', // Set order type to 'normal'
         });
 
       if (orderInsertError) {

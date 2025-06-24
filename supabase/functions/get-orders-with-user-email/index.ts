@@ -14,6 +14,7 @@ serve(async (req) => {
 
   let sortColumn = 'created_at';
   let sortDirection = 'desc';
+  let orderType: string | null = null; // New variable for order type filter
 
   try {
     // Check if the request has a body and if it's JSON
@@ -22,8 +23,9 @@ serve(async (req) => {
       const requestBody = await req.json();
       sortColumn = requestBody.sortColumn || sortColumn;
       sortDirection = requestBody.sortDirection || sortDirection;
+      orderType = requestBody.orderType || null; // Extract orderType
     }
-    console.log(`Edge Function received request: sortColumn=${sortColumn}, sortDirection=${sortDirection}`);
+    console.log(`Edge Function received request: sortColumn=${sortColumn}, sortDirection=${sortDirection}, orderType=${orderType}`);
 
   } catch (error) {
     console.error("Error processing request body (using defaults):", error);
@@ -85,7 +87,7 @@ serve(async (req) => {
     console.log(`Invoker user ${invokerUser.id} is an admin.`);
 
     // Fetch orders and join with auth.users to get email
-    const { data: ordersData, error: ordersError } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('orders')
       .select(`
         id,
@@ -99,9 +101,16 @@ serve(async (req) => {
         ordered_design_image_url,
         products (name),
         profiles (first_name, last_name),
-        user_id
-      `)
-      .order(sortColumn, { ascending: sortDirection === 'asc' });
+        user_id,
+        type
+      `); // Include 'type' in the select statement
+
+    if (orderType && orderType !== 'all') {
+      query = query.eq('type', orderType); // Apply filter if orderType is specified and not 'all'
+      console.log(`Filtering orders by type: ${orderType}`);
+    }
+
+    const { data: ordersData, error: ordersError } = await query.order(sortColumn, { ascending: sortDirection === 'asc' });
 
     if (ordersError) {
       console.error("Error fetching orders from DB:", ordersError);
@@ -146,6 +155,17 @@ serve(async (req) => {
         }
       });
       console.log(`Orders sorted by user_email in ${sortDirection} direction.`);
+    } else if (sortColumn === 'type') { // New sort logic for 'type'
+      ordersWithEmails.sort((a, b) => {
+        const typeA = a.type || '';
+        const typeB = b.type || '';
+        if (sortDirection === 'asc') {
+          return typeA.localeCompare(typeB);
+        } else {
+          return typeB.localeCompare(typeA);
+        }
+      });
+      console.log(`Orders sorted by type in ${sortDirection} direction.`);
     }
 
     return new Response(JSON.stringify({ orders: ordersWithEmails }), {
