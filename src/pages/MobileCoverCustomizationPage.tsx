@@ -140,14 +140,18 @@ const MobileCoverCustomizationPage = () => {
   };
 
   const addImageElement = (imageUrl: string) => {
+    if (!product) {
+      toast({ title: "Error", description: "Product details not loaded. Cannot add image.", variant: "destructive" });
+      return;
+    }
     const newElement: DesignElement = {
       id: `image-${Date.now()}`,
       type: 'image',
       value: imageUrl,
-      x: 50,
-      y: 50,
-      width: 150, // Default width
-      height: 150, // Default height
+      x: 0, // Position at top-left
+      y: 0, // Position at top-left
+      width: product.canvas_width, // Set width to canvas width
+      height: product.canvas_height, // Set height to canvas height
       // Removed rotation and scale
     };
     setDesignElements([...designElements, newElement]);
@@ -397,12 +401,7 @@ const MobileCoverCustomizationPage = () => {
                       src={el.value}
                       alt="design element"
                       className="w-full h-full object-contain"
-                      onLoad={(e) => {
-                        if (!el.width || !el.height) {
-                          const img = e.target as HTMLImageElement;
-                          updateElement(el.id, { width: img.naturalWidth, height: img.naturalHeight });
-                        }
-                      }}
+                      // Removed onLoad handler
                     />
                   )}
                   {selectedElementId === el.id && el.type === 'image' && (
