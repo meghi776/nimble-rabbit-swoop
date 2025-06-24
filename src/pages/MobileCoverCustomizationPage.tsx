@@ -27,6 +27,7 @@ import {
   LayoutTemplate, // For Readymade
   Sticker, // For Add Sticker
 } from 'lucide-react';
+import ImageGallerySelector from '@/components/ImageGallerySelector'; // Import the new component
 
 interface Product {
   id: string;
@@ -59,8 +60,6 @@ const MobileCoverCustomizationPage = () => {
   const [designElements, setDesignElements] = useState<DesignElement[]>([]);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [newText, setNewText] = useState('');
-  const [newImageFile, setNewImageFile] = useState<File | null>(null);
-  const [newImageUrl, setNewImageUrl] = useState('');
   const [fontSize, setFontSize] = useState<number[]>([24]);
   const [textColor, setTextColor] = useState('#000000');
   const [rotation, setRotation] = useState<number[]>([0]);
@@ -69,7 +68,7 @@ const MobileCoverCustomizationPage = () => {
   const { toast } = useToast();
 
   // Modals state
-  const [isAddImageModalOpen, setIsAddImageModalOpen] = useState(false);
+  const [isImageSelectionModalOpen, setIsImageSelectionModalOpen] = useState(false); // Renamed for clarity
   const [isAddTextModalOpen, setIsAddTextModalOpen] = useState(false);
 
   useEffect(() => {
@@ -139,57 +138,21 @@ const MobileCoverCustomizationPage = () => {
     setIsAddTextModalOpen(false); // Close modal after adding
   };
 
-  const handleImageUpload = async () => {
-    if (!newImageFile && !newImageUrl.trim()) {
-      toast({ title: "Error", description: "Please select an image file or enter an image URL.", variant: "destructive" });
-      return;
-    }
-
-    let imageUrlToUse = newImageUrl.trim();
-
-    if (newImageFile) {
-      setLoading(true);
-      const fileExt = newImageFile.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-      const filePath = `design-images/${fileName}`;
-
-      const { data, error } = await supabase.storage
-        .from('mockups-bucket')
-        .upload(filePath, newImageFile);
-
-      if (error) {
-        console.error("Error uploading image:", error);
-        toast({ title: "Error", description: `Failed to upload image: ${error.message}`, variant: "destructive" });
-        setLoading(false);
-        return;
-      }
-
-      const { data: publicUrlData } = supabase.storage
-        .from('mockups-bucket')
-        .getPublicUrl(filePath);
-
-      imageUrlToUse = publicUrlData.publicUrl;
-      setLoading(false);
-    }
-
-    if (imageUrlToUse) {
-      const newElement: DesignElement = {
-        id: `image-${Date.now()}`,
-        type: 'image',
-        value: imageUrlToUse,
-        x: 50,
-        y: 50,
-        width: 100, // Default width
-        height: 100, // Default height
-        rotation: rotation[0],
-        scale: scale[0],
-      };
-      setDesignElements([...designElements, newElement]);
-      setNewImageFile(null);
-      setNewImageUrl('');
-      setSelectedElementId(newElement.id);
-      setIsAddImageModalOpen(false); // Close modal after adding
-    }
+  const handleImageSelected = (imageUrl: string) => {
+    const newElement: DesignElement = {
+      id: `image-${Date.now()}`,
+      type: 'image',
+      value: imageUrl,
+      x: 50,
+      y: 50,
+      width: 100, // Default width
+      height: 100, // Default height
+      rotation: rotation[0],
+      scale: scale[0],
+    };
+    setDesignElements([...designElements, newElement]);
+    setSelectedElementId(newElement.id);
+    setIsImageSelectionModalOpen(false); // Close modal after adding
   };
 
   const updateElement = (id: string, updates: Partial<DesignElement>) => {
@@ -417,7 +380,7 @@ const MobileCoverCustomizationPage = () => {
               {!designElements.length && (
                 <div
                   className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 cursor-pointer border-2 border-dashed border-gray-400 rounded-lg m-4"
-                  onClick={() => setIsAddImageModalOpen(true)}
+                  onClick={() => setIsImageSelectionModalOpen(true)}
                 >
                   <PlusCircle className="h-12 w-12 mb-2" />
                   <p className="text-lg font-medium">Add Your Image</p>
@@ -508,7 +471,7 @@ const MobileCoverCustomizationPage = () => {
 
       {/* Bottom Control Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-lg p-2 flex justify-around items-center border-t border-gray-200 dark:border-gray-700 z-10">
-        <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => setIsAddImageModalOpen(true)}>
+        <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => setIsImageSelectionModalOpen(true)}>
           <ImageIcon className="h-6 w-6" />
           <span className="text-xs mt-1">Your Photo</span>
         </Button>
@@ -530,33 +493,13 @@ const MobileCoverCustomizationPage = () => {
         </Button>
       </div>
 
-      {/* Add Image Modal */}
-      <Dialog open={isAddImageModalOpen} onOpenChange={setIsAddImageModalOpen}>
-        <DialogContent>
+      {/* Image Selection Modal (now uses ImageGallerySelector) */}
+      <Dialog open={isImageSelectionModalOpen} onOpenChange={setIsImageSelectionModalOpen}>
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Add Image</DialogTitle>
+            <DialogTitle>Select or Upload Image</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <Label htmlFor="image-file">Upload Image</Label>
-            <Input
-              id="image-file"
-              type="file"
-              accept="image/*"
-              onChange={(e) => setNewImageFile(e.target.files ? e.target.files[0] : null)}
-            />
-            <Label htmlFor="image-url">Or Image URL</Label>
-            <Input
-              id="image-url"
-              type="text"
-              placeholder="Enter image URL"
-              value={newImageUrl}
-              onChange={(e) => setNewImageUrl(e.target.value)}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddImageModalOpen(false)}>Cancel</Button>
-            <Button onClick={handleImageUpload}>Add Image</Button>
-          </DialogFooter>
+          <ImageGallerySelector onImageSelect={handleImageSelected} onClose={() => setIsImageSelectionModalOpen(false)} />
         </DialogContent>
       </Dialog>
 
