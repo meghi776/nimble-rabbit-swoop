@@ -200,29 +200,33 @@ const UserManagementPage = () => {
       });
 
       if (invokeError) {
-        console.error("Full Edge Function invoke error object:", invokeError); // Log the entire error object
-        let errorMessage = invokeError.message; // Default to the invokeError message
+        console.error("Full Edge Function invoke error object:", invokeError);
+        console.error("invokeError.message:", invokeError.message);
+        console.error("invokeError.context:", invokeError.context);
+        console.error("invokeError.context?.data:", invokeError.context?.data);
 
-        // Attempt to parse the detailed error message from the Edge Function's response body
-        if (typeof invokeError.context?.data === 'string') {
+        let errorMessage = invokeError.message;
+
+        if (invokeError.context?.data) {
           try {
-            const errorBody = JSON.parse(invokeError.context.data);
-            if (errorBody.error) {
-              errorMessage = errorBody.error;
+            const errorData = invokeError.context.data;
+            // Check if errorData is already an object (e.g., if it was parsed by Supabase client already)
+            if (typeof errorData === 'object' && errorData !== null && 'error' in errorData) {
+              errorMessage = (errorData as any).error;
+            } else if (typeof errorData === 'string') {
+              // Try parsing if it's a string
+              const parsedErrorBody = JSON.parse(errorData);
+              if (parsedErrorBody.error) {
+                errorMessage = parsedErrorBody.error;
+              } else {
+                errorMessage = `Failed to create user: ${invokeError.message}. Response: ${errorData}`;
+              }
             } else {
-              errorMessage = `Failed to create user: ${invokeError.message}. Response: ${invokeError.context.data}`;
+              errorMessage = `Failed to create user: Unexpected error response format. ${invokeError.message}`;
             }
           } catch (parseErr) {
             console.error("Failed to parse error response body from Edge Function:", parseErr);
             errorMessage = `Failed to create user: ${invokeError.message}. Raw response: ${invokeError.context.data}`;
-          }
-        } else if (invokeError.context?.data) {
-          // If data exists but is not a string (e.g., an object directly), try to use it
-          if (typeof invokeError.context.data === 'object' && (invokeError.context.data as any).error) {
-            errorMessage = (invokeError.context.data as any).error;
-          } else {
-            // Fallback for unexpected data format
-            errorMessage = `Failed to create user: Unexpected error response format. ${invokeError.message}`;
           }
         }
 
