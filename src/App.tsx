@@ -18,7 +18,8 @@ import BrandListingPage from "./pages/BrandListingPage";
 import ProductListingPage from "./pages/ProductListingPage";
 import Login from "./pages/Login";
 import { SessionContextProvider } from "./contexts/SessionContext";
-import PublicLayout from "./components/PublicLayout"; // Import the new PublicLayout
+import PublicLayout from "./components/PublicLayout";
+import OrderHistoryPage from "./pages/OrderHistoryPage"; // Import the new OrderHistoryPage
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,7 @@ const App = () => (
               <Route path="/categories/:categoryId/brands" element={<BrandListingPage />} />
               <Route path="/categories/:categoryId/products" element={<ProductListingPage />} />
               <Route path="/categories/:categoryId/brands/:brandId/products" element={<ProductListingPage />} />
+              <Route path="/orders" element={<OrderHistoryPage />} /> {/* New route for Order History */}
             </Route>
 
             {/* Routes that do NOT use the global Header */}

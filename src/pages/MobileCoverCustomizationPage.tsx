@@ -26,9 +26,11 @@ import {
   ArrowLeft,
   Eye,
   Download,
+  ShoppingCart, // Added for Buy Now button
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useSession } from '@/contexts/SessionContext'; // Import useSession
 
 interface Product {
   id: string;
@@ -37,6 +39,7 @@ interface Product {
   canvas_width: number;
   canvas_height: number;
   mockup_image_url?: string | null;
+  price: number; // Ensure product has a price
 }
 
 interface DesignElement {
@@ -81,10 +84,16 @@ const MobileCoverCustomizationPage = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const { user } = useSession(); // Get current user from session
 
   const [isAddTextModalOpen, setIsAddTextModalOpen] = useState(false);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false); // New state for checkout modal
+  const [customerName, setCustomerName] = useState('');
+  const [customerAddress, setCustomerAddress] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('COD'); // Default to Cash on Delivery
 
   const touchState = useRef<TouchState>({
     mode: 'none',
@@ -481,6 +490,109 @@ const MobileCoverCustomizationPage = () => {
     }
   };
 
+  const handleBuyNowClick = () => {
+    if (!user) {
+      toast({ title: "Authentication Required", description: "Please log in to place an order.", variant: "destructive" });
+      navigate('/login'); // Redirect to login if not authenticated
+      return;
+    }
+    if (!product) {
+      toast({ title: "Error", description: "Product not loaded. Cannot proceed with order.", variant: "destructive" });
+      return;
+    }
+    setIsCheckoutModalOpen(true);
+  };
+
+  const handlePlaceOrder = async () => {
+    if (!product || !user?.id) {
+      toast({ title: "Error", description: "Product or user information missing.", variant: "destructive" });
+      return;
+    }
+    if (!customerName.trim() || !customerAddress.trim() || !customerPhone.trim()) {
+      toast({ title: "Validation Error", description: "Please fill in all customer details.", variant: "destructive" });
+      return;
+    }
+
+    setLoading(true);
+    let orderedDesignImageUrl: string | null = null;
+
+    try {
+      // 1. Generate image of the customized product
+      if (!canvasContentRef.current) {
+        throw new Error("Design area not found for order image capture.");
+      }
+
+      const selectedElementDiv = document.querySelector(`[data-element-id="${selectedElementId}"]`);
+      if (selectedElementDiv) {
+        selectedElementDiv.classList.remove('border-2', 'border-blue-500');
+      }
+
+      const canvas = await html2canvas(canvasContentRef.current, {
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: null,
+      });
+      const dataUrl = canvas.toDataURL('image/png');
+
+      // Convert data URL to Blob
+      const blob = await (await fetch(dataUrl)).blob();
+
+      // 2. Upload the generated image to Supabase Storage
+      const fileExt = 'png';
+      const fileName = `${product.id}-${Date.now()}.${fileExt}`;
+      const filePath = `orders/${fileName}`; // Store in an 'orders' subfolder
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('order-mockups') // Assuming a bucket named 'order-mockups'
+        .upload(filePath, blob, {
+          contentType: 'image/png',
+          upsert: false,
+        });
+
+      if (uploadError) {
+        throw new Error(`Failed to upload order image: ${uploadError.message}`);
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from('order-mockups')
+        .getPublicUrl(filePath);
+
+      orderedDesignImageUrl = publicUrlData.publicUrl;
+
+      // 3. Save order details to the 'orders' table
+      const { error: orderInsertError } = await supabase
+        .from('orders')
+        .insert({
+          user_id: user.id,
+          product_id: product.id,
+          customer_name: customerName,
+          customer_address: customerAddress,
+          customer_phone: customerPhone,
+          payment_method: paymentMethod,
+          total_price: product.price, // Use product's price for now
+          ordered_design_image_url: orderedDesignImageUrl,
+          ordered_design_data: designElements, // Save the design elements JSON
+        });
+
+      if (orderInsertError) {
+        throw new Error(`Failed to place order: ${orderInsertError.message}`);
+      }
+
+      toast({ title: "Success", description: "Your order has been placed successfully!" });
+      setIsCheckoutModalOpen(false);
+      navigate('/orders'); // Redirect to orders history page
+    } catch (err: any) {
+      console.error("Error placing order:", err);
+      toast({ title: "Order Failed", description: err.message || "An unexpected error occurred while placing your order.", variant: "destructive" });
+    } finally {
+      const selectedElementDiv = document.querySelector(`[data-element-id="${selectedElementId}"]`);
+      if (selectedElementDiv) {
+        selectedElementDiv.classList.add('border-2', 'border-blue-500');
+      }
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
       <header className="flex items-center justify-between py-2 px-4 bg-white dark:bg-gray-800 shadow-md">
@@ -629,6 +741,10 @@ const MobileCoverCustomizationPage = () => {
           <LayoutTemplate className="h-6 w-6" />
           <span className="text-xs mt-1">Readymade</span>
         </Button>
+        <Button variant="default" className="flex flex-col h-auto p-2 bg-blue-600 hover:bg-blue-700 text-white" onClick={handleBuyNowClick}>
+          <ShoppingCart className="h-6 w-6" />
+          <span className="text-xs mt-1">Buy Now</span>
+        </Button>
       </div>
 
       <Dialog open={isAddTextModalOpen} onOpenChange={setIsAddTextModalOpen}>
@@ -668,6 +784,78 @@ const MobileCoverCustomizationPage = () => {
             <Button variant="outline" onClick={() => setIsPreviewModalOpen(false)}>Close</Button>
             <Button onClick={handleDownloadImage} disabled={!previewImageUrl}>
               <Download className="mr-2 h-4 w-4" /> Download Image
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Checkout Modal */}
+      <Dialog open={isCheckoutModalOpen} onOpenChange={setIsCheckoutModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Checkout</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="customer-name" className="text-right">
+                Name
+              </Label>
+              <Input
+                id="customer-name"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                className="col-span-3"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="customer-address" className="text-right">
+                Address
+              </Label>
+              <Textarea
+                id="customer-address"
+                value={customerAddress}
+                onChange={(e) => setCustomerAddress(e.target.value)}
+                className="col-span-3"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="customer-phone" className="text-right">
+                Phone
+              </Label>
+              <Input
+                id="customer-phone"
+                type="tel"
+                value={customerPhone}
+                onChange={(e) => setCustomerPhone(e.target.value)}
+                className="col-span-3"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="payment-method" className="text-right">
+                Payment
+              </Label>
+              <Input
+                id="payment-method"
+                value="Cash on Delivery"
+                readOnly
+                className="col-span-3 bg-gray-100 dark:bg-gray-700"
+              />
+            </div>
+            {product && (
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right font-bold">Total Price</Label>
+                <span className="col-span-3 text-lg font-bold">${product.price?.toFixed(2)}</span>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCheckoutModalOpen(false)}>Cancel</Button>
+            <Button onClick={handlePlaceOrder} disabled={loading}>
+              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Place Order
             </Button>
           </DialogFooter>
         </DialogContent>
