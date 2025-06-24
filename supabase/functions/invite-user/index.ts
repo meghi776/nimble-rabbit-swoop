@@ -63,10 +63,20 @@ serve(async (req) => {
       });
     }
 
+    // Get the app base URL from secrets
+    const APP_BASE_URL = Deno.env.get('APP_BASE_URL');
+    if (!APP_BASE_URL) {
+      console.error("APP_BASE_URL secret is not set.");
+      return new Response(JSON.stringify({ error: 'Server configuration error: APP_BASE_URL is not set.' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
+      });
+    }
+
     // Invite the new user
     const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
       data: { first_name, last_name },
-      redirectTo: `${Deno.env.get('SUPABASE_URL')}/auth/v1/callback`, // Or your desired redirect URL
+      redirectTo: `${APP_BASE_URL}/login?type=recovery`, // Use APP_BASE_URL for redirect
     });
 
     if (error) {

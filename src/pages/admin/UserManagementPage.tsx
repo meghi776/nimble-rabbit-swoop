@@ -194,12 +194,12 @@ const UserManagementPage = () => {
         last_name: newLastName,
       };
 
-      console.log("Attempting to invoke create-user-admin with token:", session.access_token);
+      console.log("Attempting to invoke create-user-admin with token (relying on auto-attach):", session.access_token);
 
       const { data, error: invokeError } = await supabase.functions.invoke('create-user-admin', {
         body: JSON.stringify(requestBody),
+        // Removed explicit Authorization header, relying on Supabase client to attach it
         headers: {
-          'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
       });
