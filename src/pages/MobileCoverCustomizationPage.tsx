@@ -41,7 +41,7 @@ interface Product {
 interface DesignElement {
   id: string;
   type: 'text' | 'image';
-  value: string; // text content or image URL
+  value: string; // text content or image URL (can be local object URL or remote URL)
   x: number;
   y: number;
   width?: number;
@@ -70,6 +70,9 @@ const MobileCoverCustomizationPage = () => {
 
   // Modals state
   const [isAddTextModalOpen, setIsAddTextModalOpen] = useState(false);
+
+  // Keep track of object URLs to revoke them later
+  const objectUrlsRef = useRef<string[]>([]);
 
   useEffect(() => {
     const fetchProductAndMockup = async () => {
@@ -101,6 +104,7 @@ const MobileCoverCustomizationPage = () => {
           toast({ title: "Error", description: `Failed to load design data: ${mockupDesignError.message}`, variant: "destructive" });
         } else if (mockupDesignData?.design_data) {
           try {
+            // Note: Design elements loaded from DB will have remote URLs, not object URLs
             setDesignElements(JSON.parse(mockupDesignData.design_data as string));
           } catch (parseError) {
             console.error("Error parsing design data:", parseError);
@@ -114,6 +118,12 @@ const MobileCoverCustomizationPage = () => {
     if (productId) {
       fetchProductAndMockup();
     }
+
+    // Cleanup function for object URLs
+    return () => {
+      objectUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
+      objectUrlsRef.current = [];
+    };
   }, [productId]);
 
   const addTextElement = () => {
@@ -138,37 +148,14 @@ const MobileCoverCustomizationPage = () => {
     setIsAddTextModalOpen(false); // Close modal after adding
   };
 
-  const handleImageFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) {
       return;
     }
 
-    setLoading(true);
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-    const filePath = `${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('stock-images') // Using 'stock-images' bucket for user uploads
-      .upload(filePath, file);
-
-    if (uploadError) {
-      console.error("Error uploading image:", uploadError);
-      toast({
-        title: "Error",
-        description: `Failed to upload image: ${uploadError.message}`,
-        variant: "destructive",
-      });
-      setLoading(false);
-      return;
-    }
-
-    const { data: publicUrlData } = supabase.storage
-      .from('stock-images')
-      .getPublicUrl(filePath);
-
-    const imageUrl = publicUrlData.publicUrl;
+    const imageUrl = URL.createObjectURL(file);
+    objectUrlsRef.current.push(imageUrl); // Store the object URL for cleanup
 
     const newElement: DesignElement = {
       id: `image-${Date.now()}`,
@@ -184,7 +171,7 @@ const MobileCoverCustomizationPage = () => {
     setDesignElements([...designElements, newElement]);
     setSelectedElementId(newElement.id);
     toast({ title: "Success", description: "Image added to design." });
-    setLoading(false);
+    
     // Clear the file input value so the same file can be selected again
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -198,7 +185,15 @@ const MobileCoverCustomizationPage = () => {
   };
 
   const deleteElement = (id: string) => {
-    setDesignElements(prev => prev.filter(el => el.id !== id));
+    setDesignElements(prev => {
+      const elementToDelete = prev.find(el => el.id === id);
+      if (elementToDelete && elementToDelete.type === 'image' && elementToDelete.value.startsWith('blob:')) {
+        // Revoke object URL if it's a temporary one
+        URL.revokeObjectURL(elementToDelete.value);
+        objectUrlsRef.current = objectUrlsRef.current.filter(url => url !== elementToDelete.value);
+      }
+      return prev.filter(el => el.id !== id);
+    });
     if (selectedElementId === id) {
       setSelectedElementId(null);
     }
@@ -258,7 +253,9 @@ const MobileCoverCustomizationPage = () => {
     if (!product) return;
 
     setLoading(true);
-    const designData = JSON.stringify(designElements);
+    // Filter out temporary object URLs before saving to DB
+    const savableDesignElements = designElements.filter(el => !el.value.startsWith('blob:'));
+    const designData = JSON.stringify(savableDesignElements);
 
     const { data: existingMockup, error: fetchMockupError } = await supabase
       .from('mockups')
@@ -283,7 +280,7 @@ const MobileCoverCustomizationPage = () => {
         console.error("Error updating mockup design:", updateError);
         toast({ title: "Error", description: `Failed to update design: ${updateError.message}`, variant: "destructive" });
       } else {
-        toast({ title: "Success", description: "Design saved successfully!" });
+        toast({ title: "Success", description: "Design saved successfully! Note: Locally added images are not saved." });
       }
     } else {
       const { error: insertError } = await supabase
@@ -301,7 +298,7 @@ const MobileCoverCustomizationPage = () => {
         console.error("Error inserting new mockup with design:", insertError);
         toast({ title: "Error", description: `Failed to save design: ${insertError.message}`, variant: "destructive" });
       } else {
-        toast({ title: "Success", description: "Design saved successfully!" });
+        toast({ title: "Success", description: "Design saved successfully! Note: Locally added images are not saved." });
       }
     }
     setLoading(false);
@@ -538,7 +535,6 @@ const MobileCoverCustomizationPage = () => {
         </Button>
       </div>
 
-      {/* Image Selection Modal (now uses ImageGallerySelector) - REMOVED */}
       {/* Add Text Modal */}
       <Dialog open={isAddTextModalOpen} onOpenChange={setIsAddTextModalOpen}>
         <DialogContent>
