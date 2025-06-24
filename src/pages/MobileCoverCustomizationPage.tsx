@@ -651,6 +651,7 @@ const MobileCoverCustomizationPage = () => {
                 backgroundRepeat: 'no-repeat',
                 backgroundPosition: 'center',
                 touchAction: 'none',
+                backgroundImage: product.mockup_image_url ? `url(${product.mockup_image_url})` : 'none', // Mockup as background
               }}
             >
               {designElements.map(el => (
@@ -664,7 +665,7 @@ const MobileCoverCustomizationPage = () => {
                     transformOrigin: 'center center',
                     width: el.type === 'image' ? `${el.width}px` : 'auto',
                     height: el.type === 'image' ? `${el.height}px` : 'auto',
-                    zIndex: selectedElementId === el.id ? 11 : 10,
+                    zIndex: 10, // Ensure design elements are on top
                     touchAction: 'none',
                   }}
                   onMouseDown={(e) => handleMouseDown(e, el.id)}
@@ -698,13 +699,7 @@ const MobileCoverCustomizationPage = () => {
                 </div>
               ))}
 
-              {product.mockup_image_url && (
-                <img
-                  src={product.mockup_image_url}
-                  alt="Mockup"
-                  className="absolute inset-0 w-full h-full object-contain z-20 pointer-events-none"
-                />
-              )}
+              {/* Removed the img tag for mockup_image_url as it's now a background */}
 
               {!designElements.length && (
                 <div
