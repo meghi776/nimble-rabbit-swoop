@@ -39,7 +39,7 @@ interface Product {
 interface DesignElement {
   id: string;
   type: 'text' | 'image';
-  value: string; // text content or image URL
+  value: string; // text content or image URL (can be blob URL for temporary images)
   x: number;
   y: number;
   width?: number;
@@ -90,6 +90,8 @@ const MobileCoverCustomizationPage = () => {
         // Load existing design data if available
         if (productData.mockups.length > 0 && productData.mockups[0].design_data) {
           try {
+            // Note: Temporary blob URLs will not persist across page loads.
+            // Only server-stored image URLs will load correctly from saved design_data.
             setDesignElements(JSON.parse(productData.mockups[0].design_data as string));
           } catch (parseError) {
             console.error("Error parsing design data:", parseError);
@@ -104,6 +106,18 @@ const MobileCoverCustomizationPage = () => {
       fetchProductAndMockup();
     }
   }, [productId]);
+
+  // Cleanup for temporary blob URLs when component unmounts or elements are removed
+  useEffect(() => {
+    return () => {
+      designElements.forEach(el => {
+        if (el.type === 'image' && el.value.startsWith('blob:')) {
+          URL.revokeObjectURL(el.value);
+        }
+      });
+    };
+  }, [designElements]);
+
 
   const addTextElement = () => {
     if (!newText.trim()) {
@@ -150,7 +164,13 @@ const MobileCoverCustomizationPage = () => {
   };
 
   const deleteElement = (id: string) => {
-    setDesignElements(prev => prev.filter(el => el.id !== id));
+    setDesignElements(prev => {
+      const elementToDelete = prev.find(el => el.id === id);
+      if (elementToDelete && elementToDelete.type === 'image' && elementToDelete.value.startsWith('blob:')) {
+        URL.revokeObjectURL(elementToDelete.value); // Revoke blob URL to free memory
+      }
+      return prev.filter(el => el.id !== id);
+    });
     if (selectedElementId === id) {
       setSelectedElementId(null);
     }
@@ -210,7 +230,23 @@ const MobileCoverCustomizationPage = () => {
     if (!product) return;
 
     setLoading(true);
-    const designData = JSON.stringify(designElements);
+    // Filter out temporary blob URLs before saving to database
+    // If you want to save temporary images, you would upload them here first.
+    const savableDesignElements = designElements.map(el => {
+      if (el.type === 'image' && el.value.startsWith('blob:')) {
+        // For now, we'll just remove temporary images from the saved design.
+        // In a real app, you'd upload them to Supabase storage here and replace the blob URL with the public URL.
+        toast({
+          title: "Warning",
+          description: "Temporary images (from your device) are not saved with the design. Please upload them to the server if you want them to persist.",
+          variant: "destructive",
+        });
+        return null; // Exclude temporary images from saved design
+      }
+      return el;
+    }).filter(Boolean); // Remove nulls
+
+    const designData = JSON.stringify(savableDesignElements);
 
     const { data: existingMockup, error: fetchMockupError } = await supabase
       .from('mockups')
@@ -259,34 +295,14 @@ const MobileCoverCustomizationPage = () => {
     setLoading(false);
   };
 
-  const handleImageFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    setLoading(true);
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-    const filePath = `${fileName}`;
+    const imageUrl = URL.createObjectURL(file);
+    addImageElement(imageUrl);
+    toast({ title: "Success", description: "Image added to design." });
 
-    const { error: uploadError } = await supabase.storage
-      .from('stock-images') // Using 'stock-images' bucket
-      .upload(filePath, file);
-
-    if (uploadError) {
-      console.error("Error uploading image:", uploadError);
-      toast({
-        title: "Error",
-        description: `Failed to upload image: ${uploadError.message}`,
-        variant: "destructive",
-      });
-    } else {
-      const { data: publicUrlData } = supabase.storage
-        .from('stock-images')
-        .getPublicUrl(filePath);
-      addImageElement(publicUrlData.publicUrl);
-      toast({ title: "Success", description: "Image uploaded and added to design." });
-    }
-    setLoading(false);
     // Clear the file input value to allow selecting the same file again
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
