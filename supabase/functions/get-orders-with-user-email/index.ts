@@ -21,7 +21,6 @@ serve(async (req) => {
     let requestBody: any = {};
 
     if (contentType && contentType.includes('application/json')) {
-      // Read the body as text first to check if it's empty
       const bodyText = await req.text();
       if (bodyText) {
         try {
@@ -31,7 +30,6 @@ serve(async (req) => {
           orderType = requestBody.orderType || null;
         } catch (jsonParseError) {
           console.error("Error parsing JSON body:", jsonParseError);
-          // If parsing fails, log and proceed with defaults
         }
       } else {
         console.log("Received application/json with empty body.");
@@ -48,13 +46,11 @@ serve(async (req) => {
   }
 
   try {
-    // Create a Supabase client with the service role key
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Get the user's ID from the request's Authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       console.error("Authorization header missing.");
@@ -76,7 +72,6 @@ serve(async (req) => {
     }
     console.log(`Invoker user ID: ${invokerUser.id}, Email: ${invokerUser.email}`);
 
-    // Check if the invoking user is an admin
     const { data: invokerProfile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('role')
@@ -100,7 +95,6 @@ serve(async (req) => {
     }
     console.log(`Invoker user ${invokerUser.id} is an admin.`);
 
-    // Fetch orders and join with auth.users to get email
     let query = supabaseAdmin
       .from('orders')
       .select(`
@@ -117,14 +111,19 @@ serve(async (req) => {
         profiles (first_name, last_name),
         user_id,
         type
-      `); // Include 'type' in the select statement
+      `);
 
     if (orderType && orderType !== 'all') {
-      query = query.eq('type', orderType); // Apply filter if orderType is specified and not 'all'
+      query = query.eq('type', orderType);
       console.log(`Filtering orders by type: ${orderType}`);
     }
 
-    const { data: ordersData, error: ordersError } = await query.order(sortColumn, { ascending: sortDirection === 'asc' });
+    // Apply sorting directly from the database for all columns except user_email
+    if (sortColumn !== 'user_email') {
+      query = query.order(sortColumn, { ascending: sortDirection === 'asc' });
+    }
+
+    const { data: ordersData, error: ordersError } = await query;
 
     if (ordersError) {
       console.error("Error fetching orders from DB:", ordersError);
@@ -153,11 +152,12 @@ serve(async (req) => {
 
     const userEmailMap = new Map(usersData.users.map(user => [user.id, user.email]));
 
-    const ordersWithEmails = ordersData.map(order => ({
+    let ordersWithEmails = ordersData.map(order => ({
       ...order,
       user_email: userEmailMap.get(order.user_id) || null,
     }));
 
+    // Apply client-side sorting for user_email if requested
     if (sortColumn === 'user_email') {
       ordersWithEmails.sort((a, b) => {
         const emailA = a.user_email || '';
@@ -168,18 +168,7 @@ serve(async (req) => {
           return emailB.localeCompare(emailA);
         }
       });
-      console.log(`Orders sorted by user_email in ${sortDirection} direction.`);
-    } else if (sortColumn === 'type') { // New sort logic for 'type'
-      ordersWithEmails.sort((a, b) => {
-        const typeA = a.type || '';
-        const typeB = b.type || '';
-        if (sortDirection === 'asc') {
-          return typeA.localeCompare(typeB);
-        } else {
-          return typeB.localeCompare(typeA);
-        }
-      });
-      console.log(`Orders sorted by type in ${sortDirection} direction.`);
+      console.log(`Orders sorted by user_email in ${sortDirection} direction (client-side).`);
     }
 
     return new Response(JSON.stringify({ orders: ordersWithEmails }), {

@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, Package, DollarSign, Calendar, MapPin, Phone, User, Image as ImageIcon } from 'lucide-react';
+import { Loader2, Package, DollarSign, Calendar, MapPin, Phone, User, Image as ImageIcon, ArrowDownWideNarrow, ArrowUpWideNarrow } from 'lucide-react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -38,6 +38,8 @@ const OrderHistoryPage = () => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
   const [orderTypeFilter, setOrderTypeFilter] = useState<'all' | 'normal' | 'demo'>('all'); // New state for filter
+  const [sortColumn, setSortColumn] = useState<keyof Order | 'product_name'>('created_at'); // Added 'product_name' for sorting
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const navigate = useNavigate(); // Initialize useNavigate
 
   useEffect(() => {
@@ -65,8 +67,7 @@ const OrderHistoryPage = () => {
           products (name),
           type
         `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .eq('user_id', user.id);
 
       if (orderTypeFilter !== 'all') {
         query = query.eq('type', orderTypeFilter);
@@ -78,19 +79,63 @@ const OrderHistoryPage = () => {
         console.error("Error fetching orders:", error);
         setError(error.message);
       } else {
-        setOrders(data || []);
+        let sortedData = data || [];
+        // Client-side sorting for product name and other columns
+        sortedData.sort((a, b) => {
+          let valA: any;
+          let valB: any;
+
+          if (sortColumn === 'product_name') {
+            valA = a.products?.name || '';
+            valB = b.products?.name || '';
+          } else {
+            valA = a[sortColumn];
+            valB = b[sortColumn];
+          }
+
+          if (typeof valA === 'string' && typeof valB === 'string') {
+            return sortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+          }
+          if (typeof valA === 'number' && typeof valB === 'number') {
+            return sortDirection === 'asc' ? valA - valB : valB - valA;
+          }
+          // For dates, convert to Date objects for comparison
+          if (sortColumn === 'created_at') {
+            const dateA = new Date(valA);
+            const dateB = new Date(valB);
+            return sortDirection === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
+          }
+          return 0;
+        });
+        setOrders(sortedData);
       }
       setLoading(false);
     };
 
     fetchOrders();
-  }, [user, sessionLoading, orderTypeFilter]); // Re-fetch when orderTypeFilter changes
+  }, [user, sessionLoading, orderTypeFilter, sortColumn, sortDirection]); // Re-fetch when orderTypeFilter or sort options change
 
   const openImageModal = (imageUrl: string | null) => {
     if (imageUrl) {
       setCurrentImageUrl(imageUrl);
       setIsImageModalOpen(true);
     }
+  };
+
+  const handleSort = (column: keyof Order | 'product_name') => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc'); // Default to ascending when changing column
+    }
+  };
+
+  const getSortIcon = (column: keyof Order | 'product_name') => {
+    if (sortColumn === column) {
+      return sortDirection === 'asc' ? <ArrowUpWideNarrow className="ml-1 h-3 w-3" /> : <ArrowDownWideNarrow className="ml-1 h-3 w-3" />;
+    }
+    return null;
   };
 
   if (sessionLoading || loading) {
@@ -162,16 +207,26 @@ const OrderHistoryPage = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Order ID</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Product</TableHead>
+                    <TableHead className="cursor-pointer hover:text-primary" onClick={() => handleSort('created_at')}>
+                      <div className="flex items-center">Date {getSortIcon('created_at')}</div>
+                    </TableHead>
+                    <TableHead className="cursor-pointer hover:text-primary" onClick={() => handleSort('product_name')}>
+                      <div className="flex items-center">Product {getSortIcon('product_name')}</div>
+                    </TableHead>
                     <TableHead>Design</TableHead>
-                    <TableHead>Type</TableHead> {/* Display order type */}
+                    <TableHead className="cursor-pointer hover:text-primary" onClick={() => handleSort('type')}>
+                      <div className="flex items-center">Type {getSortIcon('type')}</div>
+                    </TableHead>
                     <TableHead>Customer</TableHead>
                     <TableHead>Address</TableHead>
                     <TableHead>Phone</TableHead>
                     <TableHead>Payment</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead className="cursor-pointer hover:text-primary" onClick={() => handleSort('status')}>
+                      <div className="flex items-center">Status {getSortIcon('status')}</div>
+                    </TableHead>
+                    <TableHead className="text-right cursor-pointer hover:text-primary" onClick={() => handleSort('total_price')}>
+                      <div className="flex items-center justify-end">Total {getSortIcon('total_price')}</div>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
