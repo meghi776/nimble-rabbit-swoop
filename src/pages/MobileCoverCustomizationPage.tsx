@@ -429,55 +429,7 @@ const MobileCoverCustomizationPage = () => {
           </div>
 
           {/* Right: Conditional Controls for Selected Element */}
-          {selectedElement && (
-            <div className="w-full md:w-1/3 space-y-4 overflow-y-auto">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Edit Selected Element</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {selectedElement.type === 'text' && (
-                    <>
-                      <div>
-                        <Label htmlFor="font-size">Font Size: {fontSize[0]}px</Label>
-                        <Slider
-                          id="font-size"
-                          min={10}
-                          max={100}
-                          step={1}
-                          value={fontSize}
-                          onValueChange={(val) => {
-                            setFontSize(val);
-                            updateElement(selectedElement.id, { fontSize: val[0] });
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="text-color">Text Color</Label>
-                        <Input
-                          id="text-color"
-                          type="color"
-                          value={textColor}
-                          onChange={(e) => {
-                            setTextColor(e.target.value);
-                            updateElement(selectedElement.id, { color: e.target.value });
-                          }}
-                        />
-                      </div>
-                    </>
-                  )}
-                  {/* Removed Rotation and Scale Sliders */}
-                  <Button
-                    variant="destructive"
-                    onClick={() => deleteElement(selectedElement.id)}
-                    className="w-full"
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" /> Delete Element
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          )}
+          {/* Removed the entire 'Edit Selected Element' card */}
         </div>
       )}
 
