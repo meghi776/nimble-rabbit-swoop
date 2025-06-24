@@ -14,6 +14,7 @@ serve(async (req) => {
 
   try {
     const { sortColumn = 'created_at', sortDirection = 'desc' } = await req.json();
+    console.log(`Edge Function received request: sortColumn=${sortColumn}, sortDirection=${sortDirection}`);
 
     // Create a Supabase client with the service role key
     const supabaseAdmin = createClient(
@@ -24,6 +25,7 @@ serve(async (req) => {
     // Get the user's ID from the request's Authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error("Authorization header missing.");
       return new Response(JSON.stringify({ error: 'Authorization header missing.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 401,
@@ -34,12 +36,13 @@ serve(async (req) => {
     const { data: { user: invokerUser }, error: authError } = await supabaseAdmin.auth.getUser(token);
 
     if (authError || !invokerUser) {
-      console.error("Auth error:", authError);
+      console.error("Auth error during token verification:", authError?.message || "User not found.");
       return new Response(JSON.stringify({ error: 'Unauthorized: Invalid token or user not found.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 401,
       });
     }
+    console.log(`Invoker user ID: ${invokerUser.id}, Email: ${invokerUser.email}`);
 
     // Check if the invoking user is an admin
     const { data: invokerProfile, error: profileError } = await supabaseAdmin
@@ -48,13 +51,22 @@ serve(async (req) => {
       .eq('id', invokerUser.id)
       .single();
 
-    if (profileError || invokerProfile?.role !== 'admin') {
-      console.error("Profile error or not admin:", profileError);
+    if (profileError) {
+      console.error("Error fetching invoker profile:", profileError);
+      return new Response(JSON.stringify({ error: `Forbidden: Error fetching user role: ${profileError.message}` }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 403,
+      });
+    }
+
+    if (invokerProfile?.role !== 'admin') {
+      console.error(`Forbidden: User ${invokerUser.id} (role: ${invokerProfile?.role}) is not an admin.`);
       return new Response(JSON.stringify({ error: 'Forbidden: Only administrators can view all orders.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 403,
       });
     }
+    console.log(`Invoker user ${invokerUser.id} is an admin.`);
 
     // Fetch orders and join with auth.users to get email
     const { data: ordersData, error: ordersError } = await supabaseAdmin
@@ -76,29 +88,29 @@ serve(async (req) => {
       .order(sortColumn, { ascending: sortDirection === 'asc' });
 
     if (ordersError) {
-      console.error("Error fetching orders:", ordersError);
+      console.error("Error fetching orders from DB:", ordersError);
       return new Response(JSON.stringify({ error: ordersError.message }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
       });
     }
+    console.log(`Fetched ${ordersData.length} orders.`);
 
     // Manually fetch emails for each user_id from auth.users
-    // This is less efficient than a direct join if Supabase allowed it,
-    // but necessary given the current RLS and API limitations for auth.users.
     const userIds = [...new Set(ordersData.map(order => order.user_id))];
     const { data: usersData, error: usersError } = await supabaseAdmin.auth.admin.listUsers({
       page: 1,
-      perPage: 1000, // Adjust as needed, or implement pagination if many users
+      perPage: 1000,
     });
 
     if (usersError) {
-      console.error("Error listing users:", usersError);
+      console.error("Error listing users from Auth:", usersError);
       return new Response(JSON.stringify({ error: usersError.message }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
       });
     }
+    console.log(`Fetched ${usersData.users.length} users from Auth.`);
 
     const userEmailMap = new Map(usersData.users.map(user => [user.id, user.email]));
 
@@ -107,7 +119,6 @@ serve(async (req) => {
       user_email: userEmailMap.get(order.user_id) || null,
     }));
 
-    // Re-sort if sorting by user_email, as the initial sort was on a different column
     if (sortColumn === 'user_email') {
       ordersWithEmails.sort((a, b) => {
         const emailA = a.user_email || '';
@@ -118,6 +129,7 @@ serve(async (req) => {
           return emailB.localeCompare(emailA);
         }
       });
+      console.log(`Orders sorted by user_email in ${sortDirection} direction.`);
     }
 
     return new Response(JSON.stringify({ orders: ordersWithEmails }), {
@@ -125,7 +137,7 @@ serve(async (req) => {
       status: 200,
     });
   } catch (error) {
-    console.error("Unexpected error:", error);
+    console.error("Unexpected error in Edge Function:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
