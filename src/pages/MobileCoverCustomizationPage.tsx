@@ -26,7 +26,7 @@ import {
   ArrowLeft,
   Check,
 } from 'lucide-react';
-import ImageGallerySelector from '@/components/ImageGallerySelector'; // Import ImageGallerySelector
+import ImageUploadModal from '@/components/ImageUploadModal'; // Import the new ImageUploadModal
 
 interface Product {
   id: string;
@@ -68,7 +68,7 @@ const MobileCoverCustomizationPage = () => {
 
   // Modals state
   const [isAddTextModalOpen, setIsAddTextModalOpen] = useState(false);
-  const [isImageGalleryOpen, setIsImageGalleryOpen] = useState(false); // State for image gallery modal
+  const [isImageUploadModalOpen, setIsImageUploadModalOpen] = useState(false); // State for new image upload modal
 
   useEffect(() => {
     const fetchProductAndMockup = async () => {
@@ -142,7 +142,7 @@ const MobileCoverCustomizationPage = () => {
     };
     setDesignElements([...designElements, newElement]);
     setSelectedElementId(newElement.id);
-    setIsImageGalleryOpen(false); // Close modal after adding
+    setIsImageUploadModalOpen(false); // Close modal after adding
   };
 
   const updateElement = (id: string, updates: Partial<DesignElement>) => {
@@ -315,6 +315,11 @@ const MobileCoverCustomizationPage = () => {
                 backgroundRepeat: 'no-repeat',
                 backgroundPosition: 'center',
               }}
+              onClick={() => {
+                if (!designElements.length) {
+                  setIsImageUploadModalOpen(true); // Open image upload modal when empty area is clicked
+                }
+              }}
             >
               {designElements.map(el => (
                 <div
@@ -372,7 +377,7 @@ const MobileCoverCustomizationPage = () => {
                   className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 cursor-pointer border-2 border-dashed border-gray-400 rounded-lg m-4"
                 >
                   <PlusCircle className="h-12 w-12 mb-2" />
-                  <p className="text-lg font-medium">Start Designing</p>
+                  <p className="text-lg font-medium">Add Your Photo</p> {/* Changed text */}
                 </div>
               )}
             </div>
@@ -464,7 +469,7 @@ const MobileCoverCustomizationPage = () => {
           <Text className="h-6 w-6" />
           <span className="text-xs mt-1">Add Text</span>
         </Button>
-        <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => setIsImageGalleryOpen(true)}>
+        <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => setIsImageUploadModalOpen(true)}>
           <Image className="h-6 w-6" />
           <span className="text-xs mt-1">Your Photo</span>
         </Button>
@@ -500,15 +505,12 @@ const MobileCoverCustomizationPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Image Gallery Modal */}
-      <Dialog open={isImageGalleryOpen} onOpenChange={setIsImageGalleryOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Add Your Photo</DialogTitle>
-          </DialogHeader>
-          <ImageGallerySelector onImageSelect={addImageElement} onClose={() => setIsImageGalleryOpen(false)} />
-        </DialogContent>
-      </Dialog>
+      {/* Image Upload Modal */}
+      <ImageUploadModal
+        isOpen={isImageUploadModalOpen}
+        onClose={() => setIsImageUploadModalOpen(false)}
+        onImageSelect={addImageElement}
+      />
     </div>
   );
 };
