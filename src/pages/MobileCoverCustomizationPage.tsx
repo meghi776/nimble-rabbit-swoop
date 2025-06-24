@@ -474,6 +474,7 @@ const MobileCoverCustomizationPage = () => {
                 backgroundSize: 'contain',
                 backgroundRepeat: 'no-repeat',
                 backgroundPosition: 'center',
+                touchAction: 'none', // Added to prevent browser zoom/scroll
               }}
               onClick={() => {
                 if (!designElements.length && fileInputRef.current) {
@@ -493,6 +494,7 @@ const MobileCoverCustomizationPage = () => {
                     width: el.type === 'image' ? `${el.width}px` : 'auto',
                     height: el.type === 'image' ? `${el.height}px` : 'auto',
                     zIndex: selectedElementId === el.id ? 11 : 10, // Selected element on top of others
+                    touchAction: 'none', // Added to prevent browser zoom/scroll
                   }}
                   onMouseDown={(e) => handleMouseDown(e, el.id)}
                   onTouchStart={(e) => handleTouchStart(e, el.id)}
