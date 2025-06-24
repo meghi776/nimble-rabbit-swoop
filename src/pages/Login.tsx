@@ -3,8 +3,13 @@ import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useSearchParams } from 'react-router-dom'; // Import useSearchParams
 
 const Login = () => {
+  const [searchParams] = useSearchParams();
+  const type = searchParams.get('type');
+  const initialView = type === 'recovery' ? 'update_password' : 'sign_in';
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900">
       <Card className="w-full max-w-md mx-auto shadow-lg rounded-lg">
@@ -30,7 +35,8 @@ const Login = () => {
               },
             }}
             theme="light" // Use light theme by default, can be made dynamic
-            redirectTo={window.location.origin} // Redirect to home after login
+            view={initialView} // Set the view based on URL parameter
+            redirectTo={window.location.origin} // Redirect to home after login/password update
           />
         </CardContent>
       </Card>
