@@ -12,9 +12,23 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    const { email, password, first_name, last_name } = await req.json();
+  let email, password, first_name, last_name;
 
+  try {
+    const requestBody = await req.json();
+    email = requestBody.email;
+    password = requestBody.password;
+    first_name = requestBody.first_name;
+    last_name = requestBody.last_name;
+  } catch (jsonParseError) {
+    console.error("Error parsing JSON body:", jsonParseError);
+    return new Response(JSON.stringify({ error: 'Invalid request body format. Please ensure the request body is valid JSON.' }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400,
+    });
+  }
+
+  try {
     if (!email || !password) {
       return new Response(JSON.stringify({ error: 'Email and password are required.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -84,7 +98,7 @@ serve(async (req) => {
       status: 200,
     });
   } catch (error) {
-    console.error("Unexpected error:", error);
+    console.error("Unexpected error in main logic:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
