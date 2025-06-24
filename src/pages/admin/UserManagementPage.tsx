@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, Edit, Trash2 } from "lucide-react";
+import { Terminal, Edit, Trash2, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -31,12 +31,16 @@ const UserManagementPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false); // New state for add user modal
   const [currentProfile, setCurrentProfile] = useState<Profile | null>(null);
   const [editFirstName, setEditFirstName] = useState('');
   const [editLastName, setEditLastName] = useState('');
   const [editRole, setEditRole] = useState<'user' | 'admin'>('user');
+  const [newEmail, setNewEmail] = useState(''); // New state for new user email
+  const [newFirstName, setNewFirstName] = useState(''); // New state for new user first name
+  const [newLastName, setNewLastName] = useState(''); // New state for new user last name
   const { toast } = useToast();
-  const { user: currentUser } = useSession();
+  const { user: currentUser, session } = useSession(); // Get the current user and session
   const [isAdmin, setIsAdmin] = useState(false);
 
   const fetchProfiles = async () => {
@@ -152,6 +156,80 @@ const UserManagementPage = () => {
     setLoading(false);
   };
 
+  const handleAddUserClick = () => {
+    setNewEmail('');
+    setNewFirstName('');
+    setNewLastName('');
+    setIsAddUserModalOpen(true);
+  };
+
+  const handleSubmitAddUser = async () => {
+    if (!newEmail.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Email cannot be empty.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!session) {
+      toast({
+        title: "Authentication Error",
+        description: "You must be logged in to invite users.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('invite-user', {
+        body: {
+          email: newEmail,
+          first_name: newFirstName,
+          last_name: newLastName,
+        },
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (error) {
+        console.error("Error inviting user via Edge Function:", error);
+        toast({
+          title: "Error",
+          description: `Failed to invite user: ${error.message}`,
+          variant: "destructive",
+        });
+      } else if (data && data.error) {
+        console.error("Edge Function returned error:", data.error);
+        toast({
+          title: "Error",
+          description: `Failed to invite user: ${data.error}`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Invitation sent successfully! User will receive an email to set up their account.",
+        });
+        setIsAddUserModalOpen(false);
+        fetchProfiles(); // Re-fetch profiles to show the new user (once they sign up)
+      }
+    } catch (err) {
+      console.error("Network or unexpected error invoking Edge Function:", err);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while inviting the user.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="p-4">
       <h1 className="text-3xl font-bold mb-6 text-gray-800 dark:text-gray-100">User Management</h1>
@@ -172,8 +250,13 @@ const UserManagementPage = () => {
 
       {!loading && !error && (
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row justify-between items-center">
             <CardTitle>User List</CardTitle>
+            {isAdmin && (
+              <Button onClick={handleAddUserClick}>
+                <PlusCircle className="mr-2 h-4 w-4" /> Add User
+              </Button>
+            )}
           </CardHeader>
           <CardContent>
             {profiles.length === 0 ? (
@@ -275,6 +358,56 @@ const UserManagementPage = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
             <Button onClick={handleSaveEdit}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add New User Dialog */}
+      <Dialog open={isAddUserModalOpen} onOpenChange={setIsAddUserModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Invite New User</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="new-email" className="text-right">
+                Email
+              </Label>
+              <Input
+                id="new-email"
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                className="col-span-3"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="new-first-name" className="text-right">
+                First Name
+              </Label>
+              <Input
+                id="new-first-name"
+                value={newFirstName}
+                onChange={(e) => setNewFirstName(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="new-last-name" className="text-right">
+                Last Name
+              </Label>
+              <Input
+                id="new-last-name"
+                value={newLastName}
+                onChange={(e) => setNewLastName(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddUserModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleSubmitAddUser}>Send Invitation</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
