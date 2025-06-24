@@ -10,7 +10,14 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal } from "lucide-react";
+import { Terminal, Edit, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/components/ui/use-toast";
+import { useSession } from '@/contexts/SessionContext';
 
 interface Profile {
   id: string;
@@ -23,26 +30,127 @@ const UserManagementPage = () => {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [currentProfile, setCurrentProfile] = useState<Profile | null>(null);
+  const [editFirstName, setEditFirstName] = useState('');
+  const [editLastName, setEditLastName] = useState('');
+  const [editRole, setEditRole] = useState<'user' | 'admin'>('user');
+  const { toast } = useToast();
+  const { user: currentUser } = useSession();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  const fetchProfiles = async () => {
+    setLoading(true);
+    setError(null);
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, first_name, last_name, role');
+
+    if (error) {
+      console.error("Error fetching profiles:", error);
+      setError(error.message);
+      toast({
+        title: "Error",
+        description: `Failed to load users: ${error.message}`,
+        variant: "destructive",
+      });
+    } else {
+      setProfiles(data || []);
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
-    const fetchProfiles = async () => {
-      setLoading(true);
-      setError(null);
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name, role');
-
-      if (error) {
-        console.error("Error fetching profiles:", error);
-        setError(error.message);
-      } else {
-        setProfiles(data || []);
-      }
-      setLoading(false);
-    };
-
     fetchProfiles();
   }, []);
+
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (currentUser) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', currentUser.id)
+          .single();
+
+        if (error) {
+          console.error("Error fetching current user role:", error);
+          setIsAdmin(false);
+        } else if (data) {
+          setIsAdmin(data.role === 'admin');
+        }
+      } else {
+        setIsAdmin(false);
+      }
+    };
+    checkAdminStatus();
+  }, [currentUser]);
+
+  const handleEditClick = (profile: Profile) => {
+    setCurrentProfile(profile);
+    setEditFirstName(profile.first_name || '');
+    setEditLastName(profile.last_name || '');
+    setEditRole(profile.role);
+    setIsEditModalOpen(true);
+  };
+
+  const handleDeleteClick = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this user's profile? This action cannot be undone.")) {
+      return;
+    }
+    setLoading(true);
+    const { error } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error("Error deleting profile:", error);
+      toast({
+        title: "Error",
+        description: `Failed to delete profile: ${error.message}`,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "User profile deleted successfully.",
+      });
+      fetchProfiles(); // Re-fetch profiles to update the list
+    }
+    setLoading(false);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!currentProfile) return;
+
+    setLoading(true);
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        first_name: editFirstName,
+        last_name: editLastName,
+        role: editRole,
+      })
+      .eq('id', currentProfile.id);
+
+    if (error) {
+      console.error("Error updating profile:", error);
+      toast({
+        title: "Error",
+        description: `Failed to update profile: ${error.message}`,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "User profile updated successfully.",
+      });
+      setIsEditModalOpen(false);
+      fetchProfiles(); // Re-fetch profiles to update the list
+    }
+    setLoading(false);
+  };
 
   return (
     <div className="p-4">
@@ -79,7 +187,7 @@ const UserManagementPage = () => {
                       <TableHead>First Name</TableHead>
                       <TableHead>Last Name</TableHead>
                       <TableHead>Role</TableHead>
-                      {/* <TableHead className="text-right">Actions</TableHead> */}
+                      {isAdmin && <TableHead className="text-right">Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -89,10 +197,27 @@ const UserManagementPage = () => {
                         <TableCell>{profile.first_name || 'N/A'}</TableCell>
                         <TableCell>{profile.last_name || 'N/A'}</TableCell>
                         <TableCell>{profile.role}</TableCell>
-                        {/* <TableCell className="text-right">
-                          <Button variant="outline" size="sm" className="mr-2">Edit</Button>
-                          <Button variant="destructive" size="sm">Delete</Button>
-                        </TableCell> */}
+                        {isAdmin && (
+                          <TableCell className="text-right">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="mr-2"
+                              onClick={() => handleEditClick(profile)}
+                              disabled={profile.id === currentUser?.id} // Prevent editing own profile role here to avoid self-lockout
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDeleteClick(profile.id)}
+                              disabled={profile.id === currentUser?.id} // Prevent deleting own profile
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -102,6 +227,57 @@ const UserManagementPage = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Edit User Profile Dialog */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit User Profile</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-first-name" className="text-right">
+                First Name
+              </Label>
+              <Input
+                id="edit-first-name"
+                value={editFirstName}
+                onChange={(e) => setEditFirstName(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-last-name" className="text-right">
+                Last Name
+              </Label>
+              <Input
+                id="edit-last-name"
+                value={editLastName}
+                onChange={(e) => setEditLastName(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-role" className="text-right">
+                Role
+              </Label>
+              <Select value={editRole} onValueChange={(value: 'user' | 'admin') => setEditRole(value)}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select a role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">User</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveEdit}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
