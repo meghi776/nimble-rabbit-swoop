@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom'; // Removed Link, added useNavigate
+import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,15 +20,15 @@ import {
   PlusCircle,
   Trash2,
   Text,
-  Palette, // For Back Color
-  LayoutTemplate, // For Readymade
-  Image, // For Your Photo
+  Palette,
+  LayoutTemplate,
+  Image,
   ArrowLeft,
-  Eye, // For Preview
-  Download, // For Download
+  Eye,
+  Download,
 } from 'lucide-react';
-import html2canvas from 'html2canvas'; // Import html2canvas
-import { useIsMobile } from '@/hooks/use-mobile'; // Import the useIsMobile hook
+import html2canvas from 'html2canvas';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Product {
   id: string;
@@ -42,7 +42,7 @@ interface Product {
 interface DesignElement {
   id: string;
   type: 'text' | 'image';
-  value: string; // text content or image URL (can be blob URL for temporary images)
+  value: string;
   x: number;
   y: number;
   width?: number;
@@ -51,24 +51,23 @@ interface DesignElement {
   color?: string;
 }
 
-// Define a type for the touch state
 interface TouchState {
   mode: 'none' | 'dragging' | 'pinching';
   startX: number;
   startY: number;
   initialElementX: number;
   initialElementY: number;
-  initialDistance?: number; // For pinching
-  initialElementWidth?: number; // For pinching
-  initialElementHeight?: number; // For pinching
-  initialMidX?: number; // For pinch center
-  initialMidY?: number; // For pinch center
+  initialDistance?: number;
+  initialElementWidth?: number;
+  initialElementHeight?: number;
+  initialMidX?: number;
+  initialMidY?: number;
   activeElementId: string | null;
 }
 
 const MobileCoverCustomizationPage = () => {
   const { productId } = useParams<{ productId: string }>();
-  const navigate = useNavigate(); // Initialize useNavigate
+  const navigate = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,17 +77,15 @@ const MobileCoverCustomizationPage = () => {
   const [fontSize, setFontSize] = useState<number[]>([24]);
   const [textColor, setTextColor] = useState('#000000');
   const designAreaRef = useRef<HTMLDivElement>(null);
-  const canvasContentRef = useRef<HTMLDivElement>(null); // New ref for the actual canvas content
+  const canvasContentRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
-  // Modals state
   const [isAddTextModalOpen, setIsAddTextModalOpen] = useState(false);
-  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false); // New state for preview modal
-  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null); // State to store the generated image URL
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
-  // Ref to store touch state for ongoing gestures
   const touchState = useRef<TouchState>({
     mode: 'none',
     startX: 0,
@@ -200,9 +197,8 @@ const MobileCoverCustomizationPage = () => {
     }
   };
 
-  // --- Mouse Event Handlers ---
   const handleMouseDown = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation(); // Prevent click on design area
+    e.stopPropagation();
     setSelectedElementId(id);
     const element = designElements.find(el => el.id === id);
     if (!element || !designAreaRef.current) return;
@@ -227,7 +223,7 @@ const MobileCoverCustomizationPage = () => {
   };
 
   const handleResizeMouseDown = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation(); // Prevent drag on element
+    e.stopPropagation();
     const element = designElements.find(el => el.id === id);
     if (!element) return;
 
@@ -251,9 +247,8 @@ const MobileCoverCustomizationPage = () => {
     document.addEventListener('mouseup', onMouseUp);
   };
 
-  // --- Touch Event Handlers ---
   const handleTouchStart = (e: React.TouchEvent, id: string) => {
-    e.stopPropagation(); // Prevent default touch behavior like scrolling
+    e.stopPropagation();
     setSelectedElementId(id);
     const element = designElements.find(el => el.id === id);
     if (!element || !designAreaRef.current || !product) return;
@@ -281,22 +276,22 @@ const MobileCoverCustomizationPage = () => {
 
       touchState.current = {
         mode: 'pinching',
-        startX: initialMidX, // Use midpoint as start for calculating delta
+        startX: initialMidX,
         startY: initialMidY,
         initialElementX: element.x,
         initialElementY: element.y,
         initialDistance: initialDistance,
         initialElementWidth: element.width || product.canvas_width,
         initialElementHeight: element.height || product.canvas_height,
-        initialMidX: initialMidX - designAreaRect.left, // Midpoint relative to design area
-        initialMidY: initialMidY - designAreaRect.top, // Midpoint relative to design area
+        initialMidX: initialMidX - designAreaRect.left,
+        initialMidY: initialMidY - designAreaRect.top,
         activeElementId: id,
       };
     }
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    e.preventDefault(); // Prevent scrolling while dragging/pinching
+    e.preventDefault();
     const { mode, startX, startY, initialElementX, initialElementY, initialDistance, initialElementWidth, initialElementHeight, initialMidX, initialMidY, activeElementId } = touchState.current;
     if (!activeElementId || !designAreaRef.current) return;
 
@@ -324,11 +319,9 @@ const MobileCoverCustomizationPage = () => {
       const newWidth = Math.max(20, initialElementWidth * scaleFactor);
       const newHeight = Math.max(20, initialElementHeight * scaleFactor);
 
-      // Calculate current midpoint relative to design area
       const currentMidX = (touch1.clientX + touch2.clientX) / 2 - designAreaRect.left;
       const currentMidY = (touch1.clientY + touch2.clientY) / 2 - designAreaRect.top;
 
-      // Adjust position to scale around the initial midpoint
       const newX = currentMidX - (initialMidX - initialElementX) * scaleFactor;
       const newY = currentMidY - (initialMidY - initialElementY) * scaleFactor;
 
@@ -441,7 +434,6 @@ const MobileCoverCustomizationPage = () => {
     }
   }, [selectedElement]);
 
-  // New functions for Preview and Download
   const handlePreviewClick = async () => {
     if (!canvasContentRef.current) {
       toast({ title: "Error", description: "Design area not found for preview.", variant: "destructive" });
@@ -450,16 +442,15 @@ const MobileCoverCustomizationPage = () => {
 
     setLoading(true);
     try {
-      // Temporarily hide borders for capture
       const selectedElementDiv = document.querySelector(`[data-element-id="${selectedElementId}"]`);
       if (selectedElementDiv) {
         selectedElementDiv.classList.remove('border-2', 'border-blue-500');
       }
 
       const canvas = await html2canvas(canvasContentRef.current, {
-        useCORS: true, // Important for images loaded from external URLs (like Supabase storage)
-        allowTaint: true, // Allow tainting canvas for cross-origin images (might not work for all cases)
-        backgroundColor: null, // Make background transparent if needed, or match product background
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: null,
       });
       const dataUrl = canvas.toDataURL('image/png');
       setPreviewImageUrl(dataUrl);
@@ -468,7 +459,6 @@ const MobileCoverCustomizationPage = () => {
       console.error("Error generating preview:", err);
       toast({ title: "Error", description: "Failed to generate preview image.", variant: "destructive" });
     } finally {
-      // Restore borders
       const selectedElementDiv = document.querySelector(`[data-element-id="${selectedElementId}"]`);
       if (selectedElementDiv) {
         selectedElementDiv.classList.add('border-2', 'border-blue-500');
@@ -493,9 +483,8 @@ const MobileCoverCustomizationPage = () => {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
       <header className="flex items-center justify-between py-2 px-4 bg-white dark:bg-gray-800 shadow-md">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}> {/* Changed Link to Button with navigate(-1) */}
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="h-6 w-6" />
         </Button>
         <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
@@ -519,17 +508,16 @@ const MobileCoverCustomizationPage = () => {
 
       {!loading && !error && product && (
         <div className="flex-1 flex flex-col md:flex-row overflow-y-auto pb-24">
-          {/* Left: Design Area */}
           <div
             ref={designAreaRef}
             className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center relative overflow-hidden p-4"
             style={{
-              width: `${product.canvas_width}px`, // This width/height is for the inner canvas, not the container
-              height: `${product.canvas_height}px`, // This width/height is for the inner canvas, not the container
+              width: `${product.canvas_width}px`,
+              height: `${product.canvas_height}px`,
               backgroundSize: 'contain',
               backgroundRepeat: 'no-repeat',
               backgroundPosition: 'center',
-              touchAction: 'none', // Added to prevent browser zoom/scroll
+              touchAction: 'none',
             }}
             onClick={() => {
               if (!designElements.length && fileInputRef.current) {
@@ -537,9 +525,8 @@ const MobileCoverCustomizationPage = () => {
               }
             }}
           >
-            {/* The actual design canvas, centered within its flex container */}
             <div
-              ref={canvasContentRef} {/* Apply the new ref here */}
+              ref={canvasContentRef}
               className="relative bg-white shadow-lg overflow-hidden"
               style={{
                 width: `${product.canvas_width}px`,
@@ -550,11 +537,10 @@ const MobileCoverCustomizationPage = () => {
                 touchAction: 'none',
               }}
             >
-              {/* Design Elements - rendered below mockup */}
               {designElements.map(el => (
                 <div
                   key={el.id}
-                  data-element-id={el.id} // Add data attribute for easy selection
+                  data-element-id={el.id}
                   className={`absolute cursor-grab ${selectedElementId === el.id ? 'border-2 border-blue-500' : ''}`}
                   style={{
                     left: el.x,
@@ -562,8 +548,8 @@ const MobileCoverCustomizationPage = () => {
                     transformOrigin: 'center center',
                     width: el.type === 'image' ? `${el.width}px` : 'auto',
                     height: el.type === 'image' ? `${el.height}px` : 'auto',
-                    zIndex: selectedElementId === el.id ? 11 : 10, // Selected element on top of others
-                    touchAction: 'none', // Added to prevent browser zoom/scroll
+                    zIndex: selectedElementId === el.id ? 11 : 10,
+                    touchAction: 'none',
                   }}
                   onMouseDown={(e) => handleMouseDown(e, el.id)}
                   onTouchStart={(e) => handleTouchStart(e, el.id)}
@@ -591,13 +577,11 @@ const MobileCoverCustomizationPage = () => {
                     <div
                       className="absolute -bottom-2 -right-2 w-4 h-4 bg-blue-500 rounded-full cursor-nwse-resize"
                       onMouseDown={(e) => handleResizeMouseDown(e, el.id)}
-                      // Touch resize is handled by pinch gesture, no separate handle needed
                     />
                   )}
                 </div>
               ))}
 
-              {/* Mockup Image - always on top */}
               {product.mockup_image_url && (
                 <img
                   src={product.mockup_image_url}
@@ -620,7 +604,6 @@ const MobileCoverCustomizationPage = () => {
         </div>
       )}
 
-      {/* Hidden file input */}
       <input
         type="file"
         ref={fileInputRef}
@@ -629,7 +612,6 @@ const MobileCoverCustomizationPage = () => {
         className="hidden"
       />
 
-      {/* Bottom Control Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-lg p-2 flex justify-around items-center border-t border-gray-200 dark:border-gray-700 z-10">
         <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => setIsAddTextModalOpen(true)}>
           <Text className="h-6 w-6" />
@@ -649,7 +631,6 @@ const MobileCoverCustomizationPage = () => {
         </Button>
       </div>
 
-      {/* Add Text Modal */}
       <Dialog open={isAddTextModalOpen} onOpenChange={setIsAddTextModalOpen}>
         <DialogContent>
           <DialogHeader>
@@ -671,7 +652,6 @@ const MobileCoverCustomizationPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Preview Modal */}
       <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
