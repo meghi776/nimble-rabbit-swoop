@@ -13,10 +13,11 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox"; // Import Checkbox component
 import { useToast } from "@/components/ui/use-toast";
 import { Loader2, Eye, Trash2, Image as ImageIcon, ArrowDownWideNarrow, ArrowUpWideNarrow } from 'lucide-react';
 import { format } from 'date-fns';
-import { Link } from 'react-router-dom'; // Import Link for navigation to user-specific orders
+import { Link } from 'react-router-dom';
 
 interface Order {
   id: string;
@@ -28,11 +29,11 @@ interface Order {
   status: string;
   total_price: number;
   ordered_design_image_url: string | null;
-  products: { name: string } | null; // Nested product data
+  products: { name: string } | null;
   profiles: { first_name: string | null; last_name: string | null; } | null;
-  user_id: string; // Add user_id to link to user's orders page
-  user_email?: string | null; // Add user_email from Edge Function
-  type: string; // Add type to Order interface
+  user_id: string;
+  user_email?: string | null;
+  type: string;
 }
 
 const OrderManagementPage = () => {
@@ -46,7 +47,8 @@ const OrderManagementPage = () => {
   const [newStatus, setNewStatus] = useState<string>('');
   const [sortColumn, setSortColumn] = useState<string>('created_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  const [orderTypeFilter, setOrderTypeFilter] = useState<string>('normal'); // Changed default to 'normal'
+  const [orderTypeFilter, setOrderTypeFilter] = useState<string>('normal');
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set()); // State for selected orders
   const { toast } = useToast();
 
   const orderStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
@@ -54,10 +56,11 @@ const OrderManagementPage = () => {
   const fetchOrders = async () => {
     setLoading(true);
     setError(null);
+    setSelectedOrderIds(new Set()); // Clear selections on re-fetch
 
     try {
       const { data, error: invokeError } = await supabase.functions.invoke('get-orders-with-user-email', {
-        body: JSON.stringify({ sortColumn, sortDirection, orderType: orderTypeFilter }), // Pass orderTypeFilter
+        body: JSON.stringify({ sortColumn, sortDirection, orderType: orderTypeFilter }),
         headers: {
           'Content-Type': 'application/json',
         },
@@ -65,7 +68,7 @@ const OrderManagementPage = () => {
 
       if (invokeError) {
         console.error("Edge Function Invoke Error:", invokeError);
-        console.error("Invoke Error Context:", invokeError.context); // Log the full context for debugging
+        console.error("Invoke Error Context:", invokeError.context);
 
         let errorMessage = invokeError.message;
         if (invokeError.context?.data) {
@@ -109,7 +112,7 @@ const OrderManagementPage = () => {
 
   useEffect(() => {
     fetchOrders();
-  }, [sortColumn, sortDirection, orderTypeFilter]); // Re-fetch when sort or filter options change
+  }, [sortColumn, sortDirection, orderTypeFilter]);
 
   const openImageModal = (imageUrl: string | null) => {
     if (imageUrl) {
@@ -146,25 +149,19 @@ const OrderManagementPage = () => {
         description: "Order status updated successfully.",
       });
       setIsEditStatusModalOpen(false);
-      fetchOrders(); // Re-fetch orders to update the list
+      fetchOrders();
     }
     setLoading(false);
   };
 
-  const handleDeleteOrder = async (id: string, imageUrl: string | null) => {
-    if (!window.confirm("Are you sure you want to delete this order? This action cannot be undone.")) {
-      return;
-    }
-
-    setLoading(true);
-
+  const deleteSingleOrder = async (id: string, imageUrl: string | null) => {
     // Delete image from storage if it exists and is a Supabase URL
     if (imageUrl && imageUrl.startsWith('https://smpjbedvyqensurarrym.supabase.co/storage/v1/object/public/order-mockups/')) {
       const fileName = imageUrl.split('/').pop();
       if (fileName) {
         const { error: storageError } = await supabase.storage
           .from('order-mockups')
-          .remove([`orders/${fileName}`]); // Ensure correct path for removal
+          .remove([`orders/${fileName}`]);
         if (storageError) {
           console.error("Error deleting order image from storage:", storageError);
           toast({
@@ -172,8 +169,7 @@ const OrderManagementPage = () => {
             description: `Failed to delete order image: ${storageError.message}`,
             variant: "destructive",
           });
-          setLoading(false);
-          return;
+          return false; // Indicate failure
         }
       }
     }
@@ -190,15 +186,97 @@ const OrderManagementPage = () => {
         description: `Failed to delete order: ${error.message}`,
         variant: "destructive",
       });
-    } else {
+      return false; // Indicate failure
+    }
+    return true; // Indicate success
+  };
+
+  const handleDeleteOrder = async (id: string, imageUrl: string | null) => {
+    if (!window.confirm("Are you sure you want to delete this order? This action cannot be undone.")) {
+      return;
+    }
+    setLoading(true);
+    const success = await deleteSingleOrder(id, imageUrl);
+    if (success) {
       toast({
         title: "Success",
         description: "Order deleted successfully.",
       });
-      fetchOrders(); // Re-fetch orders to update the list
+      fetchOrders();
     }
     setLoading(false);
   };
+
+  const handleSelectOrder = (orderId: string, isChecked: boolean) => {
+    setSelectedOrderIds(prev => {
+      const newSelection = new Set(prev);
+      if (isChecked) {
+        newSelection.add(orderId);
+      } else {
+        newSelection.delete(orderId);
+      }
+      return newSelection;
+    });
+  };
+
+  const handleSelectAllOrders = (isChecked: boolean) => {
+    if (isChecked) {
+      const allOrderIds = new Set(orders.map(order => order.id));
+      setSelectedOrderIds(allOrderIds);
+    } else {
+      setSelectedOrderIds(new Set());
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedOrderIds.size === 0) {
+      toast({
+        title: "No orders selected",
+        description: "Please select at least one order to delete.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to delete ${selectedOrderIds.size} selected orders? This action cannot be undone.`)) {
+      return;
+    }
+
+    setLoading(true);
+    let successfulDeletions = 0;
+    let failedDeletions = 0;
+
+    for (const orderId of selectedOrderIds) {
+      const orderToDelete = orders.find(o => o.id === orderId);
+      if (orderToDelete) {
+        const success = await deleteSingleOrder(orderId, orderToDelete.ordered_design_image_url);
+        if (success) {
+          successfulDeletions++;
+        } else {
+          failedDeletions++;
+        }
+      }
+    }
+
+    if (successfulDeletions > 0) {
+      toast({
+        title: "Deletion Complete",
+        description: `${successfulDeletions} order(s) deleted successfully. ${failedDeletions > 0 ? `${failedDeletions} failed.` : ''}`,
+      });
+    } else {
+      toast({
+        title: "Deletion Failed",
+        description: "No orders were deleted. Please check the console for errors.",
+        variant: "destructive",
+      });
+    }
+
+    fetchOrders(); // Re-fetch orders to update the list and clear selections
+    setLoading(false);
+  };
+
+  const isAllSelected = orders.length > 0 && selectedOrderIds.size === orders.length;
+  const isIndeterminate = selectedOrderIds.size > 0 && selectedOrderIds.size < orders.length;
 
   return (
     <div className="p-4">
@@ -207,7 +285,16 @@ const OrderManagementPage = () => {
       <Card>
         <CardHeader className="flex flex-row justify-between items-center">
           <CardTitle>All Orders</CardTitle>
-          <div className="flex items-center space-x-4"> {/* Adjusted spacing */}
+          <div className="flex items-center space-x-4">
+            {selectedOrderIds.size > 0 && (
+              <Button
+                variant="destructive"
+                onClick={handleBulkDelete}
+                disabled={loading}
+              >
+                <Trash2 className="mr-2 h-4 w-4" /> Delete Selected ({selectedOrderIds.size})
+              </Button>
+            )}
             <div className="flex items-center space-x-2">
               <Label htmlFor="order-type-filter">Type:</Label>
               <Select value={orderTypeFilter} onValueChange={(value) => setOrderTypeFilter(value)}>
@@ -234,7 +321,7 @@ const OrderManagementPage = () => {
                   <SelectItem value="user_email">User Email</SelectItem>
                   <SelectItem value="total_price">Total Price</SelectItem>
                   <SelectItem value="status">Status</SelectItem>
-                  <SelectItem value="type">Type</SelectItem> {/* New sort option */}
+                  <SelectItem value="type">Type</SelectItem>
                 </SelectContent>
               </Select>
               <Button
@@ -271,13 +358,21 @@ const OrderManagementPage = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-[30px]">
+                          <Checkbox
+                            checked={isAllSelected}
+                            indeterminate={isIndeterminate}
+                            onCheckedChange={handleSelectAllOrders}
+                            aria-label="Select all"
+                          />
+                        </TableHead>
                         <TableHead>Order ID</TableHead>
                         <TableHead>Date</TableHead>
                         <TableHead>Customer Name</TableHead>
                         <TableHead>User Email</TableHead>
                         <TableHead>Product</TableHead>
                         <TableHead>Design</TableHead>
-                        <TableHead>Type</TableHead> {/* New TableHead for Type */}
+                        <TableHead>Type</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Total</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
@@ -286,6 +381,13 @@ const OrderManagementPage = () => {
                     <TableBody>
                       {orders.map((order) => (
                         <TableRow key={order.id}>
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedOrderIds.has(order.id)}
+                              onCheckedChange={(checked) => handleSelectOrder(order.id, checked as boolean)}
+                              aria-label={`Select order ${order.id}`}
+                            />
+                          </TableCell>
                           <TableCell className="font-medium text-xs">{order.id.substring(0, 8)}...</TableCell>
                           <TableCell>{format(new Date(order.created_at), 'PPP')}</TableCell>
                           <TableCell>
@@ -304,7 +406,7 @@ const OrderManagementPage = () => {
                               'N/A'
                             )}
                           </TableCell>
-                          <TableCell>{order.type}</TableCell> {/* Display order type */}
+                          <TableCell>{order.type}</TableCell>
                           <TableCell>{order.status}</TableCell>
                           <TableCell className="text-right">${order.total_price?.toFixed(2)}</TableCell>
                           <TableCell className="text-right">
