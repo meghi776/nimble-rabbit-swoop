@@ -27,7 +27,7 @@ import {
   LayoutTemplate, // For Readymade
   Sticker, // For Add Sticker
 } from 'lucide-react';
-import ImageGallerySelector from '@/components/ImageGallerySelector'; // Import the new component
+// ImageGallerySelector is no longer needed
 
 interface Product {
   id: string;
@@ -65,10 +65,10 @@ const MobileCoverCustomizationPage = () => {
   const [rotation, setRotation] = useState<number[]>([0]);
   const [scale, setScale] = useState<number[]>([1]);
   const designAreaRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null); // Ref for hidden file input
   const { toast } = useToast();
 
   // Modals state
-  const [isImageSelectionModalOpen, setIsImageSelectionModalOpen] = useState(false); // Renamed for clarity
   const [isAddTextModalOpen, setIsAddTextModalOpen] = useState(false);
 
   useEffect(() => {
@@ -138,7 +138,38 @@ const MobileCoverCustomizationPage = () => {
     setIsAddTextModalOpen(false); // Close modal after adding
   };
 
-  const handleImageSelected = (imageUrl: string) => {
+  const handleImageFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    setLoading(true);
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('stock-images') // Using 'stock-images' bucket for user uploads
+      .upload(filePath, file);
+
+    if (uploadError) {
+      console.error("Error uploading image:", uploadError);
+      toast({
+        title: "Error",
+        description: `Failed to upload image: ${uploadError.message}`,
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from('stock-images')
+      .getPublicUrl(filePath);
+
+    const imageUrl = publicUrlData.publicUrl;
+
     const newElement: DesignElement = {
       id: `image-${Date.now()}`,
       type: 'image',
@@ -152,7 +183,12 @@ const MobileCoverCustomizationPage = () => {
     };
     setDesignElements([...designElements, newElement]);
     setSelectedElementId(newElement.id);
-    setIsImageSelectionModalOpen(false); // Close modal after adding
+    toast({ title: "Success", description: "Image added to design." });
+    setLoading(false);
+    // Clear the file input value so the same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const updateElement = (id: string, updates: Partial<DesignElement>) => {
@@ -380,7 +416,7 @@ const MobileCoverCustomizationPage = () => {
               {!designElements.length && (
                 <div
                   className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 cursor-pointer border-2 border-dashed border-gray-400 rounded-lg m-4"
-                  onClick={() => setIsImageSelectionModalOpen(true)}
+                  onClick={() => fileInputRef.current?.click()} // Trigger hidden file input
                 >
                   <PlusCircle className="h-12 w-12 mb-2" />
                   <p className="text-lg font-medium">Add Your Image</p>
@@ -469,9 +505,18 @@ const MobileCoverCustomizationPage = () => {
         </div>
       )}
 
+      {/* Hidden file input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleImageFileSelect}
+        accept="image/*"
+        className="hidden"
+      />
+
       {/* Bottom Control Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-lg p-2 flex justify-around items-center border-t border-gray-200 dark:border-gray-700 z-10">
-        <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => setIsImageSelectionModalOpen(true)}>
+        <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => fileInputRef.current?.click()}>
           <ImageIcon className="h-6 w-6" />
           <span className="text-xs mt-1">Your Photo</span>
         </Button>
@@ -493,16 +538,7 @@ const MobileCoverCustomizationPage = () => {
         </Button>
       </div>
 
-      {/* Image Selection Modal (now uses ImageGallerySelector) */}
-      <Dialog open={isImageSelectionModalOpen} onOpenChange={setIsImageSelectionModalOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Select or Upload Image</DialogTitle>
-          </DialogHeader>
-          <ImageGallerySelector onImageSelect={handleImageSelected} onClose={() => setIsImageSelectionModalOpen(false)} />
-        </DialogContent>
-      </Dialog>
-
+      {/* Image Selection Modal (now uses ImageGallerySelector) - REMOVED */}
       {/* Add Text Modal */}
       <Dialog open={isAddTextModalOpen} onOpenChange={setIsAddTextModalOpen}>
         <DialogContent>
