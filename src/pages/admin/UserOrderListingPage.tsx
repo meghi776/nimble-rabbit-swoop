@@ -67,14 +67,17 @@ const OrderManagementPage = () => {
     setError(null);
     setSelectedOrderIds(new Set());
 
+    const payload = {
+      sortColumn,
+      sortDirection,
+      orderType: orderTypeFilter,
+      userId: selectedUserIdFilter === 'all' ? null : selectedUserIdFilter, // Pass selected user ID
+    };
+    console.log("UserOrderListingPage: Sending payload to Edge Function:", payload);
+
     try {
       const { data, error: invokeError } = await supabase.functions.invoke('get-orders-with-user-email', {
-        body: JSON.stringify({ 
-          sortColumn, 
-          sortDirection, 
-          orderType: orderTypeFilter,
-          userId: selectedUserIdFilter === 'all' ? null : selectedUserIdFilter, // Pass selected user ID
-        }),
+        body: JSON.stringify(payload),
         headers: {
           'Content-Type': 'application/json',
         },

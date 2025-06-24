@@ -17,10 +17,9 @@ serve(async (req) => {
   let orderType: string | null = null;
   let userIdFilter: string | null = null; // New: userId filter
 
+  let requestBody: any = {};
   try {
     const contentType = req.headers.get('content-type');
-    let requestBody: any = {};
-
     if (contentType && contentType.includes('application/json')) {
       const bodyText = await req.text();
       if (bodyText) {
@@ -29,23 +28,24 @@ serve(async (req) => {
           sortColumn = requestBody.sortColumn || sortColumn;
           sortDirection = requestBody.sortDirection || sortDirection;
           orderType = requestBody.orderType || null;
-          userIdFilter = requestBody.userId || null; // New: parse userId
+          userIdFilter = requestBody.userId || null;
         } catch (jsonParseError) {
-          console.error("Error parsing JSON body:", jsonParseError);
+          console.error("Edge Function: Error parsing JSON body:", jsonParseError);
         }
       } else {
-        console.log("Received application/json with empty body.");
+        console.log("Edge Function: Received application/json with empty body.");
       }
     }
-    console.log(`Edge Function received request: sortColumn=${sortColumn}, sortDirection=${sortDirection}, orderType=${orderType}, userIdFilter=${userIdFilter}`);
-
   } catch (error) {
-    console.error("Unexpected error in Edge Function (outer catch):", error);
+    console.error("Edge Function: Unexpected error in request body parsing:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     });
   }
+
+  console.log(`Edge Function: Received request body: ${JSON.stringify(requestBody)}`);
+  console.log(`Edge Function: Parsed filters - sortColumn=${sortColumn}, sortDirection=${sortDirection}, orderType=${orderType}, userIdFilter=${userIdFilter}`);
 
   try {
     const supabaseAdmin = createClient(
@@ -55,7 +55,7 @@ serve(async (req) => {
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      console.error("Authorization header missing.");
+      console.error("Edge Function: Authorization header missing.");
       return new Response(JSON.stringify({ error: 'Authorization header missing.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 401,
@@ -66,13 +66,13 @@ serve(async (req) => {
     const { data: { user: invokerUser }, error: authError } = await supabaseAdmin.auth.getUser(token);
 
     if (authError || !invokerUser) {
-      console.error("Auth error during token verification:", authError?.message || "User not found.");
+      console.error("Edge Function: Auth error during token verification:", authError?.message || "User not found.");
       return new Response(JSON.stringify({ error: 'Unauthorized: Invalid token or user not found.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 401,
       });
     }
-    console.log(`Invoker user ID: ${invokerUser.id}, Email: ${invokerUser.email}`);
+    console.log(`Edge Function: Invoker user ID: ${invokerUser.id}, Email: ${invokerUser.email}`);
 
     const { data: invokerProfile, error: profileError } = await supabaseAdmin
       .from('profiles')
@@ -81,7 +81,7 @@ serve(async (req) => {
       .single();
 
     if (profileError) {
-      console.error("Error fetching invoker profile:", profileError);
+      console.error("Edge Function: Error fetching invoker profile:", profileError);
       return new Response(JSON.stringify({ error: `Forbidden: Error fetching user role: ${profileError.message}` }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 403,
@@ -89,13 +89,13 @@ serve(async (req) => {
     }
 
     if (invokerProfile?.role !== 'admin') {
-      console.error(`Forbidden: User ${invokerUser.id} (role: ${invokerProfile?.role}) is not an admin.`);
+      console.error(`Edge Function: Forbidden: User ${invokerUser.id} (role: ${invokerProfile?.role}) is not an admin.`);
       return new Response(JSON.stringify({ error: 'Forbidden: Only administrators can view all orders.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 403,
       });
     }
-    console.log(`Invoker user ${invokerUser.id} is an admin.`);
+    console.log(`Edge Function: Invoker user ${invokerUser.id} is an admin.`);
 
     let query = supabaseAdmin
       .from('orders')
@@ -117,29 +117,28 @@ serve(async (req) => {
 
     if (orderType && orderType !== 'all') {
       query = query.eq('type', orderType);
-      console.log(`Filtering orders by type: ${orderType}`);
+      console.log(`Edge Function: Applying type filter: ${orderType}`);
     }
 
     if (userIdFilter) { // New: Apply user ID filter
       query = query.eq('user_id', userIdFilter);
-      console.log(`Filtering orders by user_id: ${userIdFilter}`);
-    }
-
-    // Apply sorting directly from the database for all columns except user_email
-    if (sortColumn !== 'user_email') {
-      query = query.order(sortColumn, { ascending: sortDirection === 'asc' });
+      console.log(`Edge Function: Applying user_id filter: ${userIdFilter}`);
+    } else {
+      console.log("Edge Function: No user_id filter applied (userIdFilter was null).");
     }
 
     const { data: ordersData, error: ordersError } = await query;
+    console.log("Edge Function: Orders data fetched:", ordersData);
+    console.log("Edge Function: Orders error:", ordersError);
 
     if (ordersError) {
-      console.error("Error fetching orders from DB:", ordersError);
+      console.error("Edge Function: Error fetching orders from DB:", ordersError);
       return new Response(JSON.stringify({ error: ordersError.message }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
       });
     }
-    console.log(`Fetched ${ordersData.length} orders.`);
+    console.log(`Edge Function: Fetched ${ordersData.length} orders.`);
 
     // Manually fetch emails for each user_id from auth.users
     // Fetch all users to populate the dropdown on the frontend
@@ -149,27 +148,19 @@ serve(async (req) => {
     });
 
     if (usersError) {
-      console.error("Error listing users from Auth:", usersError);
+      console.error("Edge Function: Error listing users from Auth:", usersError);
       return new Response(JSON.stringify({ error: usersError.message }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
       });
     }
-    console.log(`Fetched ${usersData.users.length} users from Auth.`);
+    console.log(`Edge Function: Fetched ${usersData.users.length} users from Auth.`);
 
     const userEmailMap = new Map(usersData.users.map(user => [user.id, user.email]));
 
     let ordersWithEmails = ordersData.map(order => ({
       ...order,
       user_email: userEmailMap.get(order.user_id) || null,
-    }));
-
-    // Prepare user list for frontend dropdown
-    const userListForFrontend = usersData.users.map(user => ({
-      id: user.id,
-      email: user.email,
-      first_name: user.user_metadata?.first_name || null,
-      last_name: user.user_metadata?.last_name || null,
     }));
 
     // Apply client-side sorting for user_email if requested
@@ -183,7 +174,7 @@ serve(async (req) => {
           return emailB.localeCompare(emailA);
         }
       });
-      console.log(`Orders sorted by user_email in ${sortDirection} direction (client-side).`);
+      console.log(`Edge Function: Orders sorted by user_email in ${sortDirection} direction (client-side).`);
     }
 
     return new Response(JSON.stringify({ orders: ordersWithEmails, users: userListForFrontend }), {
@@ -191,7 +182,7 @@ serve(async (req) => {
       status: 200,
     });
   } catch (error) {
-    console.error("Unexpected error in Edge Function:", error);
+    console.error("Edge Function: Unexpected error in main logic:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
