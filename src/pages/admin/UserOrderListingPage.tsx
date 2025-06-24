@@ -14,8 +14,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { Loader2, Eye, Trash2, Image as ImageIcon } from 'lucide-react';
+import { Loader2, Eye, Trash2, Image as ImageIcon, ArrowDownWideNarrow, ArrowUpWideNarrow } from 'lucide-react';
 import { format } from 'date-fns';
+import { Link } from 'react-router-dom'; // Import Link for navigation to user-specific orders
 
 interface Order {
   id: string;
@@ -28,7 +29,9 @@ interface Order {
   total_price: number;
   ordered_design_image_url: string | null;
   products: { name: string } | null; // Nested product data
-  profiles: { first_name: string | null; last_name: string | null; } | null; // Changed from users to profiles
+  profiles: { first_name: string | null; last_name: string | null; } | null;
+  user_id: string; // Add user_id to link to user's orders page
+  user_email?: string | null; // Add user_email from Edge Function
 }
 
 const OrderManagementPage = () => {
@@ -40,6 +43,8 @@ const OrderManagementPage = () => {
   const [isEditStatusModalOpen, setIsEditStatusModalOpen] = useState(false);
   const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
   const [newStatus, setNewStatus] = useState<string>('');
+  const [sortColumn, setSortColumn] = useState<string>('created_at');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const { toast } = useToast();
 
   const orderStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
@@ -47,40 +52,60 @@ const OrderManagementPage = () => {
   const fetchOrders = async () => {
     setLoading(true);
     setError(null);
-    const { data, error } = await supabase
-      .from('orders')
-      .select(`
-        id,
-        created_at,
-        customer_name,
-        customer_address,
-        customer_phone,
-        payment_method,
-        status,
-        total_price,
-        ordered_design_image_url,
-        products (name),
-        profiles (first_name, last_name)
-      `)
-      .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error("Error fetching orders:", error);
-      setError(error.message);
+    try {
+      const { data, error: invokeError } = await supabase.functions.invoke('get-orders-with-user-email', {
+        body: JSON.stringify({ sortColumn, sortDirection }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (invokeError) {
+        console.error("Edge Function Invoke Error:", invokeError);
+        let errorMessage = invokeError.message;
+        if (invokeError.context?.data) {
+          try {
+            const parsedError = JSON.parse(invokeError.context.data);
+            if (parsedError.error) {
+              errorMessage = parsedError.error;
+            }
+          } catch (e) {
+            // Fallback if context.data is not JSON
+          }
+        }
+        setError(errorMessage);
+        toast({
+          title: "Error",
+          description: `Failed to load orders: ${errorMessage}`,
+          variant: "destructive",
+        });
+      } else if (data && data.orders) {
+        setOrders(data.orders || []);
+      } else {
+        setError("Unexpected response from server.");
+        toast({
+          title: "Error",
+          description: "Unexpected response from server while fetching orders.",
+          variant: "destructive",
+        });
+      }
+    } catch (err: any) {
+      console.error("Network or unexpected error:", err);
+      setError(err.message || "An unexpected error occurred.");
       toast({
         title: "Error",
-        description: `Failed to load orders: ${error.message}`,
+        description: `An unexpected error occurred: ${err.message}`,
         variant: "destructive",
       });
-    } else {
-      setOrders(data || []);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [sortColumn, sortDirection]); // Re-fetch when sort options change
 
   const openImageModal = (imageUrl: string | null) => {
     if (imageUrl) {
@@ -176,8 +201,35 @@ const OrderManagementPage = () => {
       <h1 className="text-3xl font-bold mb-6 text-gray-800 dark:text-gray-100">Order Management</h1>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row justify-between items-center">
           <CardTitle>All Orders</CardTitle>
+          <div className="flex items-center space-x-2">
+            <Label htmlFor="sort-by">Sort by:</Label>
+            <Select value={sortColumn} onValueChange={(value) => setSortColumn(value)}>
+              <SelectTrigger id="sort-by" className="w-[180px]">
+                <SelectValue placeholder="Select column" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="created_at">Order Date</SelectItem>
+                <SelectItem value="customer_name">Customer Name</SelectItem>
+                <SelectItem value="customer_phone">Phone Number</SelectItem>
+                <SelectItem value="user_email">User Email</SelectItem> {/* New sort option */}
+                <SelectItem value="total_price">Total Price</SelectItem>
+                <SelectItem value="status">Status</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
+            >
+              {sortDirection === 'asc' ? (
+                <ArrowUpWideNarrow className="h-4 w-4" />
+              ) : (
+                <ArrowDownWideNarrow className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {loading && (
@@ -201,7 +253,8 @@ const OrderManagementPage = () => {
                       <TableRow>
                         <TableHead>Order ID</TableHead>
                         <TableHead>Date</TableHead>
-                        <TableHead>Customer Name</TableHead> {/* Changed from Email to Customer Name */}
+                        <TableHead>Customer Name</TableHead>
+                        <TableHead>User Email</TableHead> {/* New column */}
                         <TableHead>Product</TableHead>
                         <TableHead>Design</TableHead>
                         <TableHead>Status</TableHead>
@@ -215,8 +268,11 @@ const OrderManagementPage = () => {
                           <TableCell className="font-medium text-xs">{order.id.substring(0, 8)}...</TableCell>
                           <TableCell>{format(new Date(order.created_at), 'PPP')}</TableCell>
                           <TableCell>
-                            {order.profiles?.first_name || 'N/A'} {order.profiles?.last_name || ''}
+                            <Link to={`/admin/orders/${order.user_id}`} className="text-blue-600 hover:underline">
+                              {order.profiles?.first_name || 'N/A'} {order.profiles?.last_name || ''}
+                            </Link>
                           </TableCell>
+                          <TableCell>{order.user_email || 'N/A'}</TableCell> {/* Display user email */}
                           <TableCell>{order.products?.name || 'N/A'}</TableCell>
                           <TableCell>
                             {order.ordered_design_image_url ? (
