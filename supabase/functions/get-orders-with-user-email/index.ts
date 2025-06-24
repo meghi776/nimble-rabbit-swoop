@@ -15,6 +15,7 @@ serve(async (req) => {
   let sortColumn = 'created_at';
   let sortDirection = 'desc';
   let orderType: string | null = null;
+  let userIdFilter: string | null = null; // New: userId filter
 
   try {
     const contentType = req.headers.get('content-type');
@@ -28,6 +29,7 @@ serve(async (req) => {
           sortColumn = requestBody.sortColumn || sortColumn;
           sortDirection = requestBody.sortDirection || sortDirection;
           orderType = requestBody.orderType || null;
+          userIdFilter = requestBody.userId || null; // New: parse userId
         } catch (jsonParseError) {
           console.error("Error parsing JSON body:", jsonParseError);
         }
@@ -35,7 +37,7 @@ serve(async (req) => {
         console.log("Received application/json with empty body.");
       }
     }
-    console.log(`Edge Function received request: sortColumn=${sortColumn}, sortDirection=${sortDirection}, orderType=${orderType}`);
+    console.log(`Edge Function received request: sortColumn=${sortColumn}, sortDirection=${sortDirection}, orderType=${orderType}, userIdFilter=${userIdFilter}`);
 
   } catch (error) {
     console.error("Unexpected error in Edge Function (outer catch):", error);
@@ -118,6 +120,11 @@ serve(async (req) => {
       console.log(`Filtering orders by type: ${orderType}`);
     }
 
+    if (userIdFilter) { // New: Apply user ID filter
+      query = query.eq('user_id', userIdFilter);
+      console.log(`Filtering orders by user_id: ${userIdFilter}`);
+    }
+
     // Apply sorting directly from the database for all columns except user_email
     if (sortColumn !== 'user_email') {
       query = query.order(sortColumn, { ascending: sortDirection === 'asc' });
@@ -135,10 +142,10 @@ serve(async (req) => {
     console.log(`Fetched ${ordersData.length} orders.`);
 
     // Manually fetch emails for each user_id from auth.users
-    const userIds = [...new Set(ordersData.map(order => order.user_id))];
+    // Fetch all users to populate the dropdown on the frontend
     const { data: usersData, error: usersError } = await supabaseAdmin.auth.admin.listUsers({
       page: 1,
-      perPage: 1000,
+      perPage: 1000, // Adjust as needed for very large user bases
     });
 
     if (usersError) {
@@ -157,6 +164,14 @@ serve(async (req) => {
       user_email: userEmailMap.get(order.user_id) || null,
     }));
 
+    // Prepare user list for frontend dropdown
+    const userListForFrontend = usersData.users.map(user => ({
+      id: user.id,
+      email: user.email,
+      first_name: user.user_metadata?.first_name || null,
+      last_name: user.user_metadata?.last_name || null,
+    }));
+
     // Apply client-side sorting for user_email if requested
     if (sortColumn === 'user_email') {
       ordersWithEmails.sort((a, b) => {
@@ -171,7 +186,7 @@ serve(async (req) => {
       console.log(`Orders sorted by user_email in ${sortDirection} direction (client-side).`);
     }
 
-    return new Response(JSON.stringify({ orders: ordersWithEmails }), {
+    return new Response(JSON.stringify({ orders: ordersWithEmails, users: userListForFrontend }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });

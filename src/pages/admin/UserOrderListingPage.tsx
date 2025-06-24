@@ -36,6 +36,13 @@ interface Order {
   type: string;
 }
 
+interface UserListItem {
+  id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+}
+
 const OrderManagementPage = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,6 +55,8 @@ const OrderManagementPage = () => {
   const [sortColumn, setSortColumn] = useState<string>('created_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [orderTypeFilter, setOrderTypeFilter] = useState<string>('normal');
+  const [selectedUserIdFilter, setSelectedUserIdFilter] = useState<string>('all'); // New state for user filter
+  const [userList, setUserList] = useState<UserListItem[]>([]); // New state for user list
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
@@ -60,7 +69,12 @@ const OrderManagementPage = () => {
 
     try {
       const { data, error: invokeError } = await supabase.functions.invoke('get-orders-with-user-email', {
-        body: JSON.stringify({ sortColumn, sortDirection, orderType: orderTypeFilter }),
+        body: JSON.stringify({ 
+          sortColumn, 
+          sortDirection, 
+          orderType: orderTypeFilter,
+          userId: selectedUserIdFilter === 'all' ? null : selectedUserIdFilter, // Pass selected user ID
+        }),
         headers: {
           'Content-Type': 'application/json',
         },
@@ -89,6 +103,7 @@ const OrderManagementPage = () => {
         });
       } else if (data && data.orders) {
         setOrders(data.orders || []);
+        setUserList(data.users || []); // Set the user list for the dropdown
       } else {
         setError("Unexpected response from server.");
         toast({
@@ -112,7 +127,7 @@ const OrderManagementPage = () => {
 
   useEffect(() => {
     fetchOrders();
-  }, [sortColumn, sortDirection, orderTypeFilter]);
+  }, [sortColumn, sortDirection, orderTypeFilter, selectedUserIdFilter]); // Re-fetch when user filter changes
 
   const openImageModal = (imageUrl: string | null) => {
     if (imageUrl) {
@@ -320,6 +335,22 @@ const OrderManagementPage = () => {
                   <SelectItem value="all">All Orders</SelectItem>
                   <SelectItem value="normal">Normal Orders</SelectItem>
                   <SelectItem value="demo">Demo Orders</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Label htmlFor="user-email-filter">User:</Label>
+              <Select value={selectedUserIdFilter} onValueChange={(value) => setSelectedUserIdFilter(value)}>
+                <SelectTrigger id="user-email-filter" className="w-[200px]">
+                  <SelectValue placeholder="Filter by user" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Users</SelectItem>
+                  {userList.map(user => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.email}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
