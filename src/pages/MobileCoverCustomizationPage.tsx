@@ -358,7 +358,7 @@ const MobileCoverCustomizationPage = () => {
               style={{
                 width: `${product.canvas_width}px`,
                 height: `${product.canvas_height}px`,
-                backgroundImage: product.mockup_image_url ? `url(${product.mockup_image_url})` : 'none',
+                // Removed background image from here
                 backgroundSize: 'contain',
                 backgroundRepeat: 'no-repeat',
                 backgroundPosition: 'center',
@@ -369,6 +369,7 @@ const MobileCoverCustomizationPage = () => {
                 }
               }}
             >
+              {/* Design Elements - rendered below mockup */}
               {designElements.map(el => (
                 <div
                   key={el.id}
@@ -376,10 +377,10 @@ const MobileCoverCustomizationPage = () => {
                   style={{
                     left: el.x,
                     top: el.y,
-                    // Removed transform: `rotate(${el.rotation || 0}deg) scale(${el.scale || 1})`,
                     transformOrigin: 'center center',
                     width: el.type === 'image' ? `${el.width}px` : 'auto',
                     height: el.type === 'image' ? `${el.height}px` : 'auto',
+                    zIndex: 10, // Lower z-index than mockup
                   }}
                   onMouseDown={(e) => {
                     setSelectedElementId(el.id);
@@ -401,7 +402,6 @@ const MobileCoverCustomizationPage = () => {
                       src={el.value}
                       alt="design element"
                       className="w-full h-full object-contain"
-                      // Removed onLoad handler
                     />
                   )}
                   {selectedElementId === el.id && el.type === 'image' && (
@@ -415,6 +415,16 @@ const MobileCoverCustomizationPage = () => {
                   )}
                 </div>
               ))}
+
+              {/* Mockup Image - always on top */}
+              {product.mockup_image_url && (
+                <img
+                  src={product.mockup_image_url}
+                  alt="Mockup"
+                  className="absolute inset-0 w-full h-full object-contain z-20 pointer-events-none" // z-index higher than elements, pointer-events-none to allow clicking through
+                />
+              )}
+
               {!designElements.length && (
                 <div
                   className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 cursor-pointer border-2 border-dashed border-gray-400 rounded-lg m-4"
