@@ -46,8 +46,8 @@ interface DesignElement {
   height?: number;
   fontSize?: number;
   color?: string;
-  rotation?: number;
-  scale?: number;
+  // Removed rotation?: number;
+  // Removed scale?: number;
 }
 
 const MobileCoverCustomizationPage = () => {
@@ -60,8 +60,7 @@ const MobileCoverCustomizationPage = () => {
   const [newText, setNewText] = useState('');
   const [fontSize, setFontSize] = useState<number[]>([24]);
   const [textColor, setTextColor] = useState('#000000');
-  const [rotation, setRotation] = useState<number[]>([0]);
-  const [scale, setScale] = useState<number[]>([1]);
+  // Removed rotation and scale states
   const designAreaRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null); // Ref for hidden file input
   const { toast } = useToast();
@@ -132,8 +131,7 @@ const MobileCoverCustomizationPage = () => {
       y: 50,
       fontSize: fontSize[0],
       color: textColor,
-      rotation: rotation[0],
-      scale: scale[0],
+      // Removed rotation and scale
     };
     setDesignElements([...designElements, newElement]);
     setNewText('');
@@ -150,8 +148,7 @@ const MobileCoverCustomizationPage = () => {
       y: 50,
       width: 150, // Default width
       height: 150, // Default height
-      rotation: 0,
-      scale: 1,
+      // Removed rotation and scale
     };
     setDesignElements([...designElements, newElement]);
     setSelectedElementId(newElement.id);
@@ -317,8 +314,7 @@ const MobileCoverCustomizationPage = () => {
         setFontSize([selectedElement.fontSize || 24]);
         setTextColor(selectedElement.color || '#000000');
       }
-      setRotation([selectedElement.rotation || 0]);
-      setScale([selectedElement.scale || 1]);
+      // Removed setting rotation and scale from here
     }
   }, [selectedElement]);
 
@@ -376,7 +372,7 @@ const MobileCoverCustomizationPage = () => {
                   style={{
                     left: el.x,
                     top: el.y,
-                    transform: `rotate(${el.rotation || 0}deg) scale(${el.scale || 1})`,
+                    // Removed transform: `rotate(${el.rotation || 0}deg) scale(${el.scale || 1})`,
                     transformOrigin: 'center center',
                     width: el.type === 'image' ? `${el.width}px` : 'auto',
                     height: el.type === 'image' ? `${el.height}px` : 'auto',
@@ -470,34 +466,7 @@ const MobileCoverCustomizationPage = () => {
                       </div>
                     </>
                   )}
-                  <div>
-                    <Label htmlFor="rotation">Rotation: {rotation[0]}°</Label>
-                    <Slider
-                      id="rotation"
-                      min={0}
-                      max={360}
-                      step={1}
-                      value={rotation}
-                      onValueChange={(val) => {
-                        setRotation(val);
-                        updateElement(selectedElement.id, { rotation: val[0] });
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="scale">Scale: {scale[0].toFixed(2)}x</Label>
-                    <Slider
-                      id="scale"
-                      min={0.1}
-                      max={3}
-                      step={0.1}
-                      value={scale}
-                      onValueChange={(val) => {
-                        setScale(val);
-                        updateElement(selectedElement.id, { scale: val[0] });
-                      }}
-                    />
-                  </div>
+                  {/* Removed Rotation and Scale Sliders */}
                   <Button
                     variant="destructive"
                     onClick={() => deleteElement(selectedElement.id)}
