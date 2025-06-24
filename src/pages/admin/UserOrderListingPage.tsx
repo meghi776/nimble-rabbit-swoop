@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/components/ui/use-toast";
 import { Loader2, Eye, Trash2, Image as ImageIcon, ArrowDownWideNarrow, ArrowUpWideNarrow } from 'lucide-react';
 import { format } from 'date-fns';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router-dom'; // Import Link for navigation to user-specific orders
 
 interface Order {
   id: string;
@@ -30,9 +30,9 @@ interface Order {
   ordered_design_image_url: string | null;
   products: { name: string } | null; // Nested product data
   profiles: { first_name: string | null; last_name: string | null; } | null;
-  user_id: string;
-  user_email?: string | null;
-  type: string;
+  user_id: string; // Add user_id to link to user's orders page
+  user_email?: string | null; // Add user_email from Edge Function
+  type: string; // Add type to Order interface
 }
 
 const OrderManagementPage = () => {
@@ -46,7 +46,7 @@ const OrderManagementPage = () => {
   const [newStatus, setNewStatus] = useState<string>('');
   const [sortColumn, setSortColumn] = useState<string>('created_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  // Removed orderTypeFilter state
+  const [orderTypeFilter, setOrderTypeFilter] = useState<string>('all'); // New state for order type filter
   const { toast } = useToast();
 
   const orderStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
@@ -57,7 +57,7 @@ const OrderManagementPage = () => {
 
     try {
       const { data, error: invokeError } = await supabase.functions.invoke('get-orders-with-user-email', {
-        body: JSON.stringify({ sortColumn, sortDirection }), // Removed orderType
+        body: JSON.stringify({ sortColumn, sortDirection, orderType: orderTypeFilter }), // Pass orderTypeFilter
         headers: {
           'Content-Type': 'application/json',
         },
@@ -107,7 +107,7 @@ const OrderManagementPage = () => {
 
   useEffect(() => {
     fetchOrders();
-  }, [sortColumn, sortDirection]); // Removed orderTypeFilter from dependency array
+  }, [sortColumn, sortDirection, orderTypeFilter]); // Re-fetch when sort or filter options change
 
   const openImageModal = (imageUrl: string | null) => {
     if (imageUrl) {
@@ -205,8 +205,20 @@ const OrderManagementPage = () => {
       <Card>
         <CardHeader className="flex flex-row justify-between items-center">
           <CardTitle>All Orders</CardTitle>
-          <div className="flex items-center space-x-4">
-            {/* Removed order type filter */}
+          <div className="flex items-center space-x-4"> {/* Adjusted spacing */}
+            <div className="flex items-center space-x-2">
+              <Label htmlFor="order-type-filter">Type:</Label>
+              <Select value={orderTypeFilter} onValueChange={(value) => setOrderTypeFilter(value)}>
+                <SelectTrigger id="order-type-filter" className="w-[150px]">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Orders</SelectItem>
+                  <SelectItem value="normal">Normal Orders</SelectItem>
+                  <SelectItem value="demo">Demo Orders</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="flex items-center space-x-2">
               <Label htmlFor="sort-by">Sort by:</Label>
               <Select value={sortColumn} onValueChange={(value) => setSortColumn(value)}>
@@ -220,7 +232,7 @@ const OrderManagementPage = () => {
                   <SelectItem value="user_email">User Email</SelectItem>
                   <SelectItem value="total_price">Total Price</SelectItem>
                   <SelectItem value="status">Status</SelectItem>
-                  {/* Removed 'type' sort option */}
+                  <SelectItem value="type">Type</SelectItem> {/* New sort option */}
                 </SelectContent>
               </Select>
               <Button
@@ -263,7 +275,7 @@ const OrderManagementPage = () => {
                         <TableHead>User Email</TableHead>
                         <TableHead>Product</TableHead>
                         <TableHead>Design</TableHead>
-                        {/* Removed TableHead for Type */}
+                        <TableHead>Type</TableHead> {/* New TableHead for Type */}
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Total</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
@@ -290,7 +302,7 @@ const OrderManagementPage = () => {
                               'N/A'
                             )}
                           </TableCell>
-                          {/* Removed Display order type */}
+                          <TableCell>{order.type}</TableCell> {/* Display order type */}
                           <TableCell>{order.status}</TableCell>
                           <TableCell className="text-right">${order.total_price?.toFixed(2)}</TableCell>
                           <TableCell className="text-right">
