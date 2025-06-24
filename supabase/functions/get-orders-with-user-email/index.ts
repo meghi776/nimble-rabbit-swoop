@@ -12,10 +12,26 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let sortColumn = 'created_at';
+  let sortDirection = 'desc';
+
   try {
-    const { sortColumn = 'created_at', sortDirection = 'desc' } = await req.json();
+    // Check if the request has a body and if it's JSON
+    const contentType = req.headers.get('content-type');
+    if (contentType && contentType.includes('application/json') && req.body) {
+      const requestBody = await req.json();
+      sortColumn = requestBody.sortColumn || sortColumn;
+      sortDirection = requestBody.sortDirection || sortDirection;
+    }
     console.log(`Edge Function received request: sortColumn=${sortColumn}, sortDirection=${sortDirection}`);
 
+  } catch (error) {
+    console.error("Error processing request body (using defaults):", error);
+    // If JSON parsing fails, proceed with default sort parameters
+    // The outer try-catch will handle other errors.
+  }
+
+  try {
     // Create a Supabase client with the service role key
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
