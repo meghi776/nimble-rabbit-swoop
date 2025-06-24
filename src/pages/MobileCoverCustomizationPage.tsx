@@ -20,14 +20,12 @@ import {
   PlusCircle,
   Trash2,
   Text,
-  Image as ImageIcon,
-  ArrowLeft,
-  Check,
   Palette, // For Back Color
   LayoutTemplate, // For Readymade
   Sticker, // For Add Sticker
+  ArrowLeft,
+  Check,
 } from 'lucide-react';
-// ImageGallerySelector is no longer needed
 
 interface Product {
   id: string;
@@ -41,7 +39,7 @@ interface Product {
 interface DesignElement {
   id: string;
   type: 'text' | 'image';
-  value: string; // text content or image URL (can be local object URL or remote URL)
+  value: string; // text content or image URL
   x: number;
   y: number;
   width?: number;
@@ -65,14 +63,10 @@ const MobileCoverCustomizationPage = () => {
   const [rotation, setRotation] = useState<number[]>([0]);
   const [scale, setScale] = useState<number[]>([1]);
   const designAreaRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null); // Ref for hidden file input
   const { toast } = useToast();
 
   // Modals state
   const [isAddTextModalOpen, setIsAddTextModalOpen] = useState(false);
-
-  // Keep track of object URLs to revoke them later
-  const objectUrlsRef = useRef<string[]>([]);
 
   useEffect(() => {
     const fetchProductAndMockup = async () => {
@@ -104,7 +98,6 @@ const MobileCoverCustomizationPage = () => {
           toast({ title: "Error", description: `Failed to load design data: ${mockupDesignError.message}`, variant: "destructive" });
         } else if (mockupDesignData?.design_data) {
           try {
-            // Note: Design elements loaded from DB will have remote URLs, not object URLs
             setDesignElements(JSON.parse(mockupDesignData.design_data as string));
           } catch (parseError) {
             console.error("Error parsing design data:", parseError);
@@ -118,12 +111,6 @@ const MobileCoverCustomizationPage = () => {
     if (productId) {
       fetchProductAndMockup();
     }
-
-    // Cleanup function for object URLs
-    return () => {
-      objectUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
-      objectUrlsRef.current = [];
-    };
   }, [productId]);
 
   const addTextElement = () => {
@@ -148,36 +135,6 @@ const MobileCoverCustomizationPage = () => {
     setIsAddTextModalOpen(false); // Close modal after adding
   };
 
-  const handleImageFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
-
-    const imageUrl = URL.createObjectURL(file);
-    objectUrlsRef.current.push(imageUrl); // Store the object URL for cleanup
-
-    const newElement: DesignElement = {
-      id: `image-${Date.now()}`,
-      type: 'image',
-      value: imageUrl,
-      x: 50,
-      y: 50,
-      width: 100, // Default width
-      height: 100, // Default height
-      rotation: rotation[0],
-      scale: scale[0],
-    };
-    setDesignElements([...designElements, newElement]);
-    setSelectedElementId(newElement.id);
-    toast({ title: "Success", description: "Image added to design." });
-    
-    // Clear the file input value so the same file can be selected again
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
   const updateElement = (id: string, updates: Partial<DesignElement>) => {
     setDesignElements(prev =>
       prev.map(el => (el.id === id ? { ...el, ...updates } : el))
@@ -185,15 +142,7 @@ const MobileCoverCustomizationPage = () => {
   };
 
   const deleteElement = (id: string) => {
-    setDesignElements(prev => {
-      const elementToDelete = prev.find(el => el.id === id);
-      if (elementToDelete && elementToDelete.type === 'image' && elementToDelete.value.startsWith('blob:')) {
-        // Revoke object URL if it's a temporary one
-        URL.revokeObjectURL(elementToDelete.value);
-        objectUrlsRef.current = objectUrlsRef.current.filter(url => url !== elementToDelete.value);
-      }
-      return prev.filter(el => el.id !== id);
-    });
+    setDesignElements(prev => prev.filter(el => el.id !== id));
     if (selectedElementId === id) {
       setSelectedElementId(null);
     }
@@ -253,9 +202,7 @@ const MobileCoverCustomizationPage = () => {
     if (!product) return;
 
     setLoading(true);
-    // Filter out temporary object URLs before saving to DB
-    const savableDesignElements = designElements.filter(el => !el.value.startsWith('blob:'));
-    const designData = JSON.stringify(savableDesignElements);
+    const designData = JSON.stringify(designElements);
 
     const { data: existingMockup, error: fetchMockupError } = await supabase
       .from('mockups')
@@ -280,7 +227,7 @@ const MobileCoverCustomizationPage = () => {
         console.error("Error updating mockup design:", updateError);
         toast({ title: "Error", description: `Failed to update design: ${updateError.message}`, variant: "destructive" });
       } else {
-        toast({ title: "Success", description: "Design saved successfully! Note: Locally added images are not saved." });
+        toast({ title: "Success", description: "Design saved successfully!" });
       }
     } else {
       const { error: insertError } = await supabase
@@ -291,14 +238,14 @@ const MobileCoverCustomizationPage = () => {
           name: `${product.name} Custom Design`,
           designer: 'Customer',
           design_data: designData,
-          user_id: (await supabase.auth.getUser()).data.user?.id || null, // Add user_id
+          user_id: (await supabase.auth.getUser()).data.user?.id || null,
         });
 
       if (insertError) {
         console.error("Error inserting new mockup with design:", insertError);
         toast({ title: "Error", description: `Failed to save design: ${insertError.message}`, variant: "destructive" });
       } else {
-        toast({ title: "Success", description: "Design saved successfully! Note: Locally added images are not saved." });
+        toast({ title: "Success", description: "Design saved successfully!" });
       }
     }
     setLoading(false);
@@ -413,10 +360,9 @@ const MobileCoverCustomizationPage = () => {
               {!designElements.length && (
                 <div
                   className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 cursor-pointer border-2 border-dashed border-gray-400 rounded-lg m-4"
-                  onClick={() => fileInputRef.current?.click()} // Trigger hidden file input
                 >
                   <PlusCircle className="h-12 w-12 mb-2" />
-                  <p className="text-lg font-medium">Add Your Image</p>
+                  <p className="text-lg font-medium">Start Designing</p>
                 </div>
               )}
             </div>
@@ -502,21 +448,8 @@ const MobileCoverCustomizationPage = () => {
         </div>
       )}
 
-      {/* Hidden file input */}
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleImageFileSelect}
-        accept="image/*"
-        className="hidden"
-      />
-
       {/* Bottom Control Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-lg p-2 flex justify-around items-center border-t border-gray-200 dark:border-gray-700 z-10">
-        <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => fileInputRef.current?.click()}>
-          <ImageIcon className="h-6 w-6" />
-          <span className="text-xs mt-1">Your Photo</span>
-        </Button>
         <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => setIsAddTextModalOpen(true)}>
           <Text className="h-6 w-6" />
           <span className="text-xs mt-1">Add Text</span>
