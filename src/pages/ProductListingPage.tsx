@@ -131,9 +131,8 @@ const ProductListingPage = () => {
                       <CardTitle className="text-xl">{product.name}</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <Link to={`/customize-cover/${product.id}`} className="mt-4 block">
-                        <Button className="w-full">Customize</Button>
-                      </Link>
+                      {/* Removed the customize button and link */}
+                      <p className="text-sm text-gray-600 dark:text-gray-300">{product.description || 'No description.'}</p>
                     </CardContent>
                   </Card>
                 ))}
