@@ -20,13 +20,14 @@ import {
   PlusCircle,
   Trash2,
   Text,
-  Image as ImageIcon, // Re-purposing for 'Set Background'
+  Image as ImageIcon,
   ArrowLeft,
   Check,
   Palette, // For Back Color
   LayoutTemplate, // For Readymade
   Sticker, // For Add Sticker
 } from 'lucide-react';
+// ImageGallerySelector is no longer needed
 
 interface Product {
   id: string;
@@ -39,8 +40,8 @@ interface Product {
 
 interface DesignElement {
   id: string;
-  type: 'text' | 'image'; // 'image' type is still here for loaded design data, but new user images are background
-  value: string; // text content or image URL
+  type: 'text' | 'image';
+  value: string; // text content or image URL (can be local object URL or remote URL)
   x: number;
   y: number;
   width?: number;
@@ -70,8 +71,8 @@ const MobileCoverCustomizationPage = () => {
   // Modals state
   const [isAddTextModalOpen, setIsAddTextModalOpen] = useState(false);
 
-  // New state for user-uploaded background image (temporary)
-  const [userUploadedBackground, setUserUploadedBackground] = useState<string | null>(null);
+  // Keep track of object URLs to revoke them later
+  const objectUrlsRef = useRef<string[]>([]);
 
   useEffect(() => {
     const fetchProductAndMockup = async () => {
@@ -103,6 +104,7 @@ const MobileCoverCustomizationPage = () => {
           toast({ title: "Error", description: `Failed to load design data: ${mockupDesignError.message}`, variant: "destructive" });
         } else if (mockupDesignData?.design_data) {
           try {
+            // Note: Design elements loaded from DB will have remote URLs, not object URLs
             setDesignElements(JSON.parse(mockupDesignData.design_data as string));
           } catch (parseError) {
             console.error("Error parsing design data:", parseError);
@@ -117,13 +119,12 @@ const MobileCoverCustomizationPage = () => {
       fetchProductAndMockup();
     }
 
-    // Cleanup function for the temporary object URL
+    // Cleanup function for object URLs
     return () => {
-      if (userUploadedBackground) {
-        URL.revokeObjectURL(userUploadedBackground);
-      }
+      objectUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
+      objectUrlsRef.current = [];
     };
-  }, [productId, userUploadedBackground]); // Add userUploadedBackground to dependency array for cleanup
+  }, [productId]);
 
   const addTextElement = () => {
     if (!newText.trim()) {
@@ -153,14 +154,23 @@ const MobileCoverCustomizationPage = () => {
       return;
     }
 
-    // Revoke previous object URL if exists to prevent memory leaks
-    if (userUploadedBackground) {
-      URL.revokeObjectURL(userUploadedBackground);
-    }
-
     const imageUrl = URL.createObjectURL(file);
-    setUserUploadedBackground(imageUrl); // Set the new temporary background image
-    toast({ title: "Success", description: "Image set as background." });
+    objectUrlsRef.current.push(imageUrl); // Store the object URL for cleanup
+
+    const newElement: DesignElement = {
+      id: `image-${Date.now()}`,
+      type: 'image',
+      value: imageUrl,
+      x: 50,
+      y: 50,
+      width: 100, // Default width
+      height: 100, // Default height
+      rotation: rotation[0],
+      scale: scale[0],
+    };
+    setDesignElements([...designElements, newElement]);
+    setSelectedElementId(newElement.id);
+    toast({ title: "Success", description: "Image added to design." });
     
     // Clear the file input value so the same file can be selected again
     if (fileInputRef.current) {
@@ -175,7 +185,15 @@ const MobileCoverCustomizationPage = () => {
   };
 
   const deleteElement = (id: string) => {
-    setDesignElements(prev => prev.filter(el => el.id !== id));
+    setDesignElements(prev => {
+      const elementToDelete = prev.find(el => el.id === id);
+      if (elementToDelete && elementToDelete.type === 'image' && elementToDelete.value.startsWith('blob:')) {
+        // Revoke object URL if it's a temporary one
+        URL.revokeObjectURL(elementToDelete.value);
+        objectUrlsRef.current = objectUrlsRef.current.filter(url => url !== elementToDelete.value);
+      }
+      return prev.filter(el => el.id !== id);
+    });
     if (selectedElementId === id) {
       setSelectedElementId(null);
     }
@@ -235,9 +253,8 @@ const MobileCoverCustomizationPage = () => {
     if (!product) return;
 
     setLoading(true);
-    // Only save design elements that are not temporary local images (which are now handled as background)
-    // The 'image' type in DesignElement is now only for images loaded from DB (e.g., stickers, readymade)
-    const savableDesignElements = designElements; // No filtering needed if user-added images are only background
+    // Filter out temporary object URLs before saving to DB
+    const savableDesignElements = designElements.filter(el => !el.value.startsWith('blob:'));
     const designData = JSON.stringify(savableDesignElements);
 
     const { data: existingMockup, error: fetchMockupError } = await supabase
@@ -263,14 +280,14 @@ const MobileCoverCustomizationPage = () => {
         console.error("Error updating mockup design:", updateError);
         toast({ title: "Error", description: `Failed to update design: ${updateError.message}`, variant: "destructive" });
       } else {
-        toast({ title: "Success", description: "Design saved successfully! Note: Locally added background images are not saved." });
+        toast({ title: "Success", description: "Design saved successfully! Note: Locally added images are not saved." });
       }
     } else {
       const { error: insertError } = await supabase
         .from('mockups')
         .insert({
           product_id: product.id,
-          image_url: product.mockup_image_url, // Keep the original mockup image URL
+          image_url: product.mockup_image_url,
           name: `${product.name} Custom Design`,
           designer: 'Customer',
           design_data: designData,
@@ -281,7 +298,7 @@ const MobileCoverCustomizationPage = () => {
         console.error("Error inserting new mockup with design:", insertError);
         toast({ title: "Error", description: `Failed to save design: ${insertError.message}`, variant: "destructive" });
       } else {
-        toast({ title: "Success", description: "Design saved successfully! Note: Locally added background images are not saved." });
+        toast({ title: "Success", description: "Design saved successfully! Note: Locally added images are not saved." });
       }
     }
     setLoading(false);
@@ -299,9 +316,6 @@ const MobileCoverCustomizationPage = () => {
       setScale([selectedElement.scale || 1]);
     }
   }, [selectedElement]);
-
-  // Determine the background image to display
-  const currentBackgroundImage = userUploadedBackground || product?.mockup_image_url;
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900">
@@ -339,8 +353,8 @@ const MobileCoverCustomizationPage = () => {
               style={{
                 width: `${product.canvas_width}px`,
                 height: `${product.canvas_height}px`,
-                backgroundImage: currentBackgroundImage ? `url(${currentBackgroundImage})` : 'none',
-                backgroundSize: 'cover', // Changed to cover the entire canvas
+                backgroundImage: product.mockup_image_url ? `url(${product.mockup_image_url})` : 'none',
+                backgroundSize: 'contain',
                 backgroundRepeat: 'no-repeat',
                 backgroundPosition: 'center',
               }}
@@ -396,7 +410,15 @@ const MobileCoverCustomizationPage = () => {
                   )}
                 </div>
               ))}
-              {/* Removed the "Add Your Image" placeholder */}
+              {!designElements.length && (
+                <div
+                  className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 cursor-pointer border-2 border-dashed border-gray-400 rounded-lg m-4"
+                  onClick={() => fileInputRef.current?.click()} // Trigger hidden file input
+                >
+                  <PlusCircle className="h-12 w-12 mb-2" />
+                  <p className="text-lg font-medium">Add Your Image</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -493,7 +515,7 @@ const MobileCoverCustomizationPage = () => {
       <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-lg p-2 flex justify-around items-center border-t border-gray-200 dark:border-gray-700 z-10">
         <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => fileInputRef.current?.click()}>
           <ImageIcon className="h-6 w-6" />
-          <span className="text-xs mt-1">Set Background</span> {/* Changed button text */}
+          <span className="text-xs mt-1">Your Photo</span>
         </Button>
         <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => setIsAddTextModalOpen(true)}>
           <Text className="h-6 w-6" />
