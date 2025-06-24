@@ -11,7 +11,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal, Edit, Trash2, PlusCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } => "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -175,12 +175,13 @@ const UserManagementPage = () => {
       return;
     }
 
-    if (!session) {
+    if (!session || !session.access_token) {
       toast({
         title: "Authentication Error",
-        description: "You must be logged in to create users.",
+        description: "You must be logged in to create users. Please log in again.",
         variant: "destructive",
       });
+      setLoading(false);
       return;
     }
 
@@ -193,8 +194,10 @@ const UserManagementPage = () => {
         last_name: newLastName,
       };
 
+      console.log("Attempting to invoke create-user-admin with token:", session.access_token);
+
       const { data, error: invokeError } = await supabase.functions.invoke('create-user-admin', {
-        body: JSON.stringify(requestBody), // Explicitly stringify the body
+        body: JSON.stringify(requestBody),
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
