@@ -28,7 +28,7 @@ interface Order {
   total_price: number;
   ordered_design_image_url: string | null;
   products: { name: string } | null; // Nested product data
-  users: { email: string } | null; // Nested user data for the order placer
+  profiles: { first_name: string | null; last_name: string | null; } | null; // Changed from users to profiles
 }
 
 const OrderManagementPage = () => {
@@ -60,7 +60,7 @@ const OrderManagementPage = () => {
         total_price,
         ordered_design_image_url,
         products (name),
-        users (email)
+        profiles (first_name, last_name)
       `)
       .order('created_at', { ascending: false });
 
@@ -201,8 +201,7 @@ const OrderManagementPage = () => {
                       <TableRow>
                         <TableHead>Order ID</TableHead>
                         <TableHead>Date</TableHead>
-                        <TableHead>Customer</TableHead>
-                        <TableHead>Email</TableHead>
+                        <TableHead>Customer Name</TableHead> {/* Changed from Email to Customer Name */}
                         <TableHead>Product</TableHead>
                         <TableHead>Design</TableHead>
                         <TableHead>Status</TableHead>
@@ -215,8 +214,9 @@ const OrderManagementPage = () => {
                         <TableRow key={order.id}>
                           <TableCell className="font-medium text-xs">{order.id.substring(0, 8)}...</TableCell>
                           <TableCell>{format(new Date(order.created_at), 'PPP')}</TableCell>
-                          <TableCell>{order.customer_name}</TableCell>
-                          <TableCell>{order.users?.email || 'N/A'}</TableCell>
+                          <TableCell>
+                            {order.profiles?.first_name || 'N/A'} {order.profiles?.last_name || ''}
+                          </TableCell>
                           <TableCell>{order.products?.name || 'N/A'}</TableCell>
                           <TableCell>
                             {order.ordered_design_image_url ? (
