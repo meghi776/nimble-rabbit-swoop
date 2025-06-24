@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import { PlusCircle, Edit, Trash2, ArrowLeft, Upload } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ArrowLeft, Upload, XCircle } from 'lucide-react'; // Added XCircle for clear button
 
 interface Product {
   id: string;
@@ -52,11 +52,18 @@ const ProductManagementByBrandPage = () => {
   const [productPrice, setProductPrice] = useState<string>('');
   const [productImageFile, setProductImageFile] = useState<File | null>(null);
   const [productImageUrl, setProductImageUrl] = useState<string | null>(null); // For product's main image
-  const [mockupImageFile, setMockupImageFile] = useState<File | null>(null); // For mockup image
-  const [currentMockupImageUrl, setCurrentMockupImageUrl] = useState<string | null>(null); // For existing mockup image
+  const [mockupImageFile, setMockupImageFile] = useState<File | null>(null); // For mockup image file upload
+  const [mockupUrlInput, setMockupUrlInput] = useState<string>(''); // For mockup image URL input
   const [canvasWidth, setCanvasWidth] = useState<string>('300');
   const [canvasHeight, setCanvasHeight] = useState<string>('600');
   const { toast } = useToast();
+
+  // Helper to check if a URL is from Supabase storage
+  const isSupabaseStorageUrl = (url: string | null, bucketName: string) => {
+    if (!url) return false;
+    const supabaseStorageBaseUrl = `https://smpjbedvyqensurarrym.supabase.co/storage/v1/object/public/${bucketName}/`;
+    return url.startsWith(supabaseStorageBaseUrl);
+  };
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -128,8 +135,8 @@ const ProductManagementByBrandPage = () => {
     setProductPrice('');
     setProductImageFile(null);
     setProductImageUrl(null);
-    setMockupImageFile(null); // Clear mockup file input
-    setCurrentMockupImageUrl(null); // Clear current mockup URL
+    setMockupImageFile(null);
+    setMockupUrlInput(''); // Clear mockup URL input
     setCanvasWidth('300');
     setCanvasHeight('600');
     setIsDialogOpen(true);
@@ -153,11 +160,11 @@ const ProductManagementByBrandPage = () => {
     if (mockupError) {
       console.error("Error fetching existing mockup:", mockupError);
       toast({ title: "Error", description: `Failed to load existing mockup: ${mockupError.message}`, variant: "destructive" });
-      setCurrentMockupImageUrl(null);
+      setMockupUrlInput(''); // Clear URL input on error
     } else if (mockupData && mockupData.length > 0) {
-      setCurrentMockupImageUrl(mockupData[0].image_url);
+      setMockupUrlInput(mockupData[0].image_url || ''); // Set the URL input if an image exists
     } else {
-      setCurrentMockupImageUrl(null);
+      setMockupUrlInput(''); // Clear URL input if no mockup found
     }
 
     setMockupImageFile(null); // Clear mockup file input
@@ -173,8 +180,8 @@ const ProductManagementByBrandPage = () => {
 
     setLoading(true);
 
-    // Delete product's main image from storage if it exists
-    if (productImageUrl) {
+    // Delete product's main image from storage if it exists and is a Supabase URL
+    if (productImageUrl && isSupabaseStorageUrl(productImageUrl, 'product-images')) {
       const fileName = productImageUrl.split('/').pop();
       if (fileName) {
         const { error: storageError } = await supabase.storage
@@ -193,8 +200,8 @@ const ProductManagementByBrandPage = () => {
       }
     }
 
-    // Delete mockup image from storage if it exists
-    if (mockupImageUrl) {
+    // Delete mockup image from storage if it exists and is a Supabase URL
+    if (mockupImageUrl && isSupabaseStorageUrl(mockupImageUrl, 'mockups-bucket')) {
       const fileName = mockupImageUrl.split('/').pop();
       if (fileName) {
         const { error: storageError } = await supabase.storage
@@ -299,25 +306,30 @@ const ProductManagementByBrandPage = () => {
     }
 
     setLoading(true);
-    let newProductImageUrl = productImageUrl;
-    let newMockupImageUrl = currentMockupImageUrl; // Start with existing mockup URL
+    let finalProductImageUrl = productImageUrl;
+    let finalMockupImageUrl: string | null = null;
 
-    // 1. Upload product main image if new file is selected
+    // 1. Handle Product Main Image
     if (productImageFile) {
-      newProductImageUrl = await handleFileUpload(productImageFile, 'product-images');
-      if (!newProductImageUrl) {
+      finalProductImageUrl = await handleFileUpload(productImageFile, 'product-images');
+      if (!finalProductImageUrl) {
         setLoading(false);
         return; // Image upload failed
       }
     }
 
-    // 2. Upload mockup image if new file is selected
+    // 2. Handle Mockup Image (prioritize file upload over URL input)
     if (mockupImageFile) {
-      newMockupImageUrl = await handleFileUpload(mockupImageFile, 'mockups-bucket'); // Use new bucket
-      if (!newMockupImageUrl) {
+      finalMockupImageUrl = await handleFileUpload(mockupImageFile, 'mockups-bucket');
+      if (!finalMockupImageUrl) {
         setLoading(false);
         return; // Mockup image upload failed
       }
+    } else if (mockupUrlInput.trim()) {
+      finalMockupImageUrl = mockupUrlInput.trim();
+    } else if (currentProduct?.mockup_image_url) {
+      // If no new file or URL is provided, but there was an existing one, keep it.
+      finalMockupImageUrl = currentProduct.mockup_image_url;
     }
 
     const productData = {
@@ -325,7 +337,7 @@ const ProductManagementByBrandPage = () => {
       brand_id: brandId,
       name: productName,
       description: productDescription,
-      image_url: newProductImageUrl, // This is for the product's main image
+      image_url: finalProductImageUrl, // This is for the product's main image
       price: parseFloat(productPrice),
       canvas_width: parseInt(canvasWidth),
       canvas_height: parseInt(canvasHeight),
@@ -340,7 +352,7 @@ const ProductManagementByBrandPage = () => {
         .update(productData)
         .eq('id', currentProduct.id)
         .select()
-        .single(); // Use single() to get the updated product data
+        .single();
 
       if (error) {
         console.error("Error updating product:", error);
@@ -363,7 +375,7 @@ const ProductManagementByBrandPage = () => {
         .from('products')
         .insert(productData)
         .select()
-        .single(); // Use single() to get the newly created product data
+        .single();
 
       if (error) {
         console.error("Error adding product:", error);
@@ -383,7 +395,7 @@ const ProductManagementByBrandPage = () => {
     }
 
     // 3. Handle mockup entry in 'mockups' table
-    if (productIdToUse && newMockupImageUrl) {
+    if (productIdToUse && finalMockupImageUrl) {
       const { data: existingMockup, error: fetchMockupError } = await supabase
         .from('mockups')
         .select('id')
@@ -401,7 +413,7 @@ const ProductManagementByBrandPage = () => {
         // Update existing mockup
         const { error: updateMockupError } = await supabase
           .from('mockups')
-          .update({ image_url: newMockupImageUrl })
+          .update({ image_url: finalMockupImageUrl })
           .eq('id', existingMockup[0].id);
 
         if (updateMockupError) {
@@ -421,7 +433,7 @@ const ProductManagementByBrandPage = () => {
         // Insert new mockup
         const { error: insertMockupError } = await supabase
           .from('mockups')
-          .insert({ product_id: productIdToUse, image_url: newMockupImageUrl, name: `${productName} Mockup`, designer: 'Auto' }); // Add default name/designer
+          .insert({ product_id: productIdToUse, image_url: finalMockupImageUrl, name: `${productName} Mockup`, designer: 'Auto' });
 
         if (insertMockupError) {
           console.error("Error inserting mockup:", insertMockupError);
@@ -437,8 +449,9 @@ const ProductManagementByBrandPage = () => {
           });
         }
       }
-    } else if (productIdToUse && !newMockupImageUrl && currentMockupImageUrl) {
-        // If mockup image was removed (cleared) during edit, delete the mockup entry
+    } else if (productIdToUse && !finalMockupImageUrl && (currentProduct?.mockup_image_url || mockupUrlInput.trim())) {
+        // If mockup was cleared (neither file nor URL provided, but there was one before)
+        // Delete the mockup entry
         const { error: deleteMockupError } = await supabase
             .from('mockups')
             .delete()
@@ -634,28 +647,55 @@ const ProductManagementByBrandPage = () => {
                   type="file"
                   accept="image/*"
                   onChange={(e) => setProductImageFile(e.target.files ? e.target.files[0] : null)}
-                  className="col-span-3"
+                  className="flex-1"
                 />
                 {productImageUrl && (
                   <img src={productImageUrl} alt="Current Product" className="w-16 h-16 object-cover rounded-md" />
                 )}
               </div>
             </div>
-            {/* NEW: Mockup Image Upload */}
+            {/* NEW: Mockup Image URL Input */}
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="mockupImage" className="text-right">
-                Mockup Image
+              <Label htmlFor="mockupImageUrl" className="text-right">
+                Mockup Image URL
               </Label>
               <div className="col-span-3 flex items-center gap-2">
                 <Input
-                  id="mockupImage"
+                  id="mockupImageUrl"
+                  type="text"
+                  placeholder="Enter external image URL or upload below"
+                  value={mockupUrlInput}
+                  onChange={(e) => {
+                    setMockupUrlInput(e.target.value);
+                    setMockupImageFile(null); // Clear file input if URL is being typed
+                  }}
+                  className="flex-1"
+                />
+                {mockupUrlInput && (
+                  <Button variant="ghost" size="icon" onClick={() => setMockupUrlInput('')}>
+                    <XCircle className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+            {/* Mockup Image File Upload */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="mockupImageFile" className="text-right">
+                Upload Mockup
+              </Label>
+              <div className="col-span-3 flex items-center gap-2">
+                <Input
+                  id="mockupImageFile"
                   type="file"
                   accept="image/*"
-                  onChange={(e) => setMockupImageFile(e.target.files ? e.target.files[0] : null)}
-                  className="col-span-3"
+                  onChange={(e) => {
+                    setMockupImageFile(e.target.files ? e.target.files[0] : null);
+                    setMockupUrlInput(''); // Clear URL input if file is selected
+                  }}
+                  className="flex-1"
                 />
-                {currentMockupImageUrl && (
-                  <img src={currentMockupImageUrl} alt="Current Mockup" className="w-16 h-16 object-cover rounded-md" />
+                {(mockupImageFile || mockupUrlInput) && (
+                  <img src={mockupImageFile ? URL.createObjectURL(mockupImageFile) : mockupUrlInput} alt="Current Mockup" className="w-16 h-16 object-cover rounded-md" />
                 )}
               </div>
             </div>
