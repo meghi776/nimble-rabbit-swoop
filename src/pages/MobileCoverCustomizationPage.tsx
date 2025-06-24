@@ -104,6 +104,7 @@ const MobileCoverCustomizationPage = () => {
   const [customerAddress, setCustomerAddress] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('COD');
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false); // New state for order placement loading
 
   const touchState = useRef<TouchState>({
     mode: 'none',
@@ -536,18 +537,19 @@ const MobileCoverCustomizationPage = () => {
     setIsCheckoutModalOpen(true);
   };
 
-  const handlePlaceOrder = async () => {
+  const handlePlaceOrder = async (isDemo: boolean) => {
     if (!product || !user?.id) {
       console.error("handlePlaceOrder: Product or user information missing. Product:", product, "User:", user);
       toast({ title: "Error", description: "Product or user information missing.", variant: "destructive" });
       return;
     }
-    if (!customerName.trim() || !customerAddress.trim() || !customerPhone.trim()) {
+
+    if (!isDemo && (!customerName.trim() || !customerAddress.trim() || !customerPhone.trim())) {
       toast({ title: "Validation Error", description: "Please fill in all customer details.", variant: "destructive" });
       return;
     }
 
-    setLoading(true);
+    setIsPlacingOrder(true); // Set loading state
     let orderedDesignImageUrl: string | null = null;
     let originalMockupPointerEvents = '';
     const mockupImageElement = canvasContentRef.current?.querySelector('img[alt="Phone Mockup Overlay"]');
@@ -608,14 +610,15 @@ const MobileCoverCustomizationPage = () => {
         .insert({
           user_id: user.id,
           product_id: product.id,
-          customer_name: customerName,
-          customer_address: customerAddress,
-          customer_phone: customerPhone,
-          payment_method: paymentMethod,
+          customer_name: isDemo ? 'Demo User' : customerName,
+          customer_address: isDemo ? 'Demo Address, Demo City, Demo State, 00000' : customerAddress,
+          customer_phone: isDemo ? '0000000000' : customerPhone,
+          payment_method: isDemo ? 'Demo' : paymentMethod,
+          status: isDemo ? 'Demo' : 'Pending', // Set status to 'Demo' for demo orders
           total_price: product.price, // Use product's price for now
           ordered_design_image_url: orderedDesignImageUrl,
           ordered_design_data: designElements, // Save the design elements JSON
-          type: 'normal', // Set order type to 'normal'
+          type: isDemo ? 'demo' : 'normal', // Set order type
         });
 
       if (orderInsertError) {
@@ -623,7 +626,7 @@ const MobileCoverCustomizationPage = () => {
         throw new Error(`Failed to place order: ${orderInsertError.message}`);
       }
 
-      toast({ title: "Success", description: "Your order has been placed successfully!" });
+      toast({ title: "Success", description: isDemo ? "Demo order placed successfully!" : "Your order has been placed successfully!" });
       setIsCheckoutModalOpen(false);
       navigate('/orders'); // Redirect to orders history page
     } catch (err: any) {
@@ -638,8 +641,21 @@ const MobileCoverCustomizationPage = () => {
       if (selectedElementDiv) {
         selectedElementDiv.classList.add('border-2', 'border-blue-500');
       }
-      setLoading(false);
+      setIsPlacingOrder(false); // Reset loading state
     }
+  };
+
+  const handleDemoOrderClick = () => {
+    if (!user) {
+      toast({ title: "Authentication Required", description: "Please log in to place a demo order.", variant: "destructive" });
+      navigate('/login');
+      return;
+    }
+    if (!product) {
+      toast({ title: "Error", description: "Product not loaded. Cannot place demo order.", variant: "destructive" });
+      return;
+    }
+    handlePlaceOrder(true);
   };
 
   const handleSaveTextProperties = () => {
@@ -712,9 +728,15 @@ const MobileCoverCustomizationPage = () => {
         <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
           {product?.name || 'Loading Product...'}
         </h1>
-        <Button onClick={handlePreviewClick} variant="ghost" size="icon">
-          <Eye className="h-6 w-6 text-blue-600" />
-        </Button>
+        <div className="flex items-center space-x-2"> {/* Group right-side buttons */}
+          <Button onClick={handlePreviewClick} variant="ghost" size="icon">
+            <Eye className="h-6 w-6 text-blue-600" />
+          </Button>
+          <Button onClick={handleDemoOrderClick} disabled={loading || isPlacingOrder} className="bg-green-600 hover:bg-green-700 text-white">
+            {isPlacingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Demo Order
+          </Button>
+        </div>
       </header>
 
       {loading && (
@@ -856,7 +878,7 @@ const MobileCoverCustomizationPage = () => {
           <LayoutTemplate className="h-6 w-6" />
           <span className="text-xs mt-1">Readymade</span>
         </Button>
-        <Button variant="default" className="flex flex-col h-auto p-2 bg-blue-600 hover:bg-blue-700 text-white" onClick={handleBuyNowClick}>
+        <Button variant="default" className="flex flex-col h-auto p-2 bg-blue-600 hover:bg-blue-700 text-white" onClick={handleBuyNowClick} disabled={isPlacingOrder}>
           <ShoppingCart className="h-6 w-6" />
           <span className="text-xs mt-1">Buy Now</span>
         </Button>
@@ -1037,8 +1059,8 @@ const MobileCoverCustomizationPage = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsCheckoutModalOpen(false)}>Cancel</Button>
-            <Button onClick={handlePlaceOrder} disabled={loading}>
-              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            <Button onClick={() => handlePlaceOrder(false)} disabled={isPlacingOrder}>
+              {isPlacingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Place Order
             </Button>
           </DialogFooter>

@@ -30,6 +30,7 @@ interface Order {
   ordered_design_image_url: string | null;
   products: { name: string } | null; // Nested product data
   profiles: { first_name: string | null; last_name: string | null; } | null;
+  type: string; // Added type to Order interface
 }
 
 const UserOrdersPage = () => {
@@ -47,7 +48,7 @@ const UserOrdersPage = () => {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const { toast } = useToast();
 
-  const orderStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
+  const orderStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Demo']; // Added 'Demo' status
 
   const fetchUserAndOrders = async () => {
     if (!userId) {
@@ -93,7 +94,8 @@ const UserOrdersPage = () => {
         total_price,
         ordered_design_image_url,
         products (name),
-        profiles (first_name, last_name)
+        profiles (first_name, last_name),
+        type
       `)
       .eq('user_id', userId)
       .order(sortColumn, { ascending: sortDirection === 'asc' });
@@ -231,6 +233,7 @@ const UserOrdersPage = () => {
                 <SelectItem value="customer_phone">Phone Number</SelectItem>
                 <SelectItem value="total_price">Total Price</SelectItem>
                 <SelectItem value="status">Status</SelectItem>
+                <SelectItem value="type">Type</SelectItem>
               </SelectContent>
             </Select>
             <Button
@@ -270,6 +273,7 @@ const UserOrdersPage = () => {
                         <TableHead>Date</TableHead>
                         <TableHead>Product</TableHead>
                         <TableHead>Design</TableHead>
+                        <TableHead>Type</TableHead> {/* New TableHead for Type */}
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Total</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
@@ -290,6 +294,7 @@ const UserOrdersPage = () => {
                               'N/A'
                             )}
                           </TableCell>
+                          <TableCell>{order.type}</TableCell> {/* Display order type */}
                           <TableCell>{order.status}</TableCell>
                           <TableCell className="text-right">${order.total_price?.toFixed(2)}</TableCell>
                           <TableCell className="text-right">
