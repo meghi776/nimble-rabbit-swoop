@@ -450,10 +450,19 @@ const MobileCoverCustomizationPage = () => {
     }
 
     setLoading(true);
+    let originalMockupPointerEvents = '';
+    const mockupImageElement = canvasContentRef.current.querySelector('img[alt="Phone Mockup Overlay"]');
+
     try {
       const selectedElementDiv = document.querySelector(`[data-element-id="${selectedElementId}"]`);
       if (selectedElementDiv) {
         selectedElementDiv.classList.remove('border-2', 'border-blue-500');
+      }
+
+      // Temporarily adjust pointer-events for capture
+      if (mockupImageElement instanceof HTMLElement) {
+        originalMockupPointerEvents = mockupImageElement.style.pointerEvents;
+        mockupImageElement.style.pointerEvents = 'auto'; // Make it visible to html2canvas
       }
 
       const canvas = await html2canvas(canvasContentRef.current, {
@@ -468,6 +477,10 @@ const MobileCoverCustomizationPage = () => {
       console.error("Error generating preview:", err);
       toast({ title: "Error", description: "Failed to generate preview image.", variant: "destructive" });
     } finally {
+      // Restore pointer-events
+      if (mockupImageElement instanceof HTMLElement) {
+        mockupImageElement.style.pointerEvents = originalMockupPointerEvents;
+      }
       const selectedElementDiv = document.querySelector(`[data-element-id="${selectedElementId}"]`);
       if (selectedElementDiv) {
         selectedElementDiv.classList.add('border-2', 'border-blue-500');
@@ -517,6 +530,8 @@ const MobileCoverCustomizationPage = () => {
 
     setLoading(true);
     let orderedDesignImageUrl: string | null = null;
+    let originalMockupPointerEvents = '';
+    const mockupImageElement = canvasContentRef.current?.querySelector('img[alt="Phone Mockup Overlay"]');
 
     try {
       // 1. Generate image of the customized product
@@ -527,6 +542,12 @@ const MobileCoverCustomizationPage = () => {
       const selectedElementDiv = document.querySelector(`[data-element-id="${selectedElementId}"]`);
       if (selectedElementDiv) {
         selectedElementDiv.classList.remove('border-2', 'border-blue-500');
+      }
+
+      // Temporarily adjust pointer-events for capture
+      if (mockupImageElement instanceof HTMLElement) {
+        originalMockupPointerEvents = mockupImageElement.style.pointerEvents;
+        mockupImageElement.style.pointerEvents = 'auto'; // Make it visible to html2canvas
       }
 
       const canvas = await html2canvas(canvasContentRef.current, {
@@ -589,6 +610,10 @@ const MobileCoverCustomizationPage = () => {
       console.error("Error placing order:", err);
       toast({ title: "Order Failed", description: err.message || "An unexpected error occurred while placing your order.", variant: "destructive" });
     } finally {
+      // Restore pointer-events
+      if (mockupImageElement instanceof HTMLElement) {
+        mockupImageElement.style.pointerEvents = originalMockupPointerEvents;
+      }
       const selectedElementDiv = document.querySelector(`[data-element-id="${selectedElementId}"]`);
       if (selectedElementDiv) {
         selectedElementDiv.classList.add('border-2', 'border-blue-500');
@@ -651,7 +676,6 @@ const MobileCoverCustomizationPage = () => {
                 backgroundRepeat: 'no-repeat',
                 backgroundPosition: 'center',
                 touchAction: 'none',
-                // Removed backgroundImage here
               }}
             >
               {/* Design elements (user's image, text) */}
