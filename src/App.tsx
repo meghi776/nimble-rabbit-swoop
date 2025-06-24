@@ -16,7 +16,9 @@ import BrandManagementPage from "./pages/admin/BrandManagementPage";
 import ProductManagementByBrandPage from "./pages/admin/ProductManagementByBrandPage";
 import BrandListingPage from "./pages/BrandListingPage";
 import ProductListingPage from "./pages/ProductListingPage";
-import Header from "./components/Header"; // Import the new Header component
+import Header from "./components/Header";
+import Login from "./pages/Login"; // Import the new Login component
+import { SessionContextProvider } from "./contexts/SessionContext"; // Import the new SessionContextProvider
 
 const queryClient = new QueryClient();
 
@@ -26,30 +28,33 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Header /> {/* Add the Header component here */}
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/customize-cover" element={<MobileCoverCustomizationPage />} />
-          
-          {/* Public Listing Routes */}
-          <Route path="/categories/:categoryId/brands" element={<BrandListingPage />} />
-          <Route path="/categories/:categoryId/products" element={<ProductListingPage />} />
-          <Route path="/categories/:categoryId/brands/:brandId/products" element={<ProductListingPage />} />
+        <SessionContextProvider> {/* Wrap the entire app with SessionContextProvider */}
+          <Header />
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/login" element={<Login />} /> {/* Add the Login route */}
+            <Route path="/customize-cover" element={<MobileCoverCustomizationPage />} />
+            
+            {/* Public Listing Routes */}
+            <Route path="/categories/:categoryId/brands" element={<BrandListingPage />} />
+            <Route path="/categories/:categoryId/products" element={<ProductListingPage />} />
+            <Route path="/categories/:categoryId/brands/:brandId/products" element={<ProductListingPage />} />
 
-          {/* Admin Routes */}
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<AdminDashboard />} />
-            <Route path="users" element={<UserManagementPage />} />
-            <Route path="products" element={<ProductManagementPage />} />
-            <Route path="orders" element={<OrderManagementPage />} />
-            <Route path="categories" element={<CategoryManagementPage />} />
-            <Route path="categories/:categoryId/brands" element={<BrandManagementPage />} />
-            <Route path="categories/:categoryId/brands/:brandId/products" element={<ProductManagementByBrandPage />} />
-          </Route>
+            {/* Admin Routes */}
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="users" element={<UserManagementPage />} />
+              <Route path="products" element={<ProductManagementPage />} />
+              <Route path="orders" element={<OrderManagementPage />} />
+              <Route path="categories" element={<CategoryManagementPage />} />
+              <Route path="categories/:categoryId/brands" element={<BrandManagementPage />} />
+              <Route path="categories/:categoryId/brands/:brandId/products" element={<ProductManagementByBrandPage />} />
+            </Route>
 
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </SessionContextProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
