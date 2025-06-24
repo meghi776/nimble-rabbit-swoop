@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { Loader2, Eye, Trash2, Image as ImageIcon, ArrowLeft } from 'lucide-react';
+import { Loader2, Eye, Trash2, Image as ImageIcon, ArrowLeft, ArrowDownWideNarrow, ArrowUpWideNarrow } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface Order {
@@ -43,6 +43,8 @@ const UserOrdersPage = () => {
   const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
   const [newStatus, setNewStatus] = useState<string>('');
   const [userName, setUserName] = useState<string | null>(null);
+  const [sortColumn, setSortColumn] = useState<string>('created_at');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const { toast } = useToast();
 
   const orderStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
@@ -77,7 +79,7 @@ const UserOrdersPage = () => {
     }
     setUserName(`${profileData?.first_name || 'Unknown'} ${profileData?.last_name || 'User'}`);
 
-    // Fetch orders for the specific user
+    // Fetch orders for the specific user with sorting
     const { data, error: ordersError } = await supabase
       .from('orders')
       .select(`
@@ -94,7 +96,7 @@ const UserOrdersPage = () => {
         profiles (first_name, last_name)
       `)
       .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .order(sortColumn, { ascending: sortDirection === 'asc' });
 
     if (ordersError) {
       console.error("Error fetching orders:", ordersError);
@@ -112,7 +114,7 @@ const UserOrdersPage = () => {
 
   useEffect(() => {
     fetchUserAndOrders();
-  }, [userId]);
+  }, [userId, sortColumn, sortDirection]); // Re-fetch when sort options change
 
   const openImageModal = (imageUrl: string | null) => {
     if (imageUrl) {
@@ -215,8 +217,34 @@ const UserOrdersPage = () => {
       </div>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row justify-between items-center">
           <CardTitle>Customer Orders</CardTitle>
+          <div className="flex items-center space-x-2">
+            <Label htmlFor="sort-by">Sort by:</Label>
+            <Select value={sortColumn} onValueChange={(value) => setSortColumn(value)}>
+              <SelectTrigger id="sort-by" className="w-[180px]">
+                <SelectValue placeholder="Select column" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="created_at">Order Date</SelectItem>
+                <SelectItem value="customer_name">Customer Name</SelectItem>
+                <SelectItem value="customer_phone">Phone Number</SelectItem>
+                <SelectItem value="total_price">Total Price</SelectItem>
+                <SelectItem value="status">Status</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
+            >
+              {sortDirection === 'asc' ? (
+                <ArrowUpWideNarrow className="h-4 w-4" />
+              ) : (
+                <ArrowDownWideNarrow className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {loading && (
