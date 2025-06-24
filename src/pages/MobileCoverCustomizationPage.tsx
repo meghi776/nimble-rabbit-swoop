@@ -26,6 +26,7 @@ import {
   ArrowLeft,
   Check,
 } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile'; // Import the useIsMobile hook
 
 interface Product {
   id: string;
@@ -46,8 +47,21 @@ interface DesignElement {
   height?: number;
   fontSize?: number;
   color?: string;
-  // Removed rotation?: number;
-  // Removed scale?: number;
+}
+
+// Define a type for the touch state
+interface TouchState {
+  mode: 'none' | 'dragging' | 'pinching';
+  startX: number;
+  startY: number;
+  initialElementX: number;
+  initialElementY: number;
+  initialDistance?: number; // For pinching
+  initialElementWidth?: number; // For pinching
+  initialElementHeight?: number; // For pinching
+  initialMidX?: number; // For pinch center
+  initialMidY?: number; // For pinch center
+  activeElementId: string | null;
 }
 
 const MobileCoverCustomizationPage = () => {
@@ -60,20 +74,30 @@ const MobileCoverCustomizationPage = () => {
   const [newText, setNewText] = useState('');
   const [fontSize, setFontSize] = useState<number[]>([24]);
   const [textColor, setTextColor] = useState('#000000');
-  // Removed rotation and scale states
   const designAreaRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null); // Ref for hidden file input
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const isMobile = useIsMobile(); // Use the hook to detect mobile
 
   // Modals state
   const [isAddTextModalOpen, setIsAddTextModalOpen] = useState(false);
+
+  // Ref to store touch state for ongoing gestures
+  const touchState = useRef<TouchState>({
+    mode: 'none',
+    startX: 0,
+    startY: 0,
+    initialElementX: 0,
+    initialElementY: 0,
+    activeElementId: null,
+  });
 
   useEffect(() => {
     const fetchProductAndMockup = async () => {
       setLoading(true);
       const { data: productData, error: productError } = await supabase
         .from('products')
-        .select('*, mockups(image_url, design_data)') // Select design_data as well
+        .select('*, mockups(image_url, design_data)')
         .eq('id', productId)
         .single();
 
@@ -86,11 +110,8 @@ const MobileCoverCustomizationPage = () => {
           ...productData,
           mockup_image_url: productData.mockups.length > 0 ? productData.mockups[0].image_url : null,
         });
-        // Load existing design data if available
         if (productData.mockups.length > 0 && productData.mockups[0].design_data) {
           try {
-            // Note: Temporary blob URLs will not persist across page loads.
-            // Only server-stored image URLs will load correctly from saved design_data.
             setDesignElements(JSON.parse(productData.mockups[0].design_data as string));
           } catch (parseError) {
             console.error("Error parsing design data:", parseError);
@@ -106,7 +127,6 @@ const MobileCoverCustomizationPage = () => {
     }
   }, [productId]);
 
-  // Cleanup for temporary blob URLs when component unmounts or elements are removed
   useEffect(() => {
     return () => {
       designElements.forEach(el => {
@@ -116,7 +136,6 @@ const MobileCoverCustomizationPage = () => {
       });
     };
   }, [designElements]);
-
 
   const addTextElement = () => {
     if (!newText.trim()) {
@@ -131,12 +150,11 @@ const MobileCoverCustomizationPage = () => {
       y: 50,
       fontSize: fontSize[0],
       color: textColor,
-      // Removed rotation and scale
     };
     setDesignElements([...designElements, newElement]);
     setNewText('');
     setSelectedElementId(newElement.id);
-    setIsAddTextModalOpen(false); // Close modal after adding
+    setIsAddTextModalOpen(false);
   };
 
   const addImageElement = (imageUrl: string) => {
@@ -148,11 +166,10 @@ const MobileCoverCustomizationPage = () => {
       id: `image-${Date.now()}`,
       type: 'image',
       value: imageUrl,
-      x: 0, // Position at top-left
-      y: 0, // Position at top-left
-      width: product.canvas_width, // Set width to canvas width
-      height: product.canvas_height, // Set height to canvas height
-      // Removed rotation and scale
+      x: 0,
+      y: 0,
+      width: product.canvas_width,
+      height: product.canvas_height,
     };
     setDesignElements([...designElements, newElement]);
     setSelectedElementId(newElement.id);
@@ -168,7 +185,7 @@ const MobileCoverCustomizationPage = () => {
     setDesignElements(prev => {
       const elementToDelete = prev.find(el => el.id === id);
       if (elementToDelete && elementToDelete.type === 'image' && elementToDelete.value.startsWith('blob:')) {
-        URL.revokeObjectURL(elementToDelete.value); // Revoke blob URL to free memory
+        URL.revokeObjectURL(elementToDelete.value);
       }
       return prev.filter(el => el.id !== id);
     });
@@ -177,20 +194,20 @@ const MobileCoverCustomizationPage = () => {
     }
   };
 
-  const handleDrag = (e: React.MouseEvent, id: string) => {
+  // --- Mouse Event Handlers ---
+  const handleMouseDown = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation(); // Prevent click on design area
+    setSelectedElementId(id);
     const element = designElements.find(el => el.id === id);
     if (!element || !designAreaRef.current) return;
 
     const designAreaRect = designAreaRef.current.getBoundingClientRect();
-    const elementRect = e.currentTarget.getBoundingClientRect();
-
-    const offsetX = e.clientX - elementRect.left;
-    const offsetY = e.clientY - elementRect.top;
+    const offsetX = e.clientX - (element.x + designAreaRect.left);
+    const offsetY = e.clientY - (element.y + designAreaRect.top);
 
     const onMouseMove = (moveEvent: MouseEvent) => {
       const newX = moveEvent.clientX - designAreaRect.left - offsetX;
       const newY = moveEvent.clientY - designAreaRect.top - offsetY;
-
       updateElement(id, { x: newX, y: newY });
     };
 
@@ -203,7 +220,8 @@ const MobileCoverCustomizationPage = () => {
     document.addEventListener('mouseup', onMouseUp);
   };
 
-  const handleResize = (e: React.MouseEvent, id: string) => {
+  const handleResizeMouseDown = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation(); // Prevent drag on element
     const element = designElements.find(el => el.id === id);
     if (!element) return;
 
@@ -227,25 +245,122 @@ const MobileCoverCustomizationPage = () => {
     document.addEventListener('mouseup', onMouseUp);
   };
 
+  // --- Touch Event Handlers ---
+  const handleTouchStart = (e: React.TouchEvent, id: string) => {
+    e.stopPropagation(); // Prevent default touch behavior like scrolling
+    setSelectedElementId(id);
+    const element = designElements.find(el => el.id === id);
+    if (!element || !designAreaRef.current || !product) return;
+
+    const designAreaRect = designAreaRef.current.getBoundingClientRect();
+
+    if (e.touches.length === 1) {
+      touchState.current = {
+        mode: 'dragging',
+        startX: e.touches[0].clientX,
+        startY: e.touches[0].clientY,
+        initialElementX: element.x,
+        initialElementY: element.y,
+        activeElementId: id,
+      };
+    } else if (e.touches.length === 2) {
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      const initialDistance = Math.sqrt(
+        Math.pow(touch2.clientX - touch1.clientX, 2) +
+        Math.pow(touch2.clientY - touch1.clientY, 2)
+      );
+      const initialMidX = (touch1.clientX + touch2.clientX) / 2;
+      const initialMidY = (touch1.clientY + touch2.clientY) / 2;
+
+      touchState.current = {
+        mode: 'pinching',
+        startX: initialMidX, // Use midpoint as start for calculating delta
+        startY: initialMidY,
+        initialElementX: element.x,
+        initialElementY: element.y,
+        initialDistance: initialDistance,
+        initialElementWidth: element.width || product.canvas_width,
+        initialElementHeight: element.height || product.canvas_height,
+        initialMidX: initialMidX - designAreaRect.left, // Midpoint relative to design area
+        initialMidY: initialMidY - designAreaRect.top, // Midpoint relative to design area
+        activeElementId: id,
+      };
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    e.preventDefault(); // Prevent scrolling while dragging/pinching
+    const { mode, startX, startY, initialElementX, initialElementY, initialDistance, initialElementWidth, initialElementHeight, initialMidX, initialMidY, activeElementId } = touchState.current;
+    if (!activeElementId || !designAreaRef.current) return;
+
+    const element = designElements.find(el => el.id === activeElementId);
+    if (!element) return;
+
+    const designAreaRect = designAreaRef.current.getBoundingClientRect();
+
+    if (mode === 'dragging' && e.touches.length === 1) {
+      const deltaX = e.touches[0].clientX - startX;
+      const deltaY = e.touches[0].clientY - startY;
+      updateElement(activeElementId, {
+        x: initialElementX + deltaX,
+        y: initialElementY + deltaY,
+      });
+    } else if (mode === 'pinching' && e.touches.length === 2 && initialDistance !== undefined && initialElementWidth !== undefined && initialElementHeight !== undefined && initialMidX !== undefined && initialMidY !== undefined) {
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      const newDistance = Math.sqrt(
+        Math.pow(touch2.clientX - touch1.clientX, 2) +
+        Math.pow(touch2.clientY - touch1.clientY, 2)
+      );
+      const scaleFactor = newDistance / initialDistance;
+
+      const newWidth = Math.max(20, initialElementWidth * scaleFactor);
+      const newHeight = Math.max(20, initialElementHeight * scaleFactor);
+
+      // Calculate current midpoint relative to design area
+      const currentMidX = (touch1.clientX + touch2.clientX) / 2 - designAreaRect.left;
+      const currentMidY = (touch1.clientY + touch2.clientY) / 2 - designAreaRect.top;
+
+      // Adjust position to scale around the initial midpoint
+      const newX = currentMidX - (initialMidX - initialElementX) * scaleFactor;
+      const newY = currentMidY - (initialMidY - initialElementY) * scaleFactor;
+
+      updateElement(activeElementId, {
+        width: newWidth,
+        height: newHeight,
+        x: newX,
+        y: newY,
+      });
+    }
+  };
+
+  const handleTouchEnd = () => {
+    touchState.current = {
+      mode: 'none',
+      startX: 0,
+      startY: 0,
+      initialElementX: 0,
+      initialElementY: 0,
+      activeElementId: null,
+    };
+  };
+
   const handleSaveDesign = async () => {
     if (!product) return;
 
     setLoading(true);
-    // Filter out temporary blob URLs before saving to database
-    // If you want to save temporary images, you would upload them here first.
     const savableDesignElements = designElements.map(el => {
       if (el.type === 'image' && el.value.startsWith('blob:')) {
-        // For now, we'll just remove temporary images from the saved design.
-        // In a real app, you'd upload them to Supabase storage here and replace the blob URL with the public URL.
         toast({
           title: "Warning",
           description: "Temporary images (from your device) are not saved with the design. Please upload them to the server if you want them to persist.",
           variant: "destructive",
         });
-        return null; // Exclude temporary images from saved design
+        return null;
       }
       return el;
-    }).filter(Boolean); // Remove nulls
+    }).filter(Boolean);
 
     const designData = JSON.stringify(savableDesignElements);
 
@@ -304,7 +419,6 @@ const MobileCoverCustomizationPage = () => {
     addImageElement(imageUrl);
     toast({ title: "Success", description: "Image added to design." });
 
-    // Clear the file input value to allow selecting the same file again
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -318,7 +432,6 @@ const MobileCoverCustomizationPage = () => {
         setFontSize([selectedElement.fontSize || 24]);
         setTextColor(selectedElement.color || '#000000');
       }
-      // Removed setting rotation and scale from here
     }
   }, [selectedElement]);
 
@@ -358,14 +471,13 @@ const MobileCoverCustomizationPage = () => {
               style={{
                 width: `${product.canvas_width}px`,
                 height: `${product.canvas_height}px`,
-                // Removed background image from here
                 backgroundSize: 'contain',
                 backgroundRepeat: 'no-repeat',
                 backgroundPosition: 'center',
               }}
               onClick={() => {
                 if (!designElements.length && fileInputRef.current) {
-                  fileInputRef.current.click(); // Directly open file input
+                  fileInputRef.current.click();
                 }
               }}
             >
@@ -380,12 +492,12 @@ const MobileCoverCustomizationPage = () => {
                     transformOrigin: 'center center',
                     width: el.type === 'image' ? `${el.width}px` : 'auto',
                     height: el.type === 'image' ? `${el.height}px` : 'auto',
-                    zIndex: 10, // Lower z-index than mockup
+                    zIndex: selectedElementId === el.id ? 11 : 10, // Selected element on top of others
                   }}
-                  onMouseDown={(e) => {
-                    setSelectedElementId(el.id);
-                    handleDrag(e, el.id);
-                  }}
+                  onMouseDown={(e) => handleMouseDown(e, el.id)}
+                  onTouchStart={(e) => handleTouchStart(e, el.id)}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleTouchEnd}
                 >
                   {el.type === 'text' ? (
                     <span
@@ -407,10 +519,8 @@ const MobileCoverCustomizationPage = () => {
                   {selectedElementId === el.id && el.type === 'image' && (
                     <div
                       className="absolute -bottom-2 -right-2 w-4 h-4 bg-blue-500 rounded-full cursor-nwse-resize"
-                      onMouseDown={(e) => {
-                        e.stopPropagation();
-                        handleResize(e, el.id);
-                      }}
+                      onMouseDown={(e) => handleResizeMouseDown(e, el.id)}
+                      // Touch resize is handled by pinch gesture, no separate handle needed
                     />
                   )}
                 </div>
@@ -421,24 +531,21 @@ const MobileCoverCustomizationPage = () => {
                 <img
                   src={product.mockup_image_url}
                   alt="Mockup"
-                  className="absolute inset-0 w-full h-full object-contain z-20 pointer-events-none" // z-index higher than elements, pointer-events-none to allow clicking through
+                  className="absolute inset-0 w-full h-full object-contain z-20 pointer-events-none"
                 />
               )}
 
               {!designElements.length && (
                 <div
                   className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 cursor-pointer border-2 border-dashed border-gray-400 rounded-lg m-4"
-                  onClick={() => fileInputRef.current?.click()} // Trigger file input on click
+                  onClick={() => fileInputRef.current?.click()}
                 >
                   <PlusCircle className="h-12 w-12 mb-2" />
-                  <p className="text-lg font-medium">Add Your Photo</p> {/* Changed text */}
+                  <p className="text-lg font-medium">Add Your Photo</p>
                 </div>
               )}
             </div>
           </div>
-
-          {/* Right: Conditional Controls for Selected Element */}
-          {/* Removed the entire 'Edit Selected Element' card */}
         </div>
       )}
 
