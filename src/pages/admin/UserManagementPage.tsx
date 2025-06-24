@@ -186,10 +186,10 @@ const UserManagementPage = () => {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('create-user-admin', { // Changed function name
+      const { data, error: invokeError } = await supabase.functions.invoke('create-user-admin', {
         body: {
           email: newEmail,
-          password: newPassword, // Send password
+          password: newPassword,
           first_name: newFirstName,
           last_name: newLastName,
         },
@@ -199,15 +199,29 @@ const UserManagementPage = () => {
         },
       });
 
-      if (error) {
-        console.error("Error creating user via Edge Function:", error);
+      if (invokeError) {
+        console.error("Error invoking Edge Function:", invokeError);
+        let errorMessage = invokeError.message;
+
+        // Attempt to parse the detailed error message from the Edge Function's response body
+        if (invokeError.context && invokeError.context.data) {
+          try {
+            const errorBody = JSON.parse(invokeError.context.data);
+            if (errorBody.error) {
+              errorMessage = errorBody.error;
+            }
+          } catch (parseErr) {
+            console.error("Failed to parse error response body from Edge Function:", parseErr);
+          }
+        }
+
         toast({
           title: "Error",
-          description: `Failed to create user: ${error.message}`,
+          description: `Failed to create user: ${errorMessage}`,
           variant: "destructive",
         });
-      } else if (data && data.error) {
-        console.error("Edge Function returned error:", data.error);
+      } else if (data && data.error) { // This handles cases where function returns 200 but with an error payload
+        console.error("Edge Function returned error in data payload:", data.error);
         toast({
           title: "Error",
           description: `Failed to create user: ${data.error}`,
