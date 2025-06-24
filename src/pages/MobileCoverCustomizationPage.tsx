@@ -673,6 +673,13 @@ const MobileCoverCustomizationPage = () => {
                 backgroundPosition: 'center',
                 touchAction: 'none',
               }}
+              onClick={(e) => { // Add onClick here
+                // Only trigger file input if the click was directly on the canvas background
+                // and not on a child element (like a design element or the mockup overlay)
+                if (e.target === canvasContentRef.current) {
+                  fileInputRef.current?.click();
+                }
+              }}
             >
               {/* Design elements (user's image, text) */}
               {designElements.map(el => (
@@ -733,7 +740,7 @@ const MobileCoverCustomizationPage = () => {
               {!designElements.length && (
                 <div
                   className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 cursor-pointer border-2 border-dashed border-gray-400 rounded-lg m-4"
-                  // Removed onClick from here as well, as the button below handles it
+                  onClick={() => fileInputRef.current?.click()}
                 >
                   <PlusCircle className="h-12 w-12 mb-2" />
                   <p className="text-lg font-medium">Add Your Photo</p>
