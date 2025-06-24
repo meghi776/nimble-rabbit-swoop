@@ -10,7 +10,7 @@ const AdminLayout = () => {
     { name: 'Dashboard', href: '/admin', icon: Home },
     { name: 'Users', href: '/admin/users', icon: Users },
     { name: 'Products', href: '/admin/products', icon: Package },
-    { name: 'Orders', href: '/admin/orders', icon: ShoppingCart },
+    { name: 'Orders', href: '/admin/orders', icon: ShoppingCart }, // Updated href
   ];
 
   return (

@@ -10,7 +10,8 @@ import AdminLayout from "./components/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import UserManagementPage from "./pages/admin/UserManagementPage";
 import ProductManagementPage from "./pages/admin/ProductManagementPage";
-import OrderManagementPage from "./pages/admin/OrderManagementPage";
+import UserOrderListingPage from "./pages/admin/UserOrderListingPage"; // Updated import
+import UserOrdersPage from "./pages/admin/UserOrdersPage"; // New import
 import CategoryManagementPage from "./pages/admin/CategoryManagementPage";
 import BrandManagementPage from "./pages/admin/BrandManagementPage";
 import ProductManagementByBrandPage from "./pages/admin/ProductManagementByBrandPage";
@@ -19,7 +20,7 @@ import ProductListingPage from "./pages/ProductListingPage";
 import Login from "./pages/Login";
 import { SessionContextProvider } from "./contexts/SessionContext";
 import PublicLayout from "./components/PublicLayout";
-import OrderHistoryPage from "./pages/OrderHistoryPage"; // Import the new OrderHistoryPage
+import OrderHistoryPage from "./pages/OrderHistoryPage";
 
 const queryClient = new QueryClient();
 
@@ -37,7 +38,7 @@ const App = () => (
               <Route path="/categories/:categoryId/brands" element={<BrandListingPage />} />
               <Route path="/categories/:categoryId/products" element={<ProductListingPage />} />
               <Route path="/categories/:categoryId/brands/:brandId/products" element={<ProductListingPage />} />
-              <Route path="/orders" element={<OrderHistoryPage />} /> {/* New route for Order History */}
+              <Route path="/orders" element={<OrderHistoryPage />} />
             </Route>
 
             {/* Routes that do NOT use the global Header */}
@@ -49,7 +50,8 @@ const App = () => (
               <Route index element={<AdminDashboard />} />
               <Route path="users" element={<UserManagementPage />} />
               <Route path="products" element={<ProductManagementPage />} />
-              <Route path="orders" element={<OrderManagementPage />} />
+              <Route path="orders" element={<UserOrderListingPage />} /> {/* Updated route */}
+              <Route path="orders/:userId" element={<UserOrdersPage />} /> {/* New route for specific user orders */}
               <Route path="categories" element={<CategoryManagementPage />} />
               <Route path="categories/:categoryId/brands" element={<BrandManagementPage />} />
               <Route path="categories/:categoryId/brands/:brandId/products" element={<ProductManagementByBrandPage />} />
