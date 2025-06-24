@@ -651,9 +651,10 @@ const MobileCoverCustomizationPage = () => {
                 backgroundRepeat: 'no-repeat',
                 backgroundPosition: 'center',
                 touchAction: 'none',
-                backgroundImage: product.mockup_image_url ? `url(${product.mockup_image_url})` : 'none', // Mockup as background
+                // Removed backgroundImage here
               }}
             >
+              {/* Design elements (user's image, text) */}
               {designElements.map(el => (
                 <div
                   key={el.id}
@@ -665,7 +666,7 @@ const MobileCoverCustomizationPage = () => {
                     transformOrigin: 'center center',
                     width: el.type === 'image' ? `${el.width}px` : 'auto',
                     height: el.type === 'image' ? `${el.height}px` : 'auto',
-                    zIndex: 10, // Ensure design elements are on top
+                    zIndex: 5, // Lower z-index for design elements
                     touchAction: 'none',
                   }}
                   onMouseDown={(e) => handleMouseDown(e, el.id)}
@@ -699,7 +700,15 @@ const MobileCoverCustomizationPage = () => {
                 </div>
               ))}
 
-              {/* Removed the img tag for mockup_image_url as it's now a background */}
+              {/* Mockup overlay - always on top visually */}
+              {product.mockup_image_url && (
+                <img
+                  src={product.mockup_image_url}
+                  alt="Phone Mockup Overlay"
+                  className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+                  style={{ zIndex: 10 }} // Higher z-index to be on top
+                />
+              )}
 
               {!designElements.length && (
                 <div
