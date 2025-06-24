@@ -4,18 +4,23 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal } from "lucide-react";
+import { Terminal, Upload, XCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { toast } from 'sonner'; // Using sonner for toasts
 
 interface Mockup {
   id: string;
   image_url: string | null;
   product_id: string;
-  // Add other fields from your mockups table if needed
+  design_data: { userImageUrl?: string } | null; // Added design_data
 }
 
 const MobileCoverCustomizationPage = () => {
   const { productId } = useParams<{ productId: string }>();
+  const [mockupId, setMockupId] = useState<string | null>(null);
   const [mockupImage, setMockupImage] = useState<string | null>(null);
+  const [uploadedDesignFile, setUploadedDesignFile] = useState<File | null>(null);
+  const [userDesignImageUrl, setUserDesignImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,11 +35,9 @@ const MobileCoverCustomizationPage = () => {
       setLoading(true);
       setError(null);
 
-      // Fetch the mockup associated with the product ID
-      // We use .limit(1) to get at most one, and then check if data[0] exists.
       const { data, error } = await supabase
         .from('mockups')
-        .select('image_url')
+        .select('id, image_url, design_data')
         .eq('product_id', productId)
         .limit(1); 
 
@@ -42,7 +45,14 @@ const MobileCoverCustomizationPage = () => {
         console.error("Error fetching mockup:", error);
         setError(error.message);
       } else if (data && data.length > 0) {
-        setMockupImage(data[0].image_url);
+        const fetchedMockup = data[0];
+        setMockupId(fetchedMockup.id);
+        setMockupImage(fetchedMockup.image_url);
+        if (fetchedMockup.design_data?.userImageUrl) {
+          setUserDesignImageUrl(fetchedMockup.design_data.userImageUrl);
+        } else {
+          setUserDesignImageUrl(null);
+        }
       } else {
         setError("No mockup found for this product.");
       }
@@ -51,6 +61,71 @@ const MobileCoverCustomizationPage = () => {
 
     fetchMockup();
   }, [productId]);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      setUploadedDesignFile(event.target.files[0]);
+      setUserDesignImageUrl(null); // Clear previous URL if a new file is selected
+    }
+  };
+
+  const handleClearImage = () => {
+    setUploadedDesignFile(null);
+    setUserDesignImageUrl(null);
+    // Optionally, you might want to clear the image from the database here too
+    // For now, it will only be cleared from the database on "Save Design"
+  };
+
+  const handleSaveDesign = async () => {
+    if (!mockupId) {
+      toast.error("Error: Mockup ID not found.");
+      return;
+    }
+
+    setLoading(true);
+    let finalUserDesignImageUrl = userDesignImageUrl;
+
+    if (uploadedDesignFile) {
+      const fileExt = uploadedDesignFile.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { data, error: uploadError } = await supabase.storage
+        .from('user-designs') // Use the new bucket for user designs
+        .upload(filePath, uploadedDesignFile);
+
+      if (uploadError) {
+        console.error("Error uploading user design image:", uploadError);
+        toast.error(`Failed to upload design image: ${uploadError.message}`);
+        setLoading(false);
+        return;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from('user-designs')
+        .getPublicUrl(filePath);
+      
+      finalUserDesignImageUrl = publicUrlData.publicUrl;
+    }
+
+    // Update the design_data in the mockups table
+    const { error: updateError } = await supabase
+      .from('mockups')
+      .update({ design_data: finalUserDesignImageUrl ? { userImageUrl: finalUserDesignImageUrl } : null })
+      .eq('id', mockupId);
+
+    if (updateError) {
+      console.error("Error saving design data:", updateError);
+      toast.error(`Failed to save design: ${updateError.message}`);
+    } else {
+      setUserDesignImageUrl(finalUserDesignImageUrl); // Update state with the final URL
+      setUploadedDesignFile(null); // Clear file input after successful upload/save
+      toast.success("Design saved successfully!");
+    }
+    setLoading(false);
+  };
+
+  const displayImageUrl = uploadedDesignFile ? URL.createObjectURL(uploadedDesignFile) : userDesignImageUrl;
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50 dark:bg-gray-900">
@@ -62,7 +137,7 @@ const MobileCoverCustomizationPage = () => {
         </CardHeader>
         <CardContent className="flex flex-col md:flex-row gap-6 p-6">
           {/* Left Panel: Design Area */}
-          <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-lg p-4 flex items-center justify-center min-h-[300px] md:min-h-[500px] overflow-hidden">
+          <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-lg p-4 flex items-center justify-center min-h-[300px] md:min-h-[500px] overflow-hidden relative">
             {loading && (
               <p className="text-gray-600 dark:text-gray-300">Loading mockup...</p>
             )}
@@ -76,7 +151,16 @@ const MobileCoverCustomizationPage = () => {
               </Alert>
             )}
             {!loading && !error && mockupImage ? (
-              <img src={mockupImage} alt="Product Mockup" className="max-w-full max-h-full object-contain" />
+              <>
+                <img src={mockupImage} alt="Product Mockup" className="absolute inset-0 w-full h-full object-contain" />
+                {displayImageUrl && (
+                  <img 
+                    src={displayImageUrl} 
+                    alt="User Design" 
+                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 max-w-[80%] max-h-[80%] object-contain" 
+                  />
+                )}
+              </>
             ) : (
               !loading && !error && <p className="text-gray-600 dark:text-gray-300 text-lg">No mockup image available.</p>
             )}
@@ -100,11 +184,21 @@ const MobileCoverCustomizationPage = () => {
             <Card className="bg-white dark:bg-gray-800 shadow-md">
               <CardHeader>
                 <CardTitle className="text-xl text-gray-800 dark:text-gray-100">
-                  Upload Image
+                  Upload Your Design
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <Button className="w-full">Upload Image</Button>
+              <CardContent className="flex flex-col gap-2">
+                <Input
+                  id="designImageUpload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                />
+                {(uploadedDesignFile || userDesignImageUrl) && (
+                  <Button variant="outline" onClick={handleClearImage} className="w-full">
+                    <XCircle className="mr-2 h-4 w-4" /> Clear Image
+                  </Button>
+                )}
               </CardContent>
             </Card>
 
@@ -121,7 +215,9 @@ const MobileCoverCustomizationPage = () => {
               </CardContent>
             </Card>
 
-            <Button size="lg" className="mt-4">Add to Cart</Button>
+            <Button size="lg" className="mt-4" onClick={handleSaveDesign} disabled={loading}>
+              {loading ? 'Saving...' : 'Save Design'}
+            </Button>
           </div>
         </CardContent>
       </Card>
