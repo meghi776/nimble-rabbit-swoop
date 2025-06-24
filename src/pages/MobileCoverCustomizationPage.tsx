@@ -31,6 +31,8 @@ import {
 import html2canvas from 'html2canvas';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSession } from '@/contexts/SessionContext'; // Import useSession
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Import Select components
+import { Switch } from "@/components/ui/switch"; // Import Switch component
 
 interface Product {
   id: string;
@@ -52,6 +54,8 @@ interface DesignElement {
   height?: number;
   fontSize?: number;
   color?: string;
+  fontFamily?: string; // New: Font family for text
+  textShadow?: boolean; // New: Boolean to enable/disable text shadow
 }
 
 interface TouchState {
@@ -76,9 +80,15 @@ const MobileCoverCustomizationPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [designElements, setDesignElements] = useState<DesignElement[]>([]);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
-  const [newText, setNewText] = useState('');
-  const [fontSize, setFontSize] = useState<number[]>([24]);
-  const [textColor, setTextColor] = useState('#000000');
+  
+  // States for text properties dialog
+  const [isTextPropertiesModalOpen, setIsTextPropertiesModalOpen] = useState(false);
+  const [currentTextContent, setCurrentTextContent] = useState('');
+  const [currentFontSize, setCurrentFontSize] = useState<number[]>([24]);
+  const [currentTextColor, setCurrentTextColor] = useState('#000000');
+  const [currentFontFamily, setCurrentFontFamily] = useState('Arial'); // Default font
+  const [currentTextShadowEnabled, setCurrentTextShadowEnabled] = useState(false); // Default shadow
+
   const designAreaRef = useRef<HTMLDivElement>(null);
   const canvasContentRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -86,7 +96,6 @@ const MobileCoverCustomizationPage = () => {
   const isMobile = useIsMobile();
   const { user } = useSession(); // Get current user from session
 
-  const [isAddTextModalOpen, setIsAddTextModalOpen] = useState(false);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false); // New state for checkout modal
@@ -149,26 +158,6 @@ const MobileCoverCustomizationPage = () => {
     };
   }, [designElements]);
 
-  const addTextElement = () => {
-    if (!newText.trim()) {
-      toast({ title: "Error", description: "Text cannot be empty.", variant: "destructive" });
-      return;
-    }
-    const newElement: DesignElement = {
-      id: `text-${Date.now()}`,
-      type: 'text',
-      value: newText,
-      x: 50,
-      y: 50,
-      fontSize: fontSize[0],
-      color: textColor,
-    };
-    setDesignElements([...designElements, newElement]);
-    setNewText('');
-    setSelectedElementId(newElement.id);
-    setIsAddTextModalOpen(false);
-  };
-
   const addImageElement = (imageUrl: string) => {
     if (!product) {
       toast({ title: "Error", description: "Product details not loaded. Cannot add image.", variant: "destructive" });
@@ -211,6 +200,15 @@ const MobileCoverCustomizationPage = () => {
     setSelectedElementId(id);
     const element = designElements.find(el => el.id === id);
     if (!element || !designAreaRef.current) return;
+
+    if (element.type === 'text') {
+      setCurrentTextContent(element.value);
+      setCurrentFontSize([element.fontSize || 24]);
+      setCurrentTextColor(element.color || '#000000');
+      setCurrentFontFamily(element.fontFamily || 'Arial');
+      setCurrentTextShadowEnabled(element.textShadow || false);
+      setIsTextPropertiesModalOpen(true); // Open for editing
+    }
 
     const designAreaRect = designAreaRef.current.getBoundingClientRect();
     const offsetX = e.clientX - (element.x + designAreaRect.left);
@@ -261,6 +259,15 @@ const MobileCoverCustomizationPage = () => {
     setSelectedElementId(id);
     const element = designElements.find(el => el.id === id);
     if (!element || !designAreaRef.current || !product) return;
+
+    if (element.type === 'text') {
+      setCurrentTextContent(element.value);
+      setCurrentFontSize([element.fontSize || 24]);
+      setCurrentTextColor(element.color || '#000000');
+      setCurrentFontFamily(element.fontFamily || 'Arial');
+      setCurrentTextShadowEnabled(element.textShadow || false);
+      setIsTextPropertiesModalOpen(true); // Open for editing
+    }
 
     const designAreaRect = designAreaRef.current.getBoundingClientRect();
 
@@ -434,12 +441,21 @@ const MobileCoverCustomizationPage = () => {
 
   const selectedElement = designElements.find(el => el.id === selectedElementId);
 
+  // Effect to update text properties states when a text element is selected
   useEffect(() => {
-    if (selectedElement) {
-      if (selectedElement.type === 'text') {
-        setFontSize([selectedElement.fontSize || 24]);
-        setTextColor(selectedElement.color || '#000000');
-      }
+    if (selectedElement && selectedElement.type === 'text') {
+      setCurrentTextContent(selectedElement.value);
+      setCurrentFontSize([selectedElement.fontSize || 24]);
+      setCurrentTextColor(selectedElement.color || '#000000');
+      setCurrentFontFamily(selectedElement.fontFamily || 'Arial');
+      setCurrentTextShadowEnabled(selectedElement.textShadow || false);
+    } else {
+      // Reset states if no text element is selected or a different type is selected
+      setCurrentTextContent('');
+      setCurrentFontSize([24]);
+      setCurrentTextColor('#000000');
+      setCurrentFontFamily('Arial');
+      setCurrentTextShadowEnabled(false);
     }
   }, [selectedElement]);
 
@@ -622,6 +638,59 @@ const MobileCoverCustomizationPage = () => {
     }
   };
 
+  const handleSaveTextProperties = () => {
+    if (!currentTextContent.trim()) {
+      toast({ title: "Error", description: "Text cannot be empty.", variant: "destructive" });
+      return;
+    }
+
+    if (selectedElementId && selectedElement?.type === 'text') {
+      // Update existing text element
+      updateElement(selectedElementId, {
+        value: currentTextContent,
+        fontSize: currentFontSize[0],
+        color: currentTextColor,
+        fontFamily: currentFontFamily,
+        textShadow: currentTextShadowEnabled,
+      });
+      toast({ title: "Success", description: "Text updated successfully." });
+    } else {
+      // Add new text element
+      const newElement: DesignElement = {
+        id: `text-${Date.now()}`,
+        type: 'text',
+        value: currentTextContent,
+        x: 50,
+        y: 50,
+        fontSize: currentFontSize[0],
+        color: currentTextColor,
+        fontFamily: currentFontFamily,
+        textShadow: currentTextShadowEnabled,
+      };
+      setDesignElements([...designElements, newElement]);
+      setSelectedElementId(newElement.id); // Select the newly added element
+      toast({ title: "Success", description: "Text added successfully." });
+    }
+    setIsTextPropertiesModalOpen(false);
+    // Reset states to default for next add/edit
+    setCurrentTextContent('');
+    setCurrentFontSize([24]);
+    setCurrentTextColor('#000000');
+    setCurrentFontFamily('Arial');
+    setCurrentTextShadowEnabled(false);
+    setSelectedElementId(null); // Deselect after saving
+  };
+
+  const handleAddTextClick = () => {
+    setSelectedElementId(null); // Ensure no element is selected for new text
+    setCurrentTextContent('');
+    setCurrentFontSize([24]);
+    setCurrentTextColor('#000000');
+    setCurrentFontFamily('Arial');
+    setCurrentTextShadowEnabled(false);
+    setIsTextPropertiesModalOpen(true);
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
       <header className="flex items-center justify-between py-2 px-4 bg-white dark:bg-gray-800 shadow-md">
@@ -660,7 +729,6 @@ const MobileCoverCustomizationPage = () => {
               backgroundPosition: 'center',
               touchAction: 'none',
             }}
-            // Removed onClick handler from here
           >
             <div
               ref={canvasContentRef}
@@ -673,9 +741,7 @@ const MobileCoverCustomizationPage = () => {
                 backgroundPosition: 'center',
                 touchAction: 'none',
               }}
-              onClick={(e) => { // Add onClick here
-                // Only trigger file input if the click was directly on the canvas background
-                // and not on a child element (like a design element or the mockup overlay)
+              onClick={(e) => {
                 if (e.target === canvasContentRef.current) {
                   fileInputRef.current?.click();
                 }
@@ -707,6 +773,8 @@ const MobileCoverCustomizationPage = () => {
                         fontSize: `${el.fontSize}px`,
                         color: el.color,
                         whiteSpace: 'nowrap',
+                        fontFamily: el.fontFamily, // Apply font family
+                        textShadow: el.textShadow ? '2px 2px 4px rgba(0,0,0,0.5)' : 'none', // Apply shadow
                       }}
                     >
                       {el.value}
@@ -760,7 +828,7 @@ const MobileCoverCustomizationPage = () => {
       />
 
       <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-lg p-2 flex justify-around items-center border-t border-gray-200 dark:border-gray-700 z-10">
-        <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => setIsAddTextModalOpen(true)}>
+        <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={handleAddTextClick}>
           <Text className="h-6 w-6" />
           <span className="text-xs mt-1">Add Text</span>
         </Button>
@@ -782,23 +850,72 @@ const MobileCoverCustomizationPage = () => {
         </Button>
       </div>
 
-      <Dialog open={isAddTextModalOpen} onOpenChange={setIsAddTextModalOpen}>
+      {/* Text Properties Dialog (repurposed from Add Text Dialog) */}
+      <Dialog open={isTextPropertiesModalOpen} onOpenChange={setIsTextPropertiesModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Text</DialogTitle>
+            <DialogTitle>{selectedElementId && selectedElement?.type === 'text' ? 'Edit Text Properties' : 'Add New Text'}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <Label htmlFor="new-text">Enter Text</Label>
+            <Label htmlFor="text-content">Text Content</Label>
             <Textarea
-              id="new-text"
+              id="text-content"
               placeholder="Type your text here..."
-              value={newText}
-              onChange={(e) => setNewText(e.target.value)}
+              value={currentTextContent}
+              onChange={(e) => setCurrentTextContent(e.target.value)}
             />
+
+            <Label htmlFor="font-size">Font Size: {currentFontSize[0]}</Label>
+            <Slider
+              id="font-size"
+              min={10}
+              max={100}
+              step={1}
+              value={currentFontSize}
+              onValueChange={setCurrentFontSize}
+            />
+
+            <Label htmlFor="text-color">Text Color</Label>
+            <Input
+              id="text-color"
+              type="color"
+              value={currentTextColor}
+              onChange={(e) => setCurrentTextColor(e.target.value)}
+              className="w-full"
+            />
+
+            <Label htmlFor="font-family">Font Family</Label>
+            <Select value={currentFontFamily} onValueChange={setCurrentFontFamily}>
+              <SelectTrigger id="font-family">
+                <SelectValue placeholder="Select a font" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Arial">Arial</SelectItem>
+                <SelectItem value="Verdana">Verdana</SelectItem>
+                <SelectItem value="Georgia">Georgia</SelectItem>
+                <SelectItem value="Times New Roman">Times New Roman</SelectItem>
+                <SelectItem value="Courier New">Courier New</SelectItem>
+                <SelectItem value="Impact">Impact</SelectItem>
+                <SelectItem value="monospace">Monospace</SelectItem>
+                <SelectItem value="sans-serif">Sans-serif</SelectItem>
+                <SelectItem value="serif">Serif</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="text-shadow"
+                checked={currentTextShadowEnabled}
+                onCheckedChange={setCurrentTextShadowEnabled}
+              />
+              <Label htmlFor="text-shadow">Text Shadow</Label>
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddTextModalOpen(false)}>Cancel</Button>
-            <Button onClick={addTextElement}>Add Text</Button>
+            <Button variant="outline" onClick={() => setIsTextPropertiesModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveTextProperties}>
+              {selectedElementId && selectedElement?.type === 'text' ? 'Save Changes' : 'Add Text'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
