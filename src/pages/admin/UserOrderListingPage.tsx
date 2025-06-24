@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox"; // Import Checkbox component
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/components/ui/use-toast";
 import { Loader2, Eye, Trash2, Image as ImageIcon, ArrowDownWideNarrow, ArrowUpWideNarrow } from 'lucide-react';
 import { format } from 'date-fns';
@@ -48,7 +48,7 @@ const OrderManagementPage = () => {
   const [sortColumn, setSortColumn] = useState<string>('created_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [orderTypeFilter, setOrderTypeFilter] = useState<string>('normal');
-  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set()); // State for selected orders
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   const orderStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
@@ -56,7 +56,7 @@ const OrderManagementPage = () => {
   const fetchOrders = async () => {
     setLoading(true);
     setError(null);
-    setSelectedOrderIds(new Set()); // Clear selections on re-fetch
+    setSelectedOrderIds(new Set());
 
     try {
       const { data, error: invokeError } = await supabase.functions.invoke('get-orders-with-user-email', {
@@ -155,7 +155,6 @@ const OrderManagementPage = () => {
   };
 
   const deleteSingleOrder = async (id: string, imageUrl: string | null) => {
-    // Delete image from storage if it exists and is a Supabase URL
     if (imageUrl && imageUrl.startsWith('https://smpjbedvyqensurarrym.supabase.co/storage/v1/object/public/order-mockups/')) {
       const fileName = imageUrl.split('/').pop();
       if (fileName) {
@@ -169,7 +168,7 @@ const OrderManagementPage = () => {
             description: `Failed to delete order image: ${storageError.message}`,
             variant: "destructive",
           });
-          return false; // Indicate failure
+          return false;
         }
       }
     }
@@ -186,9 +185,9 @@ const OrderManagementPage = () => {
         description: `Failed to delete order: ${error.message}`,
         variant: "destructive",
       });
-      return false; // Indicate failure
+      return false;
     }
-    return true; // Indicate success
+    return true;
   };
 
   const handleDeleteOrder = async (id: string, imageUrl: string | null) => {
@@ -271,8 +270,24 @@ const OrderManagementPage = () => {
       });
     }
 
-    fetchOrders(); // Re-fetch orders to update the list and clear selections
+    fetchOrders();
     setLoading(false);
+  };
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortIcon = (column: string) => {
+    if (sortColumn === column) {
+      return sortDirection === 'asc' ? <ArrowUpWideNarrow className="ml-1 h-3 w-3" /> : <ArrowDownWideNarrow className="ml-1 h-3 w-3" />;
+    }
+    return null;
   };
 
   const isAllSelected = orders.length > 0 && selectedOrderIds.size === orders.length;
@@ -308,34 +323,6 @@ const OrderManagementPage = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center space-x-2">
-              <Label htmlFor="sort-by">Sort by:</Label>
-              <Select value={sortColumn} onValueChange={(value) => setSortColumn(value)}>
-                <SelectTrigger id="sort-by" className="w-[180px]">
-                  <SelectValue placeholder="Select column" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="created_at">Order Date</SelectItem>
-                  <SelectItem value="customer_name">Customer Name</SelectItem>
-                  <SelectItem value="customer_phone">Phone Number</SelectItem>
-                  <SelectItem value="user_email">User Email</SelectItem>
-                  <SelectItem value="total_price">Total Price</SelectItem>
-                  <SelectItem value="status">Status</SelectItem>
-                  <SelectItem value="type">Type</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
-              >
-                {sortDirection === 'asc' ? (
-                  <ArrowUpWideNarrow className="h-4 w-4" />
-                ) : (
-                  <ArrowDownWideNarrow className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -366,15 +353,29 @@ const OrderManagementPage = () => {
                             aria-label="Select all"
                           />
                         </TableHead>
-                        <TableHead>Order ID</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Customer Name</TableHead>
-                        <TableHead>User Email</TableHead>
+                        <TableHead className="cursor-pointer hover:text-primary" onClick={() => handleSort('id')}>
+                          <div className="flex items-center">Order ID {getSortIcon('id')}</div>
+                        </TableHead>
+                        <TableHead className="cursor-pointer hover:text-primary" onClick={() => handleSort('created_at')}>
+                          <div className="flex items-center">Date {getSortIcon('created_at')}</div>
+                        </TableHead>
+                        <TableHead className="cursor-pointer hover:text-primary" onClick={() => handleSort('customer_name')}>
+                          <div className="flex items-center">Customer Name {getSortIcon('customer_name')}</div>
+                        </TableHead>
+                        <TableHead className="cursor-pointer hover:text-primary" onClick={() => handleSort('user_email')}>
+                          <div className="flex items-center">User Email {getSortIcon('user_email')}</div>
+                        </TableHead>
                         <TableHead>Product</TableHead>
                         <TableHead>Design</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Total</TableHead>
+                        <TableHead className="cursor-pointer hover:text-primary" onClick={() => handleSort('type')}>
+                          <div className="flex items-center">Type {getSortIcon('type')}</div>
+                        </TableHead>
+                        <TableHead className="cursor-pointer hover:text-primary" onClick={() => handleSort('status')}>
+                          <div className="flex items-center">Status {getSortIcon('status')}</div>
+                        </TableHead>
+                        <TableHead className="text-right cursor-pointer hover:text-primary" onClick={() => handleSort('total_price')}>
+                          <div className="flex items-center justify-end">Total {getSortIcon('total_price')}</div>
+                        </TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
