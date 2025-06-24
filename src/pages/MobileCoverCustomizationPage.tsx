@@ -660,11 +660,7 @@ const MobileCoverCustomizationPage = () => {
               backgroundPosition: 'center',
               touchAction: 'none',
             }}
-            onClick={() => {
-              if (!designElements.length && fileInputRef.current) {
-                fileInputRef.current.click();
-              }
-            }}
+            // Removed onClick handler from here
           >
             <div
               ref={canvasContentRef}
@@ -737,7 +733,7 @@ const MobileCoverCustomizationPage = () => {
               {!designElements.length && (
                 <div
                   className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 cursor-pointer border-2 border-dashed border-gray-400 rounded-lg m-4"
-                  onClick={() => fileInputRef.current?.click()}
+                  // Removed onClick from here as well, as the button below handles it
                 >
                   <PlusCircle className="h-12 w-12 mb-2" />
                   <p className="text-lg font-medium">Add Your Photo</p>
