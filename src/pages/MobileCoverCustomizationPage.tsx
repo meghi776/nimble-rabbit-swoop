@@ -26,7 +26,6 @@ import {
   ArrowLeft,
   Check,
 } from 'lucide-react';
-import ImageUploadModal from '@/components/ImageUploadModal'; // Import the new ImageUploadModal
 
 interface Product {
   id: string;
@@ -64,11 +63,11 @@ const MobileCoverCustomizationPage = () => {
   const [rotation, setRotation] = useState<number[]>([0]);
   const [scale, setScale] = useState<number[]>([1]);
   const designAreaRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null); // Ref for hidden file input
   const { toast } = useToast();
 
   // Modals state
   const [isAddTextModalOpen, setIsAddTextModalOpen] = useState(false);
-  const [isImageUploadModalOpen, setIsImageUploadModalOpen] = useState(false); // State for new image upload modal
 
   useEffect(() => {
     const fetchProductAndMockup = async () => {
@@ -142,7 +141,6 @@ const MobileCoverCustomizationPage = () => {
     };
     setDesignElements([...designElements, newElement]);
     setSelectedElementId(newElement.id);
-    setIsImageUploadModalOpen(false); // Close modal after adding
   };
 
   const updateElement = (id: string, updates: Partial<DesignElement>) => {
@@ -261,6 +259,40 @@ const MobileCoverCustomizationPage = () => {
     setLoading(false);
   };
 
+  const handleImageFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setLoading(true);
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('stock-images') // Using 'stock-images' bucket
+      .upload(filePath, file);
+
+    if (uploadError) {
+      console.error("Error uploading image:", uploadError);
+      toast({
+        title: "Error",
+        description: `Failed to upload image: ${uploadError.message}`,
+        variant: "destructive",
+      });
+    } else {
+      const { data: publicUrlData } = supabase.storage
+        .from('stock-images')
+        .getPublicUrl(filePath);
+      addImageElement(publicUrlData.publicUrl);
+      toast({ title: "Success", description: "Image uploaded and added to design." });
+    }
+    setLoading(false);
+    // Clear the file input value to allow selecting the same file again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const selectedElement = designElements.find(el => el.id === selectedElementId);
 
   useEffect(() => {
@@ -316,8 +348,8 @@ const MobileCoverCustomizationPage = () => {
                 backgroundPosition: 'center',
               }}
               onClick={() => {
-                if (!designElements.length) {
-                  setIsImageUploadModalOpen(true); // Open image upload modal when empty area is clicked
+                if (!designElements.length && fileInputRef.current) {
+                  fileInputRef.current.click(); // Directly open file input
                 }
               }}
             >
@@ -375,6 +407,7 @@ const MobileCoverCustomizationPage = () => {
               {!designElements.length && (
                 <div
                   className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 cursor-pointer border-2 border-dashed border-gray-400 rounded-lg m-4"
+                  onClick={() => fileInputRef.current?.click()} // Trigger file input on click
                 >
                   <PlusCircle className="h-12 w-12 mb-2" />
                   <p className="text-lg font-medium">Add Your Photo</p> {/* Changed text */}
@@ -463,13 +496,22 @@ const MobileCoverCustomizationPage = () => {
         </div>
       )}
 
+      {/* Hidden file input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleImageFileSelect}
+        accept="image/*"
+        className="hidden"
+      />
+
       {/* Bottom Control Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-lg p-2 flex justify-around items-center border-t border-gray-200 dark:border-gray-700 z-10">
         <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => setIsAddTextModalOpen(true)}>
           <Text className="h-6 w-6" />
           <span className="text-xs mt-1">Add Text</span>
         </Button>
-        <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => setIsImageUploadModalOpen(true)}>
+        <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => fileInputRef.current?.click()}>
           <Image className="h-6 w-6" />
           <span className="text-xs mt-1">Your Photo</span>
         </Button>
@@ -504,13 +546,6 @@ const MobileCoverCustomizationPage = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Image Upload Modal */}
-      <ImageUploadModal
-        isOpen={isImageUploadModalOpen}
-        onClose={() => setIsImageUploadModalOpen(false)}
-        onImageSelect={addImageElement}
-      />
     </div>
   );
 };
