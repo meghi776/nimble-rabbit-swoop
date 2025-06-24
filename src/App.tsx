@@ -16,9 +16,9 @@ import BrandManagementPage from "./pages/admin/BrandManagementPage";
 import ProductManagementByBrandPage from "./pages/admin/ProductManagementByBrandPage";
 import BrandListingPage from "./pages/BrandListingPage";
 import ProductListingPage from "./pages/ProductListingPage";
-import Header from "./components/Header";
-import Login from "./pages/Login"; // Import the new Login component
-import { SessionContextProvider } from "./contexts/SessionContext"; // Import the new SessionContextProvider
+import Login from "./pages/Login";
+import { SessionContextProvider } from "./contexts/SessionContext";
+import PublicLayout from "./components/PublicLayout"; // Import the new PublicLayout
 
 const queryClient = new QueryClient();
 
@@ -28,19 +28,21 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <SessionContextProvider> {/* Wrap the entire app with SessionContextProvider */}
-          <Header />
+        <SessionContextProvider>
           <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/login" element={<Login />} /> {/* Add the Login route */}
-            <Route path="/customize-cover/:productId" element={<MobileCoverCustomizationPage />} /> {/* Updated route to accept product ID */}
-            
-            {/* Public Listing Routes */}
-            <Route path="/categories/:categoryId/brands" element={<BrandListingPage />} />
-            <Route path="/categories/:categoryId/products" element={<ProductListingPage />} />
-            <Route path="/categories/:categoryId/brands/:brandId/products" element={<ProductListingPage />} />
+            {/* Routes that use the global Header */}
+            <Route element={<PublicLayout />}>
+              <Route path="/" element={<Index />} />
+              <Route path="/categories/:categoryId/brands" element={<BrandListingPage />} />
+              <Route path="/categories/:categoryId/products" element={<ProductListingPage />} />
+              <Route path="/categories/:categoryId/brands/:brandId/products" element={<ProductListingPage />} />
+            </Route>
 
-            {/* Admin Routes */}
+            {/* Routes that do NOT use the global Header */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/customize-cover/:productId" element={<MobileCoverCustomizationPage />} />
+            
+            {/* Admin Routes (AdminLayout has its own sidebar/header) */}
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
               <Route path="users" element={<UserManagementPage />} />
