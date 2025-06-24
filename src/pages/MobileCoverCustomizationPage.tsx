@@ -650,7 +650,14 @@ const MobileCoverCustomizationPage = () => {
       toast({ title: "Success", description: isDemo ? "Demo order placed successfully!" : "Your order has been placed successfully!" });
       setIsCheckoutModalOpen(false);
       setIsDemoOrderModalOpen(false); // Close demo modal
-      navigate('/orders'); // Redirect to orders history page
+      
+      // Conditional redirection based on order type
+      if (isDemo) {
+        navigate('/admin/demo-orders'); // Redirect to admin demo orders page
+      } else {
+        navigate('/orders'); // Redirect to user's normal orders history page
+      }
+
     } catch (err: any) {
       console.error("Error placing order:", err);
       toast({ title: "Order Failed", description: err.message || "An unexpected error occurred while placing your order.", variant: "destructive" });
