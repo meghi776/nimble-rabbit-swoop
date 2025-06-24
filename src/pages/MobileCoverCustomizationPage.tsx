@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom'; // Removed Link, added useNavigate
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,6 +68,7 @@ interface TouchState {
 
 const MobileCoverCustomizationPage = () => {
   const { productId } = useParams<{ productId: string }>();
+  const navigate = useNavigate(); // Initialize useNavigate
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -494,9 +495,9 @@ const MobileCoverCustomizationPage = () => {
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
       <header className="flex items-center justify-between py-2 px-4 bg-white dark:bg-gray-800 shadow-md">
-        <Link to={-1} className="text-gray-600 dark:text-gray-300">
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}> {/* Changed Link to Button with navigate(-1) */}
           <ArrowLeft className="h-6 w-6" />
-        </Link>
+        </Button>
         <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
           {product?.name || 'Loading Product...'}
         </h1>
