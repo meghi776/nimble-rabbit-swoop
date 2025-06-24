@@ -37,6 +37,7 @@ const UserManagementPage = () => {
   const [editLastName, setEditLastName] = useState('');
   const [editRole, setEditRole] = useState<'user' | 'admin'>('user');
   const [newEmail, setNewEmail] = useState(''); // New state for new user email
+  const [newPassword, setNewPassword] = useState(''); // New state for new user password
   const [newFirstName, setNewFirstName] = useState(''); // New state for new user first name
   const [newLastName, setNewLastName] = useState(''); // New state for new user last name
   const { toast } = useToast();
@@ -158,16 +159,17 @@ const UserManagementPage = () => {
 
   const handleAddUserClick = () => {
     setNewEmail('');
+    setNewPassword(''); // Clear password field
     setNewFirstName('');
     setNewLastName('');
     setIsAddUserModalOpen(true);
   };
 
   const handleSubmitAddUser = async () => {
-    if (!newEmail.trim()) {
+    if (!newEmail.trim() || !newPassword.trim()) {
       toast({
         title: "Validation Error",
-        description: "Email cannot be empty.",
+        description: "Email and password cannot be empty.",
         variant: "destructive",
       });
       return;
@@ -176,7 +178,7 @@ const UserManagementPage = () => {
     if (!session) {
       toast({
         title: "Authentication Error",
-        description: "You must be logged in to invite users.",
+        description: "You must be logged in to create users.",
         variant: "destructive",
       });
       return;
@@ -184,9 +186,10 @@ const UserManagementPage = () => {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('invite-user', {
+      const { data, error } = await supabase.functions.invoke('create-user-admin', { // Changed function name
         body: {
           email: newEmail,
+          password: newPassword, // Send password
           first_name: newFirstName,
           last_name: newLastName,
         },
@@ -197,32 +200,32 @@ const UserManagementPage = () => {
       });
 
       if (error) {
-        console.error("Error inviting user via Edge Function:", error);
+        console.error("Error creating user via Edge Function:", error);
         toast({
           title: "Error",
-          description: `Failed to invite user: ${error.message}`,
+          description: `Failed to create user: ${error.message}`,
           variant: "destructive",
         });
       } else if (data && data.error) {
         console.error("Edge Function returned error:", data.error);
         toast({
           title: "Error",
-          description: `Failed to invite user: ${data.error}`,
+          description: `Failed to create user: ${data.error}`,
           variant: "destructive",
         });
       } else {
         toast({
           title: "Success",
-          description: "Invitation sent successfully! User will receive an email to set up their account.",
+          description: "User account created successfully!",
         });
         setIsAddUserModalOpen(false);
-        fetchProfiles(); // Re-fetch profiles to show the new user (once they sign up)
+        fetchProfiles(); // Re-fetch profiles to show the new user
       }
     } catch (err) {
       console.error("Network or unexpected error invoking Edge Function:", err);
       toast({
         title: "Error",
-        description: "An unexpected error occurred while inviting the user.",
+        description: "An unexpected error occurred while creating the user.",
         variant: "destructive",
       });
     } finally {
@@ -366,7 +369,7 @@ const UserManagementPage = () => {
       <Dialog open={isAddUserModalOpen} onOpenChange={setIsAddUserModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Invite New User</DialogTitle>
+            <DialogTitle>Create New User</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
@@ -378,6 +381,19 @@ const UserManagementPage = () => {
                 type="email"
                 value={newEmail}
                 onChange={(e) => setNewEmail(e.target.value)}
+                className="col-span-3"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="new-password" className="text-right">
+                Password
+              </Label>
+              <Input
+                id="new-password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
                 className="col-span-3"
                 required
               />
@@ -407,7 +423,7 @@ const UserManagementPage = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddUserModalOpen(false)}>Cancel</Button>
-            <Button onClick={handleSubmitAddUser}>Send Invitation</Button>
+            <Button onClick={handleSubmitAddUser}>Create User</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
