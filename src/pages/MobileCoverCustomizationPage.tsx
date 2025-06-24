@@ -491,6 +491,7 @@ const MobileCoverCustomizationPage = () => {
   };
 
   const handleBuyNowClick = () => {
+    console.log("handleBuyNowClick: Current user object:", user);
     if (!user) {
       toast({ title: "Authentication Required", description: "Please log in to place an order.", variant: "destructive" });
       navigate('/login'); // Redirect to login if not authenticated
@@ -505,6 +506,7 @@ const MobileCoverCustomizationPage = () => {
 
   const handlePlaceOrder = async () => {
     if (!product || !user?.id) {
+      console.error("handlePlaceOrder: Product or user information missing. Product:", product, "User:", user);
       toast({ title: "Error", description: "Product or user information missing.", variant: "destructive" });
       return;
     }
@@ -560,6 +562,7 @@ const MobileCoverCustomizationPage = () => {
       orderedDesignImageUrl = publicUrlData.publicUrl;
 
       // 3. Save order details to the 'orders' table
+      console.log("Attempting to insert order with user_id:", user.id); // Log user.id here
       const { error: orderInsertError } = await supabase
         .from('orders')
         .insert({
@@ -575,6 +578,7 @@ const MobileCoverCustomizationPage = () => {
         });
 
       if (orderInsertError) {
+        console.error("Supabase insert error:", orderInsertError); // Log the full error object
         throw new Error(`Failed to place order: ${orderInsertError.message}`);
       }
 
