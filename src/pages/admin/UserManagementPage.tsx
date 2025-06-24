@@ -200,35 +200,39 @@ const UserManagementPage = () => {
       });
 
       if (invokeError) {
-        console.error("Full Edge Function invoke error object:", invokeError);
+        console.error("--- Edge Function Invoke Error Details ---");
+        console.error("Full invokeError object:", invokeError);
         console.error("invokeError.message:", invokeError.message);
         console.error("invokeError.context:", invokeError.context);
         console.error("invokeError.context?.data (raw):", invokeError.context?.data);
+        console.error("invokeError.context?.status:", invokeError.context?.status);
+        console.error("----------------------------------------");
 
-        let errorMessage = invokeError.message; // Default to the invokeError message
+        let errorMessage = "An unexpected error occurred while creating the user."; // Default fallback message
 
+        // Try to extract error from context.data
         if (invokeError.context?.data) {
           try {
-            const errorData = invokeError.context.data;
             let parsedErrorBody: any;
-
-            if (typeof errorData === 'string') {
-              parsedErrorBody = JSON.parse(errorData);
-            } else if (typeof errorData === 'object' && errorData !== null) {
-              parsedErrorBody = errorData;
+            if (typeof invokeError.context.data === 'string') {
+              parsedErrorBody = JSON.parse(invokeError.context.data);
+            } else if (typeof invokeError.context.data === 'object' && invokeError.context.data !== null) {
+              parsedErrorBody = invokeError.context.data;
             }
-
-            console.error("Parsed error body:", parsedErrorBody);
 
             if (parsedErrorBody && typeof parsedErrorBody === 'object' && 'error' in parsedErrorBody) {
               errorMessage = parsedErrorBody.error;
             } else {
-              errorMessage = `Failed to create user: Unexpected error response format. ${invokeError.message}`;
+              // If context.data is present but not in expected { error: "message" } format
+              errorMessage = `Failed to create user: Unexpected response format. Status: ${invokeError.context?.status || 'N/A'}. Raw: ${JSON.stringify(invokeError.context.data)}`;
             }
           } catch (parseErr) {
             console.error("Failed to parse error response body from Edge Function:", parseErr);
             errorMessage = `Failed to create user: ${invokeError.message}. Raw response: ${invokeError.context.data}`;
           }
+        } else if (invokeError.message) {
+          // Fallback to invokeError.message if context.data is not available
+          errorMessage = invokeError.message;
         }
 
         toast({
@@ -237,7 +241,7 @@ const UserManagementPage = () => {
           variant: "destructive",
         });
       } else if (data && (data as any).error) { // This handles cases where function returns 200 but with an error payload
-        console.error("Edge Function returned error in data payload:", (data as any).error);
+        console.error("Edge Function returned error in data payload (status 200):", (data as any).error);
         toast({
           title: "Error",
           description: `Failed to create user: ${(data as any).error}`,
