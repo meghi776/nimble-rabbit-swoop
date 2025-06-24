@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,15 +7,26 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/components/ui/use-toast";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, PlusCircle, Trash2, Text, Image as ImageIcon, RotateCcw, RotateCw, ZoomIn, ZoomOut } from 'lucide-react';
+import {
+  Loader2,
+  PlusCircle,
+  Trash2,
+  Text,
+  Image as ImageIcon,
+  ArrowLeft,
+  Check,
+  Palette, // For Back Color
+  LayoutTemplate, // For Readymade
+  Sticker, // For Add Sticker
+} from 'lucide-react';
 
 interface Product {
   id: string;
@@ -57,6 +68,10 @@ const MobileCoverCustomizationPage = () => {
   const designAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
+  // Modals state
+  const [isAddImageModalOpen, setIsAddImageModalOpen] = useState(false);
+  const [isAddTextModalOpen, setIsAddTextModalOpen] = useState(false);
+
   useEffect(() => {
     const fetchProductAndMockup = async () => {
       setLoading(true);
@@ -75,6 +90,24 @@ const MobileCoverCustomizationPage = () => {
           ...productData,
           mockup_image_url: productData.mockups.length > 0 ? productData.mockups[0].image_url : null,
         });
+        // Load existing design data if available
+        const { data: mockupDesignData, error: mockupDesignError } = await supabase
+          .from('mockups')
+          .select('design_data')
+          .eq('product_id', productData.id)
+          .single();
+
+        if (mockupDesignError && mockupDesignError.code !== 'PGRST116') { // PGRST116 means no rows found
+          console.error("Error fetching mockup design data:", mockupDesignError);
+          toast({ title: "Error", description: `Failed to load design data: ${mockupDesignError.message}`, variant: "destructive" });
+        } else if (mockupDesignData?.design_data) {
+          try {
+            setDesignElements(JSON.parse(mockupDesignData.design_data as string));
+          } catch (parseError) {
+            console.error("Error parsing design data:", parseError);
+            toast({ title: "Error", description: "Failed to parse existing design data.", variant: "destructive" });
+          }
+        }
       }
       setLoading(false);
     };
@@ -103,6 +136,7 @@ const MobileCoverCustomizationPage = () => {
     setDesignElements([...designElements, newElement]);
     setNewText('');
     setSelectedElementId(newElement.id);
+    setIsAddTextModalOpen(false); // Close modal after adding
   };
 
   const handleImageUpload = async () => {
@@ -120,7 +154,7 @@ const MobileCoverCustomizationPage = () => {
       const filePath = `design-images/${fileName}`;
 
       const { data, error } = await supabase.storage
-        .from('mockups-bucket') // Using mockups-bucket for design images too, or create a new one
+        .from('mockups-bucket')
         .upload(filePath, newImageFile);
 
       if (error) {
@@ -154,6 +188,7 @@ const MobileCoverCustomizationPage = () => {
       setNewImageFile(null);
       setNewImageUrl('');
       setSelectedElementId(newElement.id);
+      setIsAddImageModalOpen(false); // Close modal after adding
     }
   };
 
@@ -175,10 +210,14 @@ const MobileCoverCustomizationPage = () => {
     if (!element || !designAreaRef.current) return;
 
     const designAreaRect = designAreaRef.current.getBoundingClientRect();
+    const elementRect = e.currentTarget.getBoundingClientRect();
+
+    const offsetX = e.clientX - elementRect.left;
+    const offsetY = e.clientY - elementRect.top;
 
     const onMouseMove = (moveEvent: MouseEvent) => {
-      const newX = moveEvent.clientX - designAreaRect.left - (element.width || 0) / 2;
-      const newY = moveEvent.clientY - designAreaRect.top - (element.height || 0) / 2;
+      const newX = moveEvent.clientX - designAreaRect.left - offsetX;
+      const newY = moveEvent.clientY - designAreaRect.top - offsetY;
 
       updateElement(id, { x: newX, y: newY });
     };
@@ -222,7 +261,6 @@ const MobileCoverCustomizationPage = () => {
     setLoading(true);
     const designData = JSON.stringify(designElements);
 
-    // Check if a mockup entry already exists for this product
     const { data: existingMockup, error: fetchMockupError } = await supabase
       .from('mockups')
       .select('id')
@@ -237,7 +275,6 @@ const MobileCoverCustomizationPage = () => {
     }
 
     if (existingMockup && existingMockup.length > 0) {
-      // Update existing mockup with design_data
       const { error: updateError } = await supabase
         .from('mockups')
         .update({ design_data: designData })
@@ -250,16 +287,15 @@ const MobileCoverCustomizationPage = () => {
         toast({ title: "Success", description: "Design saved successfully!" });
       }
     } else {
-      // Create a new mockup entry if none exists (this shouldn't happen if product management is used)
-      // This is a fallback, ideally mockup entry is created when product is created/mockup image is uploaded
       const { error: insertError } = await supabase
         .from('mockups')
         .insert({
           product_id: product.id,
-          image_url: product.mockup_image_url, // Use existing mockup image URL
+          image_url: product.mockup_image_url,
           name: `${product.name} Custom Design`,
           designer: 'Customer',
           design_data: designData,
+          user_id: (await supabase.auth.getUser()).data.user?.id || null, // Add user_id
         });
 
       if (insertError) {
@@ -286,7 +322,20 @@ const MobileCoverCustomizationPage = () => {
   }, [selectedElement]);
 
   return (
-    <div className="flex flex-col md:flex-row h-full p-4 gap-4">
+    <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Header */}
+      <header className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 shadow-md">
+        <Link to={-1} className="text-gray-600 dark:text-gray-300">
+          <ArrowLeft className="h-6 w-6" />
+        </Link>
+        <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
+          {product?.name || 'Loading Product...'}
+        </h1>
+        <Button onClick={handleSaveDesign} variant="ghost" size="icon">
+          <Check className="h-6 w-6 text-green-600" />
+        </Button>
+      </header>
+
       {loading && (
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
@@ -297,11 +346,13 @@ const MobileCoverCustomizationPage = () => {
           <p>Error: {error}</p>
         </div>
       )}
+
       {!loading && !error && product && (
-        <>
-          {/* Left Panel: Design Area */}
-          <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center min-h-[300px] md:min-h-[500px] overflow-hidden" ref={designAreaRef}>
+        <div className="flex-1 flex flex-col md:flex-row p-4 gap-4 overflow-hidden">
+          {/* Left: Design Area */}
+          <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center relative overflow-hidden">
             <div
+              ref={designAreaRef}
               className="relative bg-white shadow-lg overflow-hidden"
               style={{
                 width: `${product.canvas_width}px`,
@@ -345,7 +396,6 @@ const MobileCoverCustomizationPage = () => {
                       alt="design element"
                       className="w-full h-full object-contain"
                       onLoad={(e) => {
-                        // Set initial dimensions for image elements if not already set
                         if (!el.width || !el.height) {
                           const img = e.target as HTMLImageElement;
                           updateElement(el.id, { width: img.naturalWidth, height: img.naturalHeight });
@@ -357,61 +407,28 @@ const MobileCoverCustomizationPage = () => {
                     <div
                       className="absolute -bottom-2 -right-2 w-4 h-4 bg-blue-500 rounded-full cursor-nwse-resize"
                       onMouseDown={(e) => {
-                        e.stopPropagation(); // Prevent dragging when resizing
+                        e.stopPropagation();
                         handleResize(e, el.id);
                       }}
                     />
                   )}
                 </div>
               ))}
+              {!designElements.length && (
+                <div
+                  className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 cursor-pointer border-2 border-dashed border-gray-400 rounded-lg m-4"
+                  onClick={() => setIsAddImageModalOpen(true)}
+                >
+                  <PlusCircle className="h-12 w-12 mb-2" />
+                  <p className="text-lg font-medium">Add Your Image</p>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Right Panel: Controls */}
-          <div className="w-full md:w-1/3 space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Add Text</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Textarea
-                  placeholder="Enter text"
-                  value={newText}
-                  onChange={(e) => setNewText(e.target.value)}
-                />
-                <Button onClick={addTextElement} className="w-full">
-                  <PlusCircle className="mr-2 h-4 w-4" /> Add Text
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Add Image</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Label htmlFor="image-file">Upload Image</Label>
-                <Input
-                  id="image-file"
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setNewImageFile(e.target.files ? e.target.files[0] : null)}
-                />
-                <Label htmlFor="image-url">Or Image URL</Label>
-                <Input
-                  id="image-url"
-                  type="text"
-                  placeholder="Enter image URL"
-                  value={newImageUrl}
-                  onChange={(e) => setNewImageUrl(e.target.value)}
-                />
-                <Button onClick={handleImageUpload} className="w-full">
-                  <ImageIcon className="mr-2 h-4 w-4" /> Add Image
-                </Button>
-              </CardContent>
-            </Card>
-
-            {selectedElement && (
+          {/* Right: Conditional Controls for Selected Element */}
+          {selectedElement && (
+            <div className="w-full md:w-1/3 space-y-4 overflow-y-auto">
               <Card>
                 <CardHeader>
                   <CardTitle>Edit Selected Element</CardTitle>
@@ -484,14 +501,86 @@ const MobileCoverCustomizationPage = () => {
                   </Button>
                 </CardContent>
               </Card>
-            )}
-
-            <Button onClick={handleSaveDesign} className="w-full">
-              Save Design
-            </Button>
-          </div>
-        </>
+            </div>
+          )}
+        </div>
       )}
+
+      {/* Bottom Control Bar */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-lg p-2 flex justify-around items-center border-t border-gray-200 dark:border-gray-700 z-10">
+        <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => setIsAddImageModalOpen(true)}>
+          <ImageIcon className="h-6 w-6" />
+          <span className="text-xs mt-1">Your Photo</span>
+        </Button>
+        <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => setIsAddTextModalOpen(true)}>
+          <Text className="h-6 w-6" />
+          <span className="text-xs mt-1">Add Text</span>
+        </Button>
+        <Button variant="ghost" className="flex flex-col h-auto p-2">
+          <Sticker className="h-6 w-6" />
+          <span className="text-xs mt-1">Add Sticker</span>
+        </Button>
+        <Button variant="ghost" className="flex flex-col h-auto p-2">
+          <Palette className="h-6 w-6" />
+          <span className="text-xs mt-1">Back Color</span>
+        </Button>
+        <Button variant="ghost" className="flex flex-col h-auto p-2">
+          <LayoutTemplate className="h-6 w-6" />
+          <span className="text-xs mt-1">Readymade</span>
+        </Button>
+      </div>
+
+      {/* Add Image Modal */}
+      <Dialog open={isAddImageModalOpen} onOpenChange={setIsAddImageModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Image</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <Label htmlFor="image-file">Upload Image</Label>
+            <Input
+              id="image-file"
+              type="file"
+              accept="image/*"
+              onChange={(e) => setNewImageFile(e.target.files ? e.target.files[0] : null)}
+            />
+            <Label htmlFor="image-url">Or Image URL</Label>
+            <Input
+              id="image-url"
+              type="text"
+              placeholder="Enter image URL"
+              value={newImageUrl}
+              onChange={(e) => setNewImageUrl(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddImageModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleImageUpload}>Add Image</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Text Modal */}
+      <Dialog open={isAddTextModalOpen} onOpenChange={setIsAddTextModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Text</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <Label htmlFor="new-text">Enter Text</Label>
+            <Textarea
+              id="new-text"
+              placeholder="Type your text here..."
+              value={newText}
+              onChange={(e) => setNewText(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddTextModalOpen(false)}>Cancel</Button>
+            <Button onClick={addTextElement}>Add Text</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
