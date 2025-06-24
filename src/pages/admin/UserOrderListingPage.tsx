@@ -46,7 +46,7 @@ const OrderManagementPage = () => {
   const [newStatus, setNewStatus] = useState<string>('');
   const [sortColumn, setSortColumn] = useState<string>('created_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  const [orderTypeFilter, setOrderTypeFilter] = useState<string>('all'); // New state for order type filter
+  const [orderTypeFilter, setOrderTypeFilter] = useState<string>('normal'); // Changed default to 'normal'
   const { toast } = useToast();
 
   const orderStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
