@@ -33,7 +33,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} /> {/* Add the Login route */}
-            <Route path="/customize-cover" element={<MobileCoverCustomizationPage />} />
+            <Route path="/customize-cover/:productId" element={<MobileCoverCustomizationPage />} /> {/* Updated route to accept product ID */}
             
             {/* Public Listing Routes */}
             <Route path="/categories/:categoryId/brands" element={<BrandListingPage />} />

@@ -139,8 +139,7 @@ const ProductListingPage = () => {
                       <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{product.description || 'No description.'}</p>
                       <p className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1">${product.price?.toFixed(2) || '0.00'}</p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">Canvas: {product.canvas_width || 'N/A'}x{product.canvas_height || 'N/A'}</p>
-                      {/* Add the Customize button here */}
-                      <Link to="/customize-cover" className="mt-4 block">
+                      <Link to={`/customize-cover/${product.id}`} className="mt-4 block">
                         <Button className="w-full">Customize</Button>
                       </Link>
                     </CardContent>
