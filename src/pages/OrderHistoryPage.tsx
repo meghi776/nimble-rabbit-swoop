@@ -14,6 +14,7 @@ import { Loader2, Package, DollarSign, Calendar, MapPin, Phone, User, Image as I
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
 interface Order {
   id: string;
@@ -26,6 +27,7 @@ interface Order {
   total_price: number;
   ordered_design_image_url: string | null;
   products: { name: string } | null; // Nested product data
+  type: string; // Added type to Order interface
 }
 
 const OrderHistoryPage = () => {
@@ -35,6 +37,8 @@ const OrderHistoryPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
+  const [orderTypeFilter, setOrderTypeFilter] = useState<'all' | 'normal' | 'demo'>('all'); // New state for filter
+  const navigate = useNavigate(); // Initialize useNavigate
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -45,7 +49,8 @@ const OrderHistoryPage = () => {
 
       setLoading(true);
       setError(null);
-      const { data, error } = await supabase
+
+      let query = supabase
         .from('orders')
         .select(`
           id,
@@ -57,10 +62,17 @@ const OrderHistoryPage = () => {
           status,
           total_price,
           ordered_design_image_url,
-          products (name)
+          products (name),
+          type
         `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
+
+      if (orderTypeFilter !== 'all') {
+        query = query.eq('type', orderTypeFilter);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error("Error fetching orders:", error);
@@ -72,7 +84,7 @@ const OrderHistoryPage = () => {
     };
 
     fetchOrders();
-  }, [user, sessionLoading]);
+  }, [user, sessionLoading, orderTypeFilter]); // Re-fetch when orderTypeFilter changes
 
   const openImageModal = (imageUrl: string | null) => {
     if (imageUrl) {
@@ -118,12 +130,32 @@ const OrderHistoryPage = () => {
       <h1 className="text-3xl font-bold mb-6 text-gray-800 dark:text-gray-100">Your Orders</h1>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row justify-between items-center">
           <CardTitle>Order History</CardTitle>
+          <div className="flex space-x-2">
+            <Button
+              variant={orderTypeFilter === 'all' ? 'default' : 'outline'}
+              onClick={() => setOrderTypeFilter('all')}
+            >
+              All Orders
+            </Button>
+            <Button
+              variant={orderTypeFilter === 'normal' ? 'default' : 'outline'}
+              onClick={() => setOrderTypeFilter('normal')}
+            >
+              Normal Orders
+            </Button>
+            <Button
+              variant={orderTypeFilter === 'demo' ? 'default' : 'outline'}
+              onClick={() => setOrderTypeFilter('demo')}
+            >
+              Demo Orders
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {orders.length === 0 ? (
-            <p className="text-gray-600 dark:text-gray-300">You have no orders yet.</p>
+            <p className="text-gray-600 dark:text-gray-300">No {orderTypeFilter !== 'all' ? orderTypeFilter : ''} orders found yet.</p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -133,6 +165,7 @@ const OrderHistoryPage = () => {
                     <TableHead>Date</TableHead>
                     <TableHead>Product</TableHead>
                     <TableHead>Design</TableHead>
+                    <TableHead>Type</TableHead> {/* Display order type */}
                     <TableHead>Customer</TableHead>
                     <TableHead>Address</TableHead>
                     <TableHead>Phone</TableHead>
@@ -156,6 +189,7 @@ const OrderHistoryPage = () => {
                           'N/A'
                         )}
                       </TableCell>
+                      <TableCell>{order.type}</TableCell> {/* Display order type */}
                       <TableCell>{order.customer_name}</TableCell>
                       <TableCell className="text-xs max-w-[150px] truncate">{order.customer_address}</TableCell>
                       <TableCell>{order.customer_phone}</TableCell>
