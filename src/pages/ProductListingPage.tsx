@@ -126,7 +126,10 @@ const ProductListingPage = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {products.map((product) => (
                   <Link key={product.id} to={`/customize-cover/${product.id}`} className="w-full">
-                    <Button variant="outline" className="w-full h-auto py-4 text-lg font-semibold">
+                    <Button 
+                      variant="outline" 
+                      className="w-full h-auto py-2 px-4 text-base font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
+                    >
                       {product.name}
                     </Button>
                   </Link>
