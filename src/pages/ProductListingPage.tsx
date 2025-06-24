@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from 'lucide-react';
 
@@ -124,16 +123,13 @@ const ProductListingPage = () => {
             {products.length === 0 ? (
               <p className="text-gray-600 dark:text-gray-300">No products found.</p>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {products.map((product) => (
-                  <Card key={product.id} className="h-full flex flex-col justify-between hover:shadow-lg transition-shadow duration-200">
-                    <CardHeader>
-                      <CardTitle className="text-xl">{product.name}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {/* Description removed */}
-                    </CardContent>
-                  </Card>
+                  <Link key={product.id} to={`/customize-cover/${product.id}`} className="w-full">
+                    <Button variant="outline" className="w-full h-auto py-4 text-lg font-semibold">
+                      {product.name}
+                    </Button>
+                  </Link>
                 ))}
               </div>
             )}
