@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Label } => "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -26,13 +26,13 @@ import {
   ArrowLeft,
   Eye,
   Download,
-  ShoppingCart, // Added for Buy Now button
+  ShoppingCart,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useSession } from '@/contexts/SessionContext'; // Import useSession
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Import Select components
-import { Switch } from "@/components/ui/switch"; // Import Switch component
+import { useSession } from '@/contexts/SessionContext';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
 interface Product {
   id: string;
@@ -41,7 +41,7 @@ interface Product {
   canvas_width: number;
   canvas_height: number;
   mockup_image_url?: string | null;
-  price: number; // Ensure product has a price
+  price: number;
 }
 
 interface DesignElement {
@@ -54,8 +54,8 @@ interface DesignElement {
   height?: number;
   fontSize?: number;
   color?: string;
-  fontFamily?: string; // New: Font family for text
-  textShadow?: boolean; // New: Boolean to enable/disable text shadow
+  fontFamily?: string;
+  textShadow?: boolean;
 }
 
 interface TouchState {
@@ -81,28 +81,27 @@ const MobileCoverCustomizationPage = () => {
   const [designElements, setDesignElements] = useState<DesignElement[]>([]);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   
-  // States for text properties dialog
-  const [isTextPropertiesModalOpen, setIsTextPropertiesModalOpen] = useState(false);
+  // States for text properties in footer
   const [currentTextContent, setCurrentTextContent] = useState('');
   const [currentFontSize, setCurrentFontSize] = useState<number[]>([24]);
   const [currentTextColor, setCurrentTextColor] = useState('#000000');
-  const [currentFontFamily, setCurrentFontFamily] = useState('Arial'); // Default font
-  const [currentTextShadowEnabled, setCurrentTextShadowEnabled] = useState(false); // Default shadow
+  const [currentFontFamily, setCurrentFontFamily] = useState('Arial');
+  const [currentTextShadowEnabled, setCurrentTextShadowEnabled] = useState(false);
 
   const designAreaRef = useRef<HTMLDivElement>(null);
   const canvasContentRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const isMobile = useIsMobile();
-  const { user } = useSession(); // Get current user from session
+  const { user } = useSession();
 
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
-  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false); // New state for checkout modal
+  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('COD'); // Default to Cash on Delivery
+  const [paymentMethod, setPaymentMethod] = useState('COD');
 
   const touchState = useRef<TouchState>({
     mode: 'none',
@@ -201,13 +200,13 @@ const MobileCoverCustomizationPage = () => {
     const element = designElements.find(el => el.id === id);
     if (!element || !designAreaRef.current) return;
 
+    // If it's a text element, populate the footer controls
     if (element.type === 'text') {
       setCurrentTextContent(element.value);
       setCurrentFontSize([element.fontSize || 24]);
       setCurrentTextColor(element.color || '#000000');
       setCurrentFontFamily(element.fontFamily || 'Arial');
       setCurrentTextShadowEnabled(element.textShadow || false);
-      setIsTextPropertiesModalOpen(true); // Open for editing
     }
 
     const designAreaRect = designAreaRef.current.getBoundingClientRect();
@@ -260,13 +259,13 @@ const MobileCoverCustomizationPage = () => {
     const element = designElements.find(el => el.id === id);
     if (!element || !designAreaRef.current || !product) return;
 
+    // If it's a text element, populate the footer controls
     if (element.type === 'text') {
       setCurrentTextContent(element.value);
       setCurrentFontSize([element.fontSize || 24]);
       setCurrentTextColor(element.color || '#000000');
       setCurrentFontFamily(element.fontFamily || 'Arial');
       setCurrentTextShadowEnabled(element.textShadow || false);
-      setIsTextPropertiesModalOpen(true); // Open for editing
     }
 
     const designAreaRect = designAreaRef.current.getBoundingClientRect();
@@ -638,57 +637,26 @@ const MobileCoverCustomizationPage = () => {
     }
   };
 
-  const handleSaveTextProperties = () => {
-    if (!currentTextContent.trim()) {
-      toast({ title: "Error", description: "Text cannot be empty.", variant: "destructive" });
-      return;
-    }
-
-    if (selectedElementId && selectedElement?.type === 'text') {
-      // Update existing text element
-      updateElement(selectedElementId, {
-        value: currentTextContent,
-        fontSize: currentFontSize[0],
-        color: currentTextColor,
-        fontFamily: currentFontFamily,
-        textShadow: currentTextShadowEnabled,
-      });
-      toast({ title: "Success", description: "Text updated successfully." });
-    } else {
-      // Add new text element
-      const newElement: DesignElement = {
-        id: `text-${Date.now()}`,
-        type: 'text',
-        value: currentTextContent,
-        x: 50,
-        y: 50,
-        fontSize: currentFontSize[0],
-        color: currentTextColor,
-        fontFamily: currentFontFamily,
-        textShadow: currentTextShadowEnabled,
-      };
-      setDesignElements([...designElements, newElement]);
-      setSelectedElementId(newElement.id); // Select the newly added element
-      toast({ title: "Success", description: "Text added successfully." });
-    }
-    setIsTextPropertiesModalOpen(false);
-    // Reset states to default for next add/edit
-    setCurrentTextContent('');
-    setCurrentFontSize([24]);
-    setCurrentTextColor('#000000');
-    setCurrentFontFamily('Arial');
-    setCurrentTextShadowEnabled(false);
-    setSelectedElementId(null); // Deselect after saving
-  };
-
   const handleAddTextClick = () => {
-    setSelectedElementId(null); // Ensure no element is selected for new text
-    setCurrentTextContent('');
-    setCurrentFontSize([24]);
-    setCurrentTextColor('#000000');
-    setCurrentFontFamily('Arial');
-    setCurrentTextShadowEnabled(false);
-    setIsTextPropertiesModalOpen(true);
+    const newElement: DesignElement = {
+      id: `text-${Date.now()}`,
+      type: 'text',
+      value: 'New Text', // Default text
+      x: 50,
+      y: 50,
+      fontSize: 24,
+      color: '#000000',
+      fontFamily: 'Arial',
+      textShadow: false,
+    };
+    setDesignElements([...designElements, newElement]);
+    setSelectedElementId(newElement.id); // Select the newly added element
+    setCurrentTextContent(newElement.value);
+    setCurrentFontSize([newElement.fontSize || 24]);
+    setCurrentTextColor(newElement.color || '#000000');
+    setCurrentFontFamily(newElement.fontFamily || 'Arial');
+    setCurrentTextShadowEnabled(newElement.textShadow || false);
+    toast({ title: "Success", description: "New text element added." });
   };
 
   return (
@@ -717,7 +685,7 @@ const MobileCoverCustomizationPage = () => {
       )}
 
       {!loading && !error && product && (
-        <div className="flex-1 flex flex-col md:flex-row overflow-y-auto pb-24">
+        <div className="flex-1 flex flex-col md:flex-row overflow-y-auto pb-48"> {/* Increased padding-bottom */}
           <div
             ref={designAreaRef}
             className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center relative overflow-hidden p-4"
@@ -773,8 +741,8 @@ const MobileCoverCustomizationPage = () => {
                         fontSize: `${el.fontSize}px`,
                         color: el.color,
                         whiteSpace: 'nowrap',
-                        fontFamily: el.fontFamily, // Apply font family
-                        textShadow: el.textShadow ? '2px 2px 4px rgba(0,0,0,0.5)' : 'none', // Apply shadow
+                        fontFamily: el.fontFamily,
+                        textShadow: el.textShadow ? '2px 2px 4px rgba(0,0,0,0.5)' : 'none',
                       }}
                     >
                       {el.value}
@@ -801,7 +769,7 @@ const MobileCoverCustomizationPage = () => {
                   src={product.mockup_image_url}
                   alt="Phone Mockup Overlay"
                   className="absolute inset-0 w-full h-full object-contain pointer-events-none"
-                  style={{ zIndex: 10 }} // Higher z-index to be on top
+                  style={{ zIndex: 10 }}
                 />
               )}
 
@@ -827,98 +795,135 @@ const MobileCoverCustomizationPage = () => {
         className="hidden"
       />
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-lg p-2 flex justify-around items-center border-t border-gray-200 dark:border-gray-700 z-10">
-        <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={handleAddTextClick}>
-          <Text className="h-6 w-6" />
-          <span className="text-xs mt-1">Add Text</span>
-        </Button>
-        <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => fileInputRef.current?.click()}>
-          <Image className="h-6 w-6" />
-          <span className="text-xs mt-1">Your Photo</span>
-        </Button>
-        <Button variant="ghost" className="flex flex-col h-auto p-2">
-          <Palette className="h-6 w-6" />
-          <span className="text-xs mt-1">Back Color</span>
-        </Button>
-        <Button variant="ghost" className="flex flex-col h-auto p-2">
-          <LayoutTemplate className="h-6 w-6" />
-          <span className="text-xs mt-1">Readymade</span>
-        </Button>
-        <Button variant="default" className="flex flex-col h-auto p-2 bg-blue-600 hover:bg-blue-700 text-white" onClick={handleBuyNowClick}>
-          <ShoppingCart className="h-6 w-6" />
-          <span className="text-xs mt-1">Buy Now</span>
-        </Button>
-      </div>
+      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-lg p-2 flex flex-col border-t border-gray-200 dark:border-gray-700 z-10">
+        {/* Main action buttons */}
+        <div className="flex justify-around items-center w-full mb-2">
+          <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={handleAddTextClick}>
+            <Text className="h-6 w-6" />
+            <span className="text-xs mt-1">Add Text</span>
+          </Button>
+          <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => fileInputRef.current?.click()}>
+            <Image className="h-6 w-6" />
+            <span className="text-xs mt-1">Your Photo</span>
+          </Button>
+          <Button variant="ghost" className="flex flex-col h-auto p-2">
+            <Palette className="h-6 w-6" />
+            <span className="text-xs mt-1">Back Color</span>
+          </Button>
+          <Button variant="ghost" className="flex flex-col h-auto p-2">
+            <LayoutTemplate className="h-6 w-6" />
+            <span className="text-xs mt-1">Readymade</span>
+          </Button>
+          <Button variant="default" className="flex flex-col h-auto p-2 bg-blue-600 hover:bg-blue-700 text-white" onClick={handleBuyNowClick}>
+            <ShoppingCart className="h-6 w-6" />
+            <span className="text-xs mt-1">Buy Now</span>
+          </Button>
+        </div>
 
-      {/* Text Properties Dialog (repurposed from Add Text Dialog) */}
-      <Dialog open={isTextPropertiesModalOpen} onOpenChange={setIsTextPropertiesModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{selectedElementId && selectedElement?.type === 'text' ? 'Edit Text Properties' : 'Add New Text'}</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <Label htmlFor="text-content">Text Content</Label>
-            <Textarea
-              id="text-content"
-              placeholder="Type your text here..."
-              value={currentTextContent}
-              onChange={(e) => setCurrentTextContent(e.target.value)}
-            />
+        {/* Conditional Text Properties Section */}
+        {selectedElement && selectedElement.type === 'text' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 p-2 border-t border-gray-200 dark:border-gray-700">
+            {/* Text Content */}
+            <div className="col-span-full">
+              <Label htmlFor="text-content" className="sr-only">Text Content</Label>
+              <Textarea
+                id="text-content"
+                placeholder="Type your text here..."
+                value={currentTextContent}
+                onChange={(e) => {
+                  setCurrentTextContent(e.target.value);
+                  updateElement(selectedElement.id, { value: e.target.value });
+                }}
+                className="w-full text-sm"
+              />
+            </div>
 
-            <Label htmlFor="font-size">Font Size: {currentFontSize[0]}</Label>
-            <Slider
-              id="font-size"
-              min={10}
-              max={100}
-              step={1}
-              value={currentFontSize}
-              onValueChange={setCurrentFontSize}
-            />
+            {/* Font Size */}
+            <div className="flex items-center gap-2">
+              <Label htmlFor="font-size" className="text-xs whitespace-nowrap">Size: {currentFontSize[0]}</Label>
+              <Slider
+                id="font-size"
+                min={10}
+                max={100}
+                step={1}
+                value={currentFontSize}
+                onValueChange={(val) => {
+                  setCurrentFontSize(val);
+                  updateElement(selectedElement.id, { fontSize: val[0] });
+                }}
+                className="flex-1"
+              />
+            </div>
 
-            <Label htmlFor="text-color">Text Color</Label>
-            <Input
-              id="text-color"
-              type="color"
-              value={currentTextColor}
-              onChange={(e) => setCurrentTextColor(e.target.value)}
-              className="w-full"
-            />
+            {/* Text Color */}
+            <div className="flex items-center gap-2">
+              <Label htmlFor="text-color" className="text-xs whitespace-nowrap">Color:</Label>
+              <Input
+                id="text-color"
+                type="color"
+                value={currentTextColor}
+                onChange={(e) => {
+                  setCurrentTextColor(e.target.value);
+                  updateElement(selectedElement.id, { color: e.target.value });
+                }}
+                className="w-16 h-8 p-0 border-none"
+              />
+            </div>
 
-            <Label htmlFor="font-family">Font Family</Label>
-            <Select value={currentFontFamily} onValueChange={setCurrentFontFamily}>
-              <SelectTrigger id="font-family">
-                <SelectValue placeholder="Select a font" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Arial">Arial</SelectItem>
-                <SelectItem value="Verdana">Verdana</SelectItem>
-                <SelectItem value="Georgia">Georgia</SelectItem>
-                <SelectItem value="Times New Roman">Times New Roman</SelectItem>
-                <SelectItem value="Courier New">Courier New</SelectItem>
-                <SelectItem value="Impact">Impact</SelectItem>
-                <SelectItem value="monospace">Monospace</SelectItem>
-                <SelectItem value="sans-serif">Sans-serif</SelectItem>
-                <SelectItem value="serif">Serif</SelectItem>
-              </SelectContent>
-            </Select>
+            {/* Font Family */}
+            <div className="flex items-center gap-2">
+              <Label htmlFor="font-family" className="text-xs whitespace-nowrap">Font:</Label>
+              <Select value={currentFontFamily} onValueChange={(val) => {
+                setCurrentFontFamily(val);
+                updateElement(selectedElement.id, { fontFamily: val });
+              }}>
+                <SelectTrigger id="font-family" className="h-8 text-xs">
+                  <SelectValue placeholder="Select a font" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Arial">Arial</SelectItem>
+                  <SelectItem value="Verdana">Verdana</SelectItem>
+                  <SelectItem value="Georgia">Georgia</SelectItem>
+                  <SelectItem value="Times New Roman">Times New Roman</SelectItem>
+                  <SelectItem value="Courier New">Courier New</SelectItem>
+                  <SelectItem value="Impact">Impact</SelectItem>
+                  <SelectItem value="monospace">Monospace</SelectItem>
+                  <SelectItem value="sans-serif">Sans-serif</SelectItem>
+                  <SelectItem value="serif">Serif</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
+            {/* Text Shadow */}
             <div className="flex items-center space-x-2">
               <Switch
                 id="text-shadow"
                 checked={currentTextShadowEnabled}
-                onCheckedChange={setCurrentTextShadowEnabled}
+                onCheckedChange={(checked) => {
+                  setCurrentTextShadowEnabled(checked);
+                  updateElement(selectedElement.id, { textShadow: checked });
+                }}
               />
-              <Label htmlFor="text-shadow">Text Shadow</Label>
+              <Label htmlFor="text-shadow" className="text-xs">Shadow</Label>
             </div>
+
+            {/* Delete Button for selected element */}
+            {selectedElementId && (
+              <Button
+                variant="destructive"
+                size="sm"
+                className="w-full mt-2 md:mt-0"
+                onClick={() => {
+                  deleteElement(selectedElementId);
+                  setSelectedElementId(null); // Deselect after deleting
+                }}
+              >
+                <Trash2 className="mr-2 h-4 w-4" /> Delete Selected
+              </Button>
+            )}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsTextPropertiesModalOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveTextProperties}>
-              {selectedElementId && selectedElement?.type === 'text' ? 'Save Changes' : 'Add Text'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        )}
+      </div>
 
       <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
         <DialogContent className="sm:max-w-[600px]">
