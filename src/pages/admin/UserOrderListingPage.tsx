@@ -65,6 +65,8 @@ const OrderManagementPage = () => {
 
       if (invokeError) {
         console.error("Edge Function Invoke Error:", invokeError);
+        console.error("Invoke Error Context:", invokeError.context); // Log the full context for debugging
+
         let errorMessage = invokeError.message;
         if (invokeError.context?.data) {
           try {
