@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { PlusCircle, Edit, Trash2, ArrowLeft, Upload, XCircle } from 'lucide-react'; // Added XCircle for clear button
+import { useSession } from '@/contexts/SessionContext'; // Import useSession
 
 interface Product {
   id: string;
@@ -35,6 +36,7 @@ interface Mockup {
   id: string;
   product_id: string;
   image_url: string | null;
+  user_id: string; // Added user_id to Mockup interface
   // Add other mockup fields if necessary, e.g., design_data
 }
 
@@ -57,6 +59,7 @@ const ProductManagementByBrandPage = () => {
   const [canvasWidth, setCanvasWidth] = useState<string>('300');
   const [canvasHeight, setCanvasHeight] = useState<string>('600');
   const { toast } = useToast();
+  const { user } = useSession(); // Get the current user from session
 
   // Helper to check if a URL is from Supabase storage
   const isSupabaseStorageUrl = (url: string | null, bucketName: string) => {
@@ -305,6 +308,16 @@ const ProductManagementByBrandPage = () => {
       return;
     }
 
+    if (!user?.id) {
+      toast({
+        title: "Authentication Error",
+        description: "User not authenticated. Please log in.",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     let finalProductImageUrl = productImageUrl;
     let finalMockupImageUrl: string | null = null;
@@ -413,7 +426,7 @@ const ProductManagementByBrandPage = () => {
         // Update existing mockup
         const { error: updateMockupError } = await supabase
           .from('mockups')
-          .update({ image_url: finalMockupImageUrl })
+          .update({ image_url: finalMockupImageUrl, user_id: user.id }) // Include user_id for update
           .eq('id', existingMockup[0].id);
 
         if (updateMockupError) {
@@ -433,7 +446,7 @@ const ProductManagementByBrandPage = () => {
         // Insert new mockup
         const { error: insertMockupError } = await supabase
           .from('mockups')
-          .insert({ product_id: productIdToUse, image_url: finalMockupImageUrl, name: `${productName} Mockup`, designer: 'Auto' });
+          .insert({ product_id: productIdToUse, image_url: finalMockupImageUrl, name: `${productName} Mockup`, designer: 'Auto', user_id: user.id }); // Include user_id for insert
 
         if (insertMockupError) {
           console.error("Error inserting mockup:", insertMockupError);
