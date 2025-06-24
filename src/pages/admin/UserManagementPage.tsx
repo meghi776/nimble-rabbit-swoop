@@ -201,6 +201,8 @@ const UserManagementPage = () => {
 
       if (invokeError) {
         console.error("Error invoking Edge Function:", invokeError);
+        console.log("Raw Edge Function response data:", invokeError.context?.data); // Log raw data
+
         let errorMessage = invokeError.message;
 
         // Attempt to parse the detailed error message from the Edge Function's response body
@@ -212,12 +214,13 @@ const UserManagementPage = () => {
             }
           } catch (parseErr) {
             console.error("Failed to parse error response body from Edge Function:", parseErr);
+            errorMessage = `Failed to create user: ${invokeError.message}. Could not parse detailed error.`;
           }
         }
 
         toast({
           title: "Error",
-          description: `Failed to create user: ${errorMessage}`,
+          description: errorMessage,
           variant: "destructive",
         });
       } else if (data && data.error) { // This handles cases where function returns 200 but with an error payload

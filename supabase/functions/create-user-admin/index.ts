@@ -86,7 +86,7 @@ serve(async (req) => {
     });
 
     if (error) {
-      console.error("Error creating user:", error);
+      console.error("Error creating user with admin.createUser:", error); // Added detailed logging
       return new Response(JSON.stringify({ error: error.message }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
