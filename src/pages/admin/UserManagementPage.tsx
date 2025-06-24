@@ -200,21 +200,29 @@ const UserManagementPage = () => {
       });
 
       if (invokeError) {
-        console.error("Error invoking Edge Function:", invokeError);
-        console.log("Raw Edge Function response data:", invokeError.context?.data); // Log raw data
-
-        let errorMessage = invokeError.message;
+        console.error("Full Edge Function invoke error object:", invokeError); // Log the entire error object
+        let errorMessage = invokeError.message; // Default to the invokeError message
 
         // Attempt to parse the detailed error message from the Edge Function's response body
-        if (invokeError.context && invokeError.context.data) {
+        if (typeof invokeError.context?.data === 'string') {
           try {
             const errorBody = JSON.parse(invokeError.context.data);
             if (errorBody.error) {
               errorMessage = errorBody.error;
+            } else {
+              errorMessage = `Failed to create user: ${invokeError.message}. Response: ${invokeError.context.data}`;
             }
           } catch (parseErr) {
             console.error("Failed to parse error response body from Edge Function:", parseErr);
-            errorMessage = `Failed to create user: ${invokeError.message}. Could not parse detailed error.`;
+            errorMessage = `Failed to create user: ${invokeError.message}. Raw response: ${invokeError.context.data}`;
+          }
+        } else if (invokeError.context?.data) {
+          // If data exists but is not a string (e.g., an object directly), try to use it
+          if (typeof invokeError.context.data === 'object' && (invokeError.context.data as any).error) {
+            errorMessage = (invokeError.context.data as any).error;
+          } else {
+            // Fallback for unexpected data format
+            errorMessage = `Failed to create user: Unexpected error response format. ${invokeError.message}`;
           }
         }
 
@@ -223,11 +231,11 @@ const UserManagementPage = () => {
           description: errorMessage,
           variant: "destructive",
         });
-      } else if (data && data.error) { // This handles cases where function returns 200 but with an error payload
-        console.error("Edge Function returned error in data payload:", data.error);
+      } else if (data && (data as any).error) { // This handles cases where function returns 200 but with an error payload
+        console.error("Edge Function returned error in data payload:", (data as any).error);
         toast({
           title: "Error",
-          description: `Failed to create user: ${data.error}`,
+          description: `Failed to create user: ${(data as any).error}`,
           variant: "destructive",
         });
       } else {
