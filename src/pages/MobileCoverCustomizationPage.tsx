@@ -185,7 +185,7 @@ const MobileCoverCustomizationPage = () => {
     setDesignElements(prev => {
       const elementToDelete = prev.find(el => el.id === id);
       if (elementToDelete && elementToDelete.type === 'image' && elementToDelete.value.startsWith('blob:')) {
-        URL.revokeObjectURL(elementToDelete.value);
+        URL.revokeObjectURL(el.value);
       }
       return prev.filter(el => el.id !== id);
     });
@@ -462,7 +462,7 @@ const MobileCoverCustomizationPage = () => {
       )}
 
       {!loading && !error && product && (
-        <div className="flex-1 flex flex-col md:flex-row overflow-y-auto pb-14"> {/* Added overflow-y-auto and pb-14 */}
+        <div className="flex-1 flex flex-col md:flex-row overflow-y-auto pb-20"> {/* Increased pb-14 to pb-20 */}
           {/* Left: Design Area */}
           <div
             ref={designAreaRef}
