@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label"; // Corrected: changed '=>' to 'from'
+import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -67,6 +67,7 @@ interface TouchState {
   initialDistance?: number;
   initialElementWidth?: number;
   initialElementHeight?: number;
+  initialFontSize?: number; // Added for text scaling
   initialMidX?: number;
   initialMidY?: number;
   activeElementId: string | null;
@@ -81,9 +82,10 @@ const MobileCoverCustomizationPage = () => {
   const [designElements, setDesignElements] = useState<DesignElement[]>([]);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   
-  // States for text properties in footer
+  // States for text properties dialog
+  const [isTextPropertiesModalOpen, setIsTextPropertiesModalOpen] = useState(false);
   const [currentTextContent, setCurrentTextContent] = useState('');
-  const [currentFontSize, setCurrentFontSize] = useState<number[]>([24]);
+  const [currentFontSize, setCurrentFontSize] = useState<number[]>([35]); // Default size 35
   const [currentTextColor, setCurrentTextColor] = useState('#000000');
   const [currentFontFamily, setCurrentFontFamily] = useState('Arial');
   const [currentTextShadowEnabled, setCurrentTextShadowEnabled] = useState(false);
@@ -111,6 +113,17 @@ const MobileCoverCustomizationPage = () => {
     initialElementY: 0,
     activeElementId: null,
   });
+
+  const predefinedColors = [
+    '#000000', '#FFFFFF', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF',
+    '#FFA500', '#800080', '#008000', '#800000', '#000080', '#808000', '#800080', '#008080'
+  ];
+
+  const fontFamilies = [
+    'Arial', 'Verdana', 'Georgia', 'Times New Roman', 'Courier New', 'Impact',
+    'Lucida Sans Unicode', 'Tahoma', 'Trebuchet MS', 'Palatino Linotype',
+    'Comic Sans MS', 'Arial Black', 'Garamond', 'Brush Script MT', 'cursive', 'sans-serif', 'serif', 'monospace'
+  ];
 
   useEffect(() => {
     const fetchProductAndMockup = async () => {
@@ -200,13 +213,14 @@ const MobileCoverCustomizationPage = () => {
     const element = designElements.find(el => el.id === id);
     if (!element || !designAreaRef.current) return;
 
-    // If it's a text element, populate the footer controls
+    // If it's a text element, open the properties dialog
     if (element.type === 'text') {
       setCurrentTextContent(element.value);
-      setCurrentFontSize([element.fontSize || 24]);
+      setCurrentFontSize([element.fontSize || 35]); // Default to 35 if not set
       setCurrentTextColor(element.color || '#000000');
       setCurrentFontFamily(element.fontFamily || 'Arial');
       setCurrentTextShadowEnabled(element.textShadow || false);
+      setIsTextPropertiesModalOpen(true);
     }
 
     const designAreaRect = designAreaRef.current.getBoundingClientRect();
@@ -259,13 +273,14 @@ const MobileCoverCustomizationPage = () => {
     const element = designElements.find(el => el.id === id);
     if (!element || !designAreaRef.current || !product) return;
 
-    // If it's a text element, populate the footer controls
+    // If it's a text element, open the properties dialog
     if (element.type === 'text') {
       setCurrentTextContent(element.value);
-      setCurrentFontSize([element.fontSize || 24]);
+      setCurrentFontSize([element.fontSize || 35]);
       setCurrentTextColor(element.color || '#000000');
       setCurrentFontFamily(element.fontFamily || 'Arial');
       setCurrentTextShadowEnabled(element.textShadow || false);
+      setIsTextPropertiesModalOpen(true);
     }
 
     const designAreaRect = designAreaRef.current.getBoundingClientRect();
@@ -296,8 +311,9 @@ const MobileCoverCustomizationPage = () => {
         initialElementX: element.x,
         initialElementY: element.y,
         initialDistance: initialDistance,
-        initialElementWidth: element.width || product.canvas_width,
-        initialElementHeight: element.height || product.canvas_height,
+        initialElementWidth: element.width, // For images
+        initialElementHeight: element.height, // For images
+        initialFontSize: element.fontSize, // For text
         initialMidX: initialMidX - designAreaRect.left,
         initialMidY: initialMidY - designAreaRect.top,
         activeElementId: id,
@@ -307,7 +323,7 @@ const MobileCoverCustomizationPage = () => {
 
   const handleTouchMove = (e: React.TouchEvent) => {
     e.preventDefault();
-    const { mode, startX, startY, initialElementX, initialElementY, initialDistance, initialElementWidth, initialElementHeight, initialMidX, initialMidY, activeElementId } = touchState.current;
+    const { mode, startX, startY, initialElementX, initialElementY, initialDistance, initialElementWidth, initialElementHeight, initialFontSize, initialMidX, initialMidY, activeElementId } = touchState.current;
     if (!activeElementId || !designAreaRef.current) return;
 
     const element = designElements.find(el => el.id === activeElementId);
@@ -322,7 +338,7 @@ const MobileCoverCustomizationPage = () => {
         x: initialElementX + deltaX,
         y: initialElementY + deltaY,
       });
-    } else if (mode === 'pinching' && e.touches.length === 2 && initialDistance !== undefined && initialElementWidth !== undefined && initialElementHeight !== undefined && initialMidX !== undefined && initialMidY !== undefined) {
+    } else if (mode === 'pinching' && e.touches.length === 2 && initialDistance !== undefined && initialMidX !== undefined && initialMidY !== undefined) {
       const touch1 = e.touches[0];
       const touch2 = e.touches[1];
       const newDistance = Math.sqrt(
@@ -331,21 +347,29 @@ const MobileCoverCustomizationPage = () => {
       );
       const scaleFactor = newDistance / initialDistance;
 
-      const newWidth = Math.max(20, initialElementWidth * scaleFactor);
-      const newHeight = Math.max(20, initialElementHeight * scaleFactor);
-
       const currentMidX = (touch1.clientX + touch2.clientX) / 2 - designAreaRect.left;
       const currentMidY = (touch1.clientY + touch2.clientY) / 2 - designAreaRect.top;
 
       const newX = currentMidX - (initialMidX - initialElementX) * scaleFactor;
       const newY = currentMidY - (initialMidY - initialElementY) * scaleFactor;
 
-      updateElement(activeElementId, {
-        width: newWidth,
-        height: newHeight,
-        x: newX,
-        y: newY,
-      });
+      if (element.type === 'image' && initialElementWidth !== undefined && initialElementHeight !== undefined) {
+        const newWidth = Math.max(20, initialElementWidth * scaleFactor);
+        const newHeight = Math.max(20, initialElementHeight * scaleFactor);
+        updateElement(activeElementId, {
+          width: newWidth,
+          height: newHeight,
+          x: newX,
+          y: newY,
+        });
+      } else if (element.type === 'text' && initialFontSize !== undefined) {
+        const newFontSize = Math.max(10, initialFontSize * scaleFactor); // Minimum font size 10
+        updateElement(activeElementId, {
+          fontSize: newFontSize,
+          x: newX,
+          y: newY,
+        });
+      }
     }
   };
 
@@ -437,26 +461,6 @@ const MobileCoverCustomizationPage = () => {
       fileInputRef.current.value = '';
     }
   };
-
-  const selectedElement = designElements.find(el => el.id === selectedElementId);
-
-  // Effect to update text properties states when a text element is selected
-  useEffect(() => {
-    if (selectedElement && selectedElement.type === 'text') {
-      setCurrentTextContent(selectedElement.value);
-      setCurrentFontSize([selectedElement.fontSize || 24]);
-      setCurrentTextColor(selectedElement.color || '#000000');
-      setCurrentFontFamily(selectedElement.fontFamily || 'Arial');
-      setCurrentTextShadowEnabled(selectedElement.textShadow || false);
-    } else {
-      // Reset states if no text element is selected or a different type is selected
-      setCurrentTextContent('');
-      setCurrentFontSize([24]);
-      setCurrentTextColor('#000000');
-      setCurrentFontFamily('Arial');
-      setCurrentTextShadowEnabled(false);
-    }
-  }, [selectedElement]);
 
   const handlePreviewClick = async () => {
     if (!canvasContentRef.current) {
@@ -637,26 +641,65 @@ const MobileCoverCustomizationPage = () => {
     }
   };
 
+  const handleSaveTextProperties = () => {
+    if (!currentTextContent.trim()) {
+      toast({ title: "Error", description: "Text cannot be empty.", variant: "destructive" });
+      return;
+    }
+
+    if (selectedElementId && designElements.find(el => el.id === selectedElementId)?.type === 'text') {
+      // Update existing text element
+      updateElement(selectedElementId, {
+        value: currentTextContent,
+        fontSize: currentFontSize[0],
+        color: currentTextColor,
+        fontFamily: currentFontFamily,
+        textShadow: currentTextShadowEnabled,
+      });
+      toast({ title: "Success", description: "Text updated successfully!" });
+    } else {
+      // Add new text element
+      if (!product) {
+        toast({ title: "Error", description: "Product details not loaded. Cannot add text.", variant: "destructive" });
+        return;
+      }
+      // Calculate center position
+      const centerX = (product.canvas_width / 2) - (currentTextContent.length * (currentFontSize[0] / 2) / 2); // Rough centering
+      const centerY = (product.canvas_height / 2) - (currentFontSize[0] / 2);
+
+      const newElement: DesignElement = {
+        id: `text-${Date.now()}`,
+        type: 'text',
+        value: currentTextContent,
+        x: Math.max(0, centerX), // Ensure not off-canvas
+        y: Math.max(0, centerY), // Ensure not off-canvas
+        fontSize: currentFontSize[0],
+        color: currentTextColor,
+        fontFamily: currentFontFamily,
+        textShadow: currentTextShadowEnabled,
+      };
+      setDesignElements([...designElements, newElement]);
+      setSelectedElementId(newElement.id); // Select the newly added element
+      toast({ title: "Success", description: "New text element added!" });
+    }
+    setIsTextPropertiesModalOpen(false);
+    // Reset states to default for next add/edit
+    setCurrentTextContent('');
+    setCurrentFontSize([35]);
+    setCurrentTextColor('#000000');
+    setCurrentFontFamily('Arial');
+    setCurrentTextShadowEnabled(false);
+    setSelectedElementId(null); // Deselect after saving
+  };
+
   const handleAddTextClick = () => {
-    const newElement: DesignElement = {
-      id: `text-${Date.now()}`,
-      type: 'text',
-      value: 'New Text', // Default text
-      x: 50,
-      y: 50,
-      fontSize: 24,
-      color: '#000000',
-      fontFamily: 'Arial',
-      textShadow: false,
-    };
-    setDesignElements([...designElements, newElement]);
-    setSelectedElementId(newElement.id); // Select the newly added element
-    setCurrentTextContent(newElement.value);
-    setCurrentFontSize([newElement.fontSize || 24]);
-    setCurrentTextColor(newElement.color || '#000000');
-    setCurrentFontFamily(newElement.fontFamily || 'Arial');
-    setCurrentTextShadowEnabled(newElement.textShadow || false);
-    toast({ title: "Success", description: "New text element added." });
+    setSelectedElementId(null); // Ensure no element is selected for new text
+    setCurrentTextContent('');
+    setCurrentFontSize([35]); // Default size for new text
+    setCurrentTextColor('#000000');
+    setCurrentFontFamily('Arial');
+    setCurrentTextShadowEnabled(false);
+    setIsTextPropertiesModalOpen(true);
   };
 
   return (
@@ -685,7 +728,7 @@ const MobileCoverCustomizationPage = () => {
       )}
 
       {!loading && !error && product && (
-        <div className="flex-1 flex flex-col md:flex-row overflow-y-auto pb-48"> {/* Increased padding-bottom */}
+        <div className="flex-1 flex flex-col md:flex-row overflow-y-auto pb-24"> {/* Adjusted padding-bottom */}
           <div
             ref={designAreaRef}
             className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center relative overflow-hidden p-4"
@@ -795,135 +838,118 @@ const MobileCoverCustomizationPage = () => {
         className="hidden"
       />
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-lg p-2 flex flex-col border-t border-gray-200 dark:border-gray-700 z-10">
-        {/* Main action buttons */}
-        <div className="flex justify-around items-center w-full mb-2">
-          <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={handleAddTextClick}>
-            <Text className="h-6 w-6" />
-            <span className="text-xs mt-1">Add Text</span>
+      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-lg p-2 flex justify-around items-center border-t border-gray-200 dark:border-gray-700 z-10">
+        <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={handleAddTextClick}>
+          <Text className="h-6 w-6" />
+          <span className="text-xs mt-1">Add Text</span>
+        </Button>
+        <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => fileInputRef.current?.click()}>
+          <Image className="h-6 w-6" />
+          <span className="text-xs mt-1">Your Photo</span>
+        </Button>
+        <Button variant="ghost" className="flex flex-col h-auto p-2">
+          <Palette className="h-6 w-6" />
+          <span className="text-xs mt-1">Back Color</span>
+        </Button>
+        <Button variant="ghost" className="flex flex-col h-auto p-2">
+          <LayoutTemplate className="h-6 w-6" />
+          <span className="text-xs mt-1">Readymade</span>
+        </Button>
+        <Button variant="default" className="flex flex-col h-auto p-2 bg-blue-600 hover:bg-blue-700 text-white" onClick={handleBuyNowClick}>
+          <ShoppingCart className="h-6 w-6" />
+          <span className="text-xs mt-1">Buy Now</span>
+        </Button>
+        {selectedElementId && (
+          <Button
+            variant="destructive"
+            className="flex flex-col h-auto p-2"
+            onClick={() => {
+              deleteElement(selectedElementId);
+              setSelectedElementId(null); // Deselect after deleting
+            }}
+          >
+            <Trash2 className="h-6 w-6" />
+            <span className="text-xs mt-1">Delete</span>
           </Button>
-          <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => fileInputRef.current?.click()}>
-            <Image className="h-6 w-6" />
-            <span className="text-xs mt-1">Your Photo</span>
-          </Button>
-          <Button variant="ghost" className="flex flex-col h-auto p-2">
-            <Palette className="h-6 w-6" />
-            <span className="text-xs mt-1">Back Color</span>
-          </Button>
-          <Button variant="ghost" className="flex flex-col h-auto p-2">
-            <LayoutTemplate className="h-6 w-6" />
-            <span className="text-xs mt-1">Readymade</span>
-          </Button>
-          <Button variant="default" className="flex flex-col h-auto p-2 bg-blue-600 hover:bg-blue-700 text-white" onClick={handleBuyNowClick}>
-            <ShoppingCart className="h-6 w-6" />
-            <span className="text-xs mt-1">Buy Now</span>
-          </Button>
-        </div>
+        )}
+      </div>
 
-        {/* Conditional Text Properties Section */}
-        {selectedElement && selectedElement.type === 'text' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 p-2 border-t border-gray-200 dark:border-gray-700">
-            {/* Text Content */}
-            <div className="col-span-full">
-              <Label htmlFor="text-content" className="sr-only">Text Content</Label>
-              <Textarea
-                id="text-content"
-                placeholder="Type your text here..."
-                value={currentTextContent}
-                onChange={(e) => {
-                  setCurrentTextContent(e.target.value);
-                  updateElement(selectedElement.id, { value: e.target.value });
-                }}
-                className="w-full text-sm"
-              />
-            </div>
+      {/* Text Properties Dialog */}
+      <Dialog open={isTextPropertiesModalOpen} onOpenChange={setIsTextPropertiesModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{selectedElementId && designElements.find(el => el.id === selectedElementId)?.type === 'text' ? 'Edit Text Properties' : 'Add New Text'}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <Label htmlFor="text-content">Text Content</Label>
+            <Textarea
+              id="text-content"
+              placeholder="Type your text here..."
+              value={currentTextContent}
+              onChange={(e) => setCurrentTextContent(e.target.value)}
+            />
 
-            {/* Font Size */}
-            <div className="flex items-center gap-2">
-              <Label htmlFor="font-size" className="text-xs whitespace-nowrap">Size: {currentFontSize[0]}</Label>
-              <Slider
-                id="font-size"
-                min={10}
-                max={100}
-                step={1}
-                value={currentFontSize}
-                onValueChange={(val) => {
-                  setCurrentFontSize(val);
-                  updateElement(selectedElement.id, { fontSize: val[0] });
-                }}
-                className="flex-1"
-              />
-            </div>
+            <Label htmlFor="font-size">Font Size: {currentFontSize[0]}</Label>
+            <Slider
+              id="font-size"
+              min={10}
+              max={100}
+              step={1}
+              value={currentFontSize}
+              onValueChange={setCurrentFontSize}
+            />
 
-            {/* Text Color */}
-            <div className="flex items-center gap-2">
-              <Label htmlFor="text-color" className="text-xs whitespace-nowrap">Color:</Label>
+            <Label htmlFor="text-color">Text Color</Label>
+            <div className="flex flex-wrap gap-2">
+              {predefinedColors.map((color) => (
+                <div
+                  key={color}
+                  className={`w-8 h-8 rounded-full cursor-pointer border-2 ${currentTextColor === color ? 'border-blue-500' : 'border-gray-300'}`}
+                  style={{ backgroundColor: color }}
+                  onClick={() => setCurrentTextColor(color)}
+                />
+              ))}
               <Input
-                id="text-color"
+                id="text-color-custom"
                 type="color"
                 value={currentTextColor}
-                onChange={(e) => {
-                  setCurrentTextColor(e.target.value);
-                  updateElement(selectedElement.id, { color: e.target.value });
-                }}
-                className="w-16 h-8 p-0 border-none"
+                onChange={(e) => setCurrentTextColor(e.target.value)}
+                className="w-10 h-10 p-0 border-none cursor-pointer"
+                title="Custom Color"
               />
             </div>
 
-            {/* Font Family */}
-            <div className="flex items-center gap-2">
-              <Label htmlFor="font-family" className="text-xs whitespace-nowrap">Font:</Label>
-              <Select value={currentFontFamily} onValueChange={(val) => {
-                setCurrentFontFamily(val);
-                updateElement(selectedElement.id, { fontFamily: val });
-              }}>
-                <SelectTrigger id="font-family" className="h-8 text-xs">
-                  <SelectValue placeholder="Select a font" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Arial">Arial</SelectItem>
-                  <SelectItem value="Verdana">Verdana</SelectItem>
-                  <SelectItem value="Georgia">Georgia</SelectItem>
-                  <SelectItem value="Times New Roman">Times New Roman</SelectItem>
-                  <SelectItem value="Courier New">Courier New</SelectItem>
-                  <SelectItem value="Impact">Impact</SelectItem>
-                  <SelectItem value="monospace">Monospace</SelectItem>
-                  <SelectItem value="sans-serif">Sans-serif</SelectItem>
-                  <SelectItem value="serif">Serif</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <Label htmlFor="font-family">Font Family</Label>
+            <Select value={currentFontFamily} onValueChange={setCurrentFontFamily}>
+              <SelectTrigger id="font-family">
+                <SelectValue placeholder="Select a font" />
+              </SelectTrigger>
+              <SelectContent>
+                {fontFamilies.map((font) => (
+                  <SelectItem key={font} value={font} style={{ fontFamily: font }}>
+                    {font}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-            {/* Text Shadow */}
             <div className="flex items-center space-x-2">
               <Switch
                 id="text-shadow"
                 checked={currentTextShadowEnabled}
-                onCheckedChange={(checked) => {
-                  setCurrentTextShadowEnabled(checked);
-                  updateElement(selectedElement.id, { textShadow: checked });
-                }}
+                onCheckedChange={setCurrentTextShadowEnabled}
               />
-              <Label htmlFor="text-shadow" className="text-xs">Shadow</Label>
+              <Label htmlFor="text-shadow">Text Shadow</Label>
             </div>
-
-            {/* Delete Button for selected element */}
-            {selectedElementId && (
-              <Button
-                variant="destructive"
-                size="sm"
-                className="w-full mt-2 md:mt-0"
-                onClick={() => {
-                  deleteElement(selectedElementId);
-                  setSelectedElementId(null); // Deselect after deleting
-                }}
-              >
-                <Trash2 className="mr-2 h-4 w-4" /> Delete Selected
-              </Button>
-            )}
           </div>
-        )}
-      </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsTextPropertiesModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveTextProperties}>
+              {selectedElementId && designElements.find(el => el.id === selectedElementId)?.type === 'text' ? 'Save Changes' : 'Add Text'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
         <DialogContent className="sm:max-w-[600px]">
