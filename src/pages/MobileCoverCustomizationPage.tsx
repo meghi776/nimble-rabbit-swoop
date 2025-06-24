@@ -22,10 +22,11 @@ import {
   Text,
   Palette, // For Back Color
   LayoutTemplate, // For Readymade
-  Sticker, // For Add Sticker
+  Image, // For Your Photo
   ArrowLeft,
   Check,
 } from 'lucide-react';
+import ImageGallerySelector from '@/components/ImageGallerySelector'; // Import ImageGallerySelector
 
 interface Product {
   id: string;
@@ -67,13 +68,14 @@ const MobileCoverCustomizationPage = () => {
 
   // Modals state
   const [isAddTextModalOpen, setIsAddTextModalOpen] = useState(false);
+  const [isImageGalleryOpen, setIsImageGalleryOpen] = useState(false); // State for image gallery modal
 
   useEffect(() => {
     const fetchProductAndMockup = async () => {
       setLoading(true);
       const { data: productData, error: productError } = await supabase
         .from('products')
-        .select('*, mockups(image_url)')
+        .select('*, mockups(image_url, design_data)') // Select design_data as well
         .eq('id', productId)
         .single();
 
@@ -87,18 +89,9 @@ const MobileCoverCustomizationPage = () => {
           mockup_image_url: productData.mockups.length > 0 ? productData.mockups[0].image_url : null,
         });
         // Load existing design data if available
-        const { data: mockupDesignData, error: mockupDesignError } = await supabase
-          .from('mockups')
-          .select('design_data')
-          .eq('product_id', productData.id)
-          .single();
-
-        if (mockupDesignError && mockupDesignError.code !== 'PGRST116') { // PGRST116 means no rows found
-          console.error("Error fetching mockup design data:", mockupDesignError);
-          toast({ title: "Error", description: `Failed to load design data: ${mockupDesignError.message}`, variant: "destructive" });
-        } else if (mockupDesignData?.design_data) {
+        if (productData.mockups.length > 0 && productData.mockups[0].design_data) {
           try {
-            setDesignElements(JSON.parse(mockupDesignData.design_data as string));
+            setDesignElements(JSON.parse(productData.mockups[0].design_data as string));
           } catch (parseError) {
             console.error("Error parsing design data:", parseError);
             toast({ title: "Error", description: "Failed to parse existing design data.", variant: "destructive" });
@@ -133,6 +126,23 @@ const MobileCoverCustomizationPage = () => {
     setNewText('');
     setSelectedElementId(newElement.id);
     setIsAddTextModalOpen(false); // Close modal after adding
+  };
+
+  const addImageElement = (imageUrl: string) => {
+    const newElement: DesignElement = {
+      id: `image-${Date.now()}`,
+      type: 'image',
+      value: imageUrl,
+      x: 50,
+      y: 50,
+      width: 150, // Default width
+      height: 150, // Default height
+      rotation: 0,
+      scale: 1,
+    };
+    setDesignElements([...designElements, newElement]);
+    setSelectedElementId(newElement.id);
+    setIsImageGalleryOpen(false); // Close modal after adding
   };
 
   const updateElement = (id: string, updates: Partial<DesignElement>) => {
@@ -454,9 +464,9 @@ const MobileCoverCustomizationPage = () => {
           <Text className="h-6 w-6" />
           <span className="text-xs mt-1">Add Text</span>
         </Button>
-        <Button variant="ghost" className="flex flex-col h-auto p-2">
-          <Sticker className="h-6 w-6" />
-          <span className="text-xs mt-1">Add Sticker</span>
+        <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => setIsImageGalleryOpen(true)}>
+          <Image className="h-6 w-6" />
+          <span className="text-xs mt-1">Your Photo</span>
         </Button>
         <Button variant="ghost" className="flex flex-col h-auto p-2">
           <Palette className="h-6 w-6" />
@@ -487,6 +497,16 @@ const MobileCoverCustomizationPage = () => {
             <Button variant="outline" onClick={() => setIsAddTextModalOpen(false)}>Cancel</Button>
             <Button onClick={addTextElement}>Add Text</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Image Gallery Modal */}
+      <Dialog open={isImageGalleryOpen} onOpenChange={setIsImageGalleryOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Add Your Photo</DialogTitle>
+          </DialogHeader>
+          <ImageGallerySelector onImageSelect={addImageElement} onClose={() => setIsImageGalleryOpen(false)} />
         </DialogContent>
       </Dialog>
     </div>
