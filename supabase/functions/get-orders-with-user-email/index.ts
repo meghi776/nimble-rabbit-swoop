@@ -14,23 +14,37 @@ serve(async (req) => {
 
   let sortColumn = 'created_at';
   let sortDirection = 'desc';
-  let orderType: string | null = null; // New variable for order type filter
+  let orderType: string | null = null;
 
   try {
-    // Check if the request has a body and if it's JSON
     const contentType = req.headers.get('content-type');
-    if (contentType && contentType.includes('application/json') && req.body) {
-      const requestBody = await req.json();
-      sortColumn = requestBody.sortColumn || sortColumn;
-      sortDirection = requestBody.sortDirection || sortDirection;
-      orderType = requestBody.orderType || null; // Extract orderType
+    let requestBody: any = {};
+
+    if (contentType && contentType.includes('application/json')) {
+      // Read the body as text first to check if it's empty
+      const bodyText = await req.text();
+      if (bodyText) {
+        try {
+          requestBody = JSON.parse(bodyText);
+          sortColumn = requestBody.sortColumn || sortColumn;
+          sortDirection = requestBody.sortDirection || sortDirection;
+          orderType = requestBody.orderType || null;
+        } catch (jsonParseError) {
+          console.error("Error parsing JSON body:", jsonParseError);
+          // If parsing fails, log and proceed with defaults
+        }
+      } else {
+        console.log("Received application/json with empty body.");
+      }
     }
     console.log(`Edge Function received request: sortColumn=${sortColumn}, sortDirection=${sortDirection}, orderType=${orderType}`);
 
   } catch (error) {
-    console.error("Error processing request body (using defaults):", error);
-    // If JSON parsing fails, proceed with default sort parameters
-    // The outer try-catch will handle other errors.
+    console.error("Unexpected error in Edge Function (outer catch):", error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500,
+    });
   }
 
   try {
