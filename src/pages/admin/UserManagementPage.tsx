@@ -186,13 +186,15 @@ const UserManagementPage = () => {
 
     setLoading(true);
     try {
+      const requestBody = {
+        email: newEmail,
+        password: newPassword,
+        first_name: newFirstName,
+        last_name: newLastName,
+      };
+
       const { data, error: invokeError } = await supabase.functions.invoke('create-user-admin', {
-        body: {
-          email: newEmail,
-          password: newPassword,
-          first_name: newFirstName,
-          last_name: newLastName,
-        },
+        body: JSON.stringify(requestBody), // Explicitly stringify the body
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
