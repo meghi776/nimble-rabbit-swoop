@@ -31,19 +31,18 @@ const MobileCoverCustomizationPage = () => {
       setError(null);
 
       // Fetch the mockup associated with the product ID
-      // Assuming one product can have multiple mockups, we'll just take the first one for now.
+      // We use .limit(1) to get at most one, and then check if data[0] exists.
       const { data, error } = await supabase
         .from('mockups')
         .select('image_url')
         .eq('product_id', productId)
-        .limit(1)
-        .single(); // Use single() if you expect only one mockup per product, otherwise use .limit(1) and access data[0]
+        .limit(1); 
 
       if (error) {
         console.error("Error fetching mockup:", error);
         setError(error.message);
-      } else if (data) {
-        setMockupImage(data.image_url);
+      } else if (data && data.length > 0) {
+        setMockupImage(data[0].image_url);
       } else {
         setError("No mockup found for this product.");
       }
