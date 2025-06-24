@@ -203,24 +203,25 @@ const UserManagementPage = () => {
         console.error("Full Edge Function invoke error object:", invokeError);
         console.error("invokeError.message:", invokeError.message);
         console.error("invokeError.context:", invokeError.context);
-        console.error("invokeError.context?.data:", invokeError.context?.data);
+        console.error("invokeError.context?.data (raw):", invokeError.context?.data);
 
-        let errorMessage = invokeError.message;
+        let errorMessage = invokeError.message; // Default to the invokeError message
 
         if (invokeError.context?.data) {
           try {
             const errorData = invokeError.context.data;
-            // Check if errorData is already an object (e.g., if it was parsed by Supabase client already)
-            if (typeof errorData === 'object' && errorData !== null && 'error' in errorData) {
-              errorMessage = (errorData as any).error;
-            } else if (typeof errorData === 'string') {
-              // Try parsing if it's a string
-              const parsedErrorBody = JSON.parse(errorData);
-              if (parsedErrorBody.error) {
-                errorMessage = parsedErrorBody.error;
-              } else {
-                errorMessage = `Failed to create user: ${invokeError.message}. Response: ${errorData}`;
-              }
+            let parsedErrorBody: any;
+
+            if (typeof errorData === 'string') {
+              parsedErrorBody = JSON.parse(errorData);
+            } else if (typeof errorData === 'object' && errorData !== null) {
+              parsedErrorBody = errorData;
+            }
+
+            console.error("Parsed error body:", parsedErrorBody);
+
+            if (parsedErrorBody && typeof parsedErrorBody === 'object' && 'error' in parsedErrorBody) {
+              errorMessage = parsedErrorBody.error;
             } else {
               errorMessage = `Failed to create user: Unexpected error response format. ${invokeError.message}`;
             }
