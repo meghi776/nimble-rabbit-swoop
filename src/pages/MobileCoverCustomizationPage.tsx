@@ -436,7 +436,7 @@ const MobileCoverCustomizationPage = () => {
   }, [selectedElement]);
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
       <header className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 shadow-md">
         <Link to={-1} className="text-gray-600 dark:text-gray-300">
@@ -462,11 +462,27 @@ const MobileCoverCustomizationPage = () => {
       )}
 
       {!loading && !error && product && (
-        <div className="flex-1 flex flex-col md:flex-row overflow-hidden"> {/* Removed p-4 */}
+        <div className="flex-1 flex flex-col md:flex-row overflow-y-auto pb-14"> {/* Added overflow-y-auto and pb-14 */}
           {/* Left: Design Area */}
-          <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center relative overflow-hidden">
+          <div
+            ref={designAreaRef}
+            className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center relative overflow-hidden p-4"
+            style={{
+              width: `${product.canvas_width}px`, // This width/height is for the inner canvas, not the container
+              height: `${product.canvas_height}px`, // This width/height is for the inner canvas, not the container
+              backgroundSize: 'contain',
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'center',
+              touchAction: 'none', // Added to prevent browser zoom/scroll
+            }}
+            onClick={() => {
+              if (!designElements.length && fileInputRef.current) {
+                fileInputRef.current.click();
+              }
+            }}
+          >
+            {/* The actual design canvas, centered within its flex container */}
             <div
-              ref={designAreaRef}
               className="relative bg-white shadow-lg overflow-hidden"
               style={{
                 width: `${product.canvas_width}px`,
@@ -474,12 +490,7 @@ const MobileCoverCustomizationPage = () => {
                 backgroundSize: 'contain',
                 backgroundRepeat: 'no-repeat',
                 backgroundPosition: 'center',
-                touchAction: 'none', // Added to prevent browser zoom/scroll
-              }}
-              onClick={() => {
-                if (!designElements.length && fileInputRef.current) {
-                  fileInputRef.current.click();
-                }
+                touchAction: 'none',
               }}
             >
               {/* Design Elements - rendered below mockup */}
