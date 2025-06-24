@@ -127,18 +127,10 @@ const ProductListingPage = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {products.map((product) => (
                   <Card key={product.id} className="h-full flex flex-col justify-between hover:shadow-lg transition-shadow duration-200">
-                    {product.image_url ? (
-                      <img src={product.image_url} alt={product.name} className="w-full h-48 object-cover rounded-t-lg" />
-                    ) : (
-                      <div className="w-full h-48 bg-gray-200 dark:bg-gray-700 rounded-t-lg flex items-center justify-center text-gray-500 dark:text-gray-400">No Image</div>
-                    )}
                     <CardHeader>
                       <CardTitle className="text-xl">{product.name}</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{product.description || 'No description.'}</p>
-                      <p className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1">${product.price?.toFixed(2) || '0.00'}</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Canvas: {product.canvas_width || 'N/A'}x{product.canvas_height || 'N/A'}</p>
                       <Link to={`/customize-cover/${product.id}`} className="mt-4 block">
                         <Button className="w-full">Customize</Button>
                       </Link>
