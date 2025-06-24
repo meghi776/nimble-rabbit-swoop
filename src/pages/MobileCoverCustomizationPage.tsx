@@ -75,7 +75,7 @@ const MobileCoverCustomizationPage = () => {
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [newText, setNewText] = useState('');
   const [fontSize, setFontSize] = useState<number[]>([24]);
-  const [textColor, setTextColor] = useState('#000000'); // Corrected: Use useState for textColor
+  const [textColor, setTextColor] = useState('#000000');
   const designAreaRef = useRef<HTMLDivElement>(null);
   const canvasContentRef = useRef<HTMLDivElement>(null); // New ref for the actual canvas content
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -671,7 +671,7 @@ const MobileCoverCustomizationPage = () => {
       </Dialog>
 
       {/* Preview Modal */}
-      <Dialog open={isPreviewModalOpen} onOnOpenChange={setIsPreviewModalOpen}>
+      <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Design Preview</DialogTitle>
