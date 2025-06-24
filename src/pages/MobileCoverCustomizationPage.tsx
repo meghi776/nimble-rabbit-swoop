@@ -653,15 +653,6 @@ const MobileCoverCustomizationPage = () => {
                 touchAction: 'none',
               }}
             >
-              {/* Mockup image should be behind design elements */}
-              {product.mockup_image_url && (
-                <img
-                  src={product.mockup_image_url}
-                  alt="Mockup"
-                  className="absolute inset-0 w-full h-full object-contain z-0 pointer-events-none" // Changed z-index to z-0
-                />
-              )}
-
               {designElements.map(el => (
                 <div
                   key={el.id}
@@ -673,7 +664,7 @@ const MobileCoverCustomizationPage = () => {
                     transformOrigin: 'center center',
                     width: el.type === 'image' ? `${el.width}px` : 'auto',
                     height: el.type === 'image' ? `${el.height}px` : 'auto',
-                    zIndex: selectedElementId === el.id ? 11 : 10, // Ensure design elements are on top
+                    zIndex: selectedElementId === el.id ? 11 : 10,
                     touchAction: 'none',
                   }}
                   onMouseDown={(e) => handleMouseDown(e, el.id)}
@@ -706,6 +697,14 @@ const MobileCoverCustomizationPage = () => {
                   )}
                 </div>
               ))}
+
+              {product.mockup_image_url && (
+                <img
+                  src={product.mockup_image_url}
+                  alt="Mockup"
+                  className="absolute inset-0 w-full h-full object-contain z-20 pointer-events-none"
+                />
+              )}
 
               {!designElements.length && (
                 <div
