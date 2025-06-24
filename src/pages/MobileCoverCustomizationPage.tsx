@@ -75,7 +75,7 @@ const MobileCoverCustomizationPage = () => {
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [newText, setNewText] = useState('');
   const [fontSize, setFontSize] = useState<number[]>([24]);
-  const [textColor, setTextColor] = useState('#000000');
+  const [textColor, setTextColor] = '#000000'; // Default text color
   const designAreaRef = useRef<HTMLDivElement>(null);
   const canvasContentRef = useRef<HTMLDivElement>(null); // New ref for the actual canvas content
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -190,7 +190,7 @@ const MobileCoverCustomizationPage = () => {
     setDesignElements(prev => {
       const elementToDelete = prev.find(el => el.id === id);
       if (elementToDelete && elementToDelete.type === 'image' && elementToDelete.value.startsWith('blob:')) {
-        URL.revokeObjectURL(el.value);
+        URL.revokeObjectURL(elementToDelete.value);
       }
       return prev.filter(el => el.id !== id);
     });
@@ -352,10 +352,6 @@ const MobileCoverCustomizationPage = () => {
   };
 
   const handleSaveDesign = async () => {
-    // This function is now primarily for saving design data, not image.
-    // The "Check" icon will be replaced by "Preview".
-    // If a separate "Save Design" button is needed, it can be added elsewhere.
-    // For now, let's keep the logic here but note its new context.
     if (!product) return;
 
     setLoading(true);
@@ -497,14 +493,14 @@ const MobileCoverCustomizationPage = () => {
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <header className="flex items-center justify-between py-2 px-4 bg-white dark:bg-gray-800 shadow-md"> {/* Changed p-4 to py-2 px-4 */}
+      <header className="flex items-center justify-between py-2 px-4 bg-white dark:bg-gray-800 shadow-md">
         <Link to={-1} className="text-gray-600 dark:text-gray-300">
           <ArrowLeft className="h-6 w-6" />
         </Link>
         <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
           {product?.name || 'Loading Product...'}
         </h1>
-        <Button onClick={handlePreviewClick} variant="ghost" size="icon"> {/* Replaced Check with Eye for Preview */}
+        <Button onClick={handlePreviewClick} variant="ghost" size="icon">
           <Eye className="h-6 w-6 text-blue-600" />
         </Button>
       </header>
