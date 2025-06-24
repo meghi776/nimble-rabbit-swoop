@@ -106,6 +106,11 @@ const MobileCoverCustomizationPage = () => {
   const [paymentMethod, setPaymentMethod] = useState('COD');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false); // New state for order placement loading
 
+  // New states for Demo Order Modal
+  const [isDemoOrderModalOpen, setIsDemoOrderModalOpen] = useState(false);
+  const [demoOrderPrice, setDemoOrderPrice] = useState<string>('');
+  const [demoOrderAddress, setDemoOrderAddress] = useState<string>('');
+
   const touchState = useRef<TouchState>({
     mode: 'none',
     startX: 0,
@@ -152,6 +157,9 @@ const MobileCoverCustomizationPage = () => {
             toast({ title: "Error", description: "Failed to parse existing design data.", variant: "destructive" });
           }
         }
+        // Set default values for demo order price and address
+        setDemoOrderPrice(productData.price?.toFixed(2) || '0.00');
+        setDemoOrderAddress('Demo Address, Demo City, Demo State, 00000');
       }
       setLoading(false);
     };
@@ -544,10 +552,23 @@ const MobileCoverCustomizationPage = () => {
       return;
     }
 
-    if (!isDemo && (!customerName.trim() || !customerAddress.trim() || !customerPhone.trim())) {
+    const finalCustomerName = isDemo ? 'Demo User' : customerName;
+    const finalCustomerAddress = isDemo ? demoOrderAddress : customerAddress;
+    const finalCustomerPhone = isDemo ? '0000000000' : customerPhone;
+    const finalPaymentMethod = isDemo ? 'Demo' : paymentMethod;
+    const finalStatus = isDemo ? 'Demo' : 'Pending';
+    const finalTotalPrice = isDemo ? parseFloat(demoOrderPrice) : product.price;
+    const finalOrderType = isDemo ? 'demo' : 'normal';
+
+    if (!isDemo && (!finalCustomerName.trim() || !finalCustomerAddress.trim() || !finalCustomerPhone.trim())) {
       toast({ title: "Validation Error", description: "Please fill in all customer details.", variant: "destructive" });
       return;
     }
+    if (isDemo && (!finalCustomerAddress.trim() || isNaN(finalTotalPrice))) {
+      toast({ title: "Validation Error", description: "Please provide a valid price and address for the demo order.", variant: "destructive" });
+      return;
+    }
+
 
     setIsPlacingOrder(true); // Set loading state
     let orderedDesignImageUrl: string | null = null;
@@ -610,15 +631,15 @@ const MobileCoverCustomizationPage = () => {
         .insert({
           user_id: user.id,
           product_id: product.id,
-          customer_name: isDemo ? 'Demo User' : customerName,
-          customer_address: isDemo ? 'Demo Address, Demo City, Demo State, 00000' : customerAddress,
-          customer_phone: isDemo ? '0000000000' : customerPhone,
-          payment_method: isDemo ? 'Demo' : paymentMethod,
-          status: isDemo ? 'Demo' : 'Pending', // Set status to 'Demo' for demo orders
-          total_price: product.price, // Use product's price for now
+          customer_name: finalCustomerName,
+          customer_address: finalCustomerAddress,
+          customer_phone: finalCustomerPhone,
+          payment_method: finalPaymentMethod,
+          status: finalStatus,
+          total_price: finalTotalPrice,
           ordered_design_image_url: orderedDesignImageUrl,
           ordered_design_data: designElements, // Save the design elements JSON
-          type: isDemo ? 'demo' : 'normal', // Set order type
+          type: finalOrderType, // Set order type
         });
 
       if (orderInsertError) {
@@ -628,6 +649,7 @@ const MobileCoverCustomizationPage = () => {
 
       toast({ title: "Success", description: isDemo ? "Demo order placed successfully!" : "Your order has been placed successfully!" });
       setIsCheckoutModalOpen(false);
+      setIsDemoOrderModalOpen(false); // Close demo modal
       navigate('/orders'); // Redirect to orders history page
     } catch (err: any) {
       console.error("Error placing order:", err);
@@ -655,7 +677,7 @@ const MobileCoverCustomizationPage = () => {
       toast({ title: "Error", description: "Product not loaded. Cannot place demo order.", variant: "destructive" });
       return;
     }
-    handlePlaceOrder(true);
+    setIsDemoOrderModalOpen(true); // Open the new demo order modal
   };
 
   const handleSaveTextProperties = () => {
@@ -1062,6 +1084,49 @@ const MobileCoverCustomizationPage = () => {
             <Button onClick={() => handlePlaceOrder(false)} disabled={isPlacingOrder}>
               {isPlacingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Place Order
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Demo Order Modal */}
+      <Dialog open={isDemoOrderModalOpen} onOpenChange={setIsDemoOrderModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Place Demo Order</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="demo-price" className="text-right">
+                Price
+              </Label>
+              <Input
+                id="demo-price"
+                type="number"
+                value={demoOrderPrice}
+                onChange={(e) => setDemoOrderPrice(e.target.value)}
+                className="col-span-3"
+                placeholder="e.g., 19.99"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="demo-address" className="text-right">
+                Address
+              </Label>
+              <Textarea
+                id="demo-address"
+                value={demoOrderAddress}
+                onChange={(e) => setDemoOrderAddress(e.target.value)}
+                className="col-span-3"
+                placeholder="e.g., 123 Demo St, Demo City"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDemoOrderModalOpen(false)}>Cancel</Button>
+            <Button onClick={() => handlePlaceOrder(true)} disabled={isPlacingOrder}>
+              {isPlacingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Confirm Demo Order
             </Button>
           </DialogFooter>
         </DialogContent>
