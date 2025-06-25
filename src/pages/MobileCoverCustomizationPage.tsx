@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useSession } '@/contexts/SessionContext';
+import { useSession } from '@/contexts/SessionContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { proxyImageUrl } from '@/utils/imageProxy';
@@ -345,12 +345,11 @@ const MobileCoverCustomizationPage = () => {
       let newWidth = Math.max(20, startWidth + (currentClientX - startX));
       let newHeight = Math.max(20, startHeight + (currentClientY - startY));
 
-      // Ensure element doesn't go beyond canvas boundaries during resize
-      const maxAllowedWidth = product.canvas_width - element.x;
-      const maxAllowedHeight = product.canvas_height - element.y;
-
-      newWidth = Math.min(newWidth, maxAllowedWidth);
-      newHeight = Math.min(newHeight, maxAllowedHeight);
+      // Removed boundary checks for resize
+      // const maxAllowedWidth = product.canvas_width - element.x;
+      // const maxAllowedHeight = product.canvas_height - element.y;
+      // newWidth = Math.min(newWidth, maxAllowedWidth);
+      // newHeight = Math.min(newHeight, maxAllowedHeight);
 
       updateElement(id, { width: newWidth, height: newHeight });
     };
@@ -507,12 +506,11 @@ const MobileCoverCustomizationPage = () => {
         let newWidth = Math.max(20, initialElementWidth + (currentClientX - startX));
         let newHeight = Math.max(20, initialElementHeight + (currentClientY - startY));
 
-        // Ensure element doesn't go beyond canvas boundaries during resize
-        const maxAllowedWidth = product.canvas_width - element.x;
-        const maxAllowedHeight = product.canvas_height - element.y;
-
-        newWidth = Math.min(newWidth, maxAllowedWidth);
-        newHeight = Math.min(newHeight, maxAllowedHeight);
+        // Removed boundary checks for resize
+        // const maxAllowedWidth = product.canvas_width - element.x;
+        // const maxAllowedHeight = product.canvas_height - element.y;
+        // newWidth = Math.min(newWidth, maxAllowedWidth);
+        // newHeight = Math.min(newHeight, maxAllowedHeight);
 
         updateElement(activeElementId, { width: newWidth, height: newHeight });
       }
@@ -547,16 +545,15 @@ const MobileCoverCustomizationPage = () => {
       let newWidth = Math.max(20, (initialElementWidth || element.width) * scaleFactor);
       let newHeight = Math.max(20, (initialElementHeight || element.height) * scaleFactor);
       
-      // Ensure element doesn't go beyond canvas boundaries during pinch-resize
-      const maxAllowedWidth = product.canvas_width - newX;
-      const maxAllowedHeight = product.canvas_height - newY;
-
-      newWidth = Math.min(newWidth, maxAllowedWidth);
-      newHeight = Math.min(newHeight, maxAllowedHeight);
+      // Removed boundary checks for pinch-resize
+      // const maxAllowedWidth = product.canvas_width - newX;
+      // const maxAllowedHeight = product.canvas_height - newY;
+      // newWidth = Math.min(newWidth, maxAllowedWidth);
+      // newHeight = Math.min(newHeight, maxAllowedHeight);
 
       // Also ensure position doesn't go negative
-      newX = Math.max(0, newX);
-      newY = Math.max(0, newY);
+      // newX = Math.max(0, newX);
+      // newY = Math.max(0, newY);
 
       updateElement(activeElementId, {
         width: newWidth,
@@ -968,7 +965,7 @@ const MobileCoverCustomizationPage = () => {
                       className="w-full h-full object-contain"
                     />
                   )}
-                  {selectedElementId === el.id && el.type === 'text' && ( // Only render handles for text elements
+                  {selectedElementId === el.id && ( // Render handles for both text and image elements
                     <>
                       <div
                         className="absolute -bottom-2 -right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center cursor-nwse-resize"
@@ -1060,7 +1057,7 @@ const MobileCoverCustomizationPage = () => {
       />
 
       <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-lg p-2 flex flex-wrap justify-around items-center border-t border-gray-200 dark:border-gray-700 z-10">
-        {selectedTextElement ? (
+        {selectedElementId && designElements.find(el => el.id === selectedElementId)?.type === 'text' ? (
           <div className="flex flex-col w-full items-center">
             <div className="flex items-center justify-center w-full overflow-x-auto py-1 px-4 scrollbar-hide">
               {fontFamilies.map((font) => (
@@ -1072,7 +1069,7 @@ const MobileCoverCustomizationPage = () => {
                   style={{ fontFamily: font }}
                   onClick={() => {
                     setCurrentFontFamily(font);
-                    updateElement(selectedTextElement.id, { fontFamily: font });
+                    updateElement(selectedElementId, { fontFamily: font });
                   }}
                 >
                   {font}
@@ -1088,7 +1085,7 @@ const MobileCoverCustomizationPage = () => {
                         style={{ backgroundColor: color }}
                         onClick={() => {
                             setCurrentTextColor(color);
-                            updateElement(selectedTextElement.id, { color: color });
+                            updateElement(selectedElementId, { color: color });
                         }}
                         title={color}
                     />
