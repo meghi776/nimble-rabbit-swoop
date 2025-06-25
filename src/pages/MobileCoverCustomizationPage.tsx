@@ -27,7 +27,7 @@ import {
   Eye,
   Download,
   ShoppingCart,
-} from 'lucide-react'; // Removed Check icon as it's no longer needed for 'Apply'
+} from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSession } from '@/contexts/SessionContext';
@@ -84,7 +84,7 @@ const MobileCoverCustomizationPage = () => {
   
   // States for text properties (now directly in component, not modal)
   const [currentTextContent, setCurrentTextContent] = useState('');
-  const [currentFontSize, setCurrentFontSize] = useState<number[]>([35]);
+  const [currentFontSize, setCurrentFontSize] = useState<number[]>([35]); // Still needed for initial value and touch updates
   const [currentTextColor, setCurrentTextColor] = useState('#000000');
   const [currentFontFamily, setCurrentFontFamily] = useState('Arial');
   const [currentTextShadowEnabled, setCurrentTextShadowEnabled] = useState(false);
@@ -864,21 +864,7 @@ const MobileCoverCustomizationPage = () => {
                 className="w-full md:w-48 mb-2"
               />
             </div>
-            <div className="flex flex-col items-center p-2 w-full md:w-auto">
-              <Label htmlFor="font-size" className="text-xs mb-1">Size: {currentFontSize[0]}</Label>
-              <Slider
-                id="font-size"
-                min={10}
-                max={100}
-                step={1}
-                value={currentFontSize}
-                onValueChange={(value) => {
-                  setCurrentFontSize(value);
-                  updateElement(selectedTextElement.id, { fontSize: value[0] });
-                }}
-                className="w-full md:w-32"
-              />
-            </div>
+            {/* Removed Font Size Slider as requested */}
             <div className="flex flex-col items-center p-2 w-full md:w-auto">
               <Label htmlFor="font-family" className="text-xs mb-1">Font</Label>
               <Select value={currentFontFamily} onValueChange={(value) => {
@@ -922,7 +908,6 @@ const MobileCoverCustomizationPage = () => {
               />
               <Label htmlFor="text-shadow" className="ml-2 text-xs">Shadow</Label>
             </div>
-            {/* Removed the "Apply" button */}
             <Button
               variant="destructive"
               className="flex flex-col h-auto p-2"
