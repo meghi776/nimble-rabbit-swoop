@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Tag } from 'lucide-react'; // Import Tag icon
 
 interface Brand {
   id: string;
@@ -60,7 +60,7 @@ const BrandListingPage = () => {
   }, [categoryId]);
 
   return (
-    <div className="min-h-screen flex flex-col items-center p-4 bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen flex flex-col items-center p-4 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-800 dark:to-gray-950">
       <div className="w-full max-w-4xl mx-auto">
         <div className="flex items-center mb-6">
           <Link to="/" className="mr-4">
@@ -89,12 +89,16 @@ const BrandListingPage = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {brands.map((brand) => (
                   <Link key={brand.id} to={`/categories/${categoryId}/brands/${brand.id}/products`}>
-                    <Card className="h-full flex flex-col justify-between hover:shadow-lg transition-shadow duration-200">
-                      <CardHeader>
-                        <CardTitle className="text-xl">{brand.name}</CardTitle>
+                    <Card className="h-full flex flex-col justify-between p-6 bg-white dark:bg-gray-800 shadow-xl rounded-xl border-2 border-indigo-500 hover:border-indigo-700 transition-all duration-300 transform hover:scale-105 cursor-pointer">
+                      <CardHeader className="pb-4 flex flex-col items-center text-center">
+                        <Tag className="h-12 w-12 text-indigo-600 dark:text-indigo-400 mb-3" /> {/* Added icon */}
+                        <CardTitle className="text-2xl font-bold text-gray-900 dark:text-gray-50">{brand.name}</CardTitle>
                       </CardHeader>
-                      <CardContent>
-                        <p className="text-sm text-gray-600 dark:text-gray-300">{brand.description || 'No description.'}</p>
+                      <CardContent className="text-center">
+                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">{brand.description || 'No description.'}</p>
+                        <span className="inline-block bg-indigo-500 text-white text-sm font-semibold px-4 py-2 rounded-full shadow-md">
+                          View Products
+                        </span>
                       </CardContent>
                     </Card>
                   </Link>
