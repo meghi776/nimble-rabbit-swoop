@@ -15,7 +15,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
 import { PlusCircle, Edit, Trash2, ArrowLeft } from 'lucide-react';
 
 interface Brand {
@@ -35,7 +34,6 @@ const BrandManagementPage = () => {
   const [currentBrand, setCurrentBrand] = useState<Brand | null>(null);
   const [brandName, setBrandName] = useState('');
   const [brandDescription, setBrandDescription] = useState('');
-  const { toast } = useToast();
 
   useEffect(() => {
     const fetchCategoryAndBrands = async () => {
@@ -52,11 +50,6 @@ const BrandManagementPage = () => {
       if (categoryError) {
         console.error("Error fetching category:", categoryError);
         setError(categoryError.message);
-        toast({
-          title: "Error",
-          description: `Failed to load category: ${categoryError.message}`,
-          variant: "destructive",
-        });
         setLoading(false);
         return;
       }
@@ -72,11 +65,6 @@ const BrandManagementPage = () => {
       if (brandsError) {
         console.error("Error fetching brands:", brandsError);
         setError(brandsError.message);
-        toast({
-          title: "Error",
-          description: `Failed to load brands: ${brandsError.message}`,
-          variant: "destructive",
-        });
       } else {
         setBrands(brandsData || []);
       }
@@ -113,16 +101,7 @@ const BrandManagementPage = () => {
 
     if (error) {
       console.error("Error deleting brand:", error);
-      toast({
-        title: "Error",
-        description: `Failed to delete brand: ${error.message}`,
-        variant: "destructive",
-      });
     } else {
-      toast({
-        title: "Success",
-        description: "Brand deleted successfully.",
-      });
       // Re-fetch brands after deletion
       const { data: brandsData, error: fetchError } = await supabase
         .from('brands')
@@ -140,20 +119,12 @@ const BrandManagementPage = () => {
 
   const handleSubmit = async () => {
     if (!brandName.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Brand name cannot be empty.",
-        variant: "destructive",
-      });
+      console.error("Brand name cannot be empty.");
       return;
     }
 
     if (!categoryId) {
-      toast({
-        title: "Error",
-        description: "Category ID is missing.",
-        variant: "destructive",
-      });
+      console.error("Category ID is missing.");
       return;
     }
 
@@ -166,16 +137,7 @@ const BrandManagementPage = () => {
 
       if (error) {
         console.error("Error updating brand:", error);
-        toast({
-          title: "Error",
-          description: `Failed to update brand: ${error.message}`,
-          variant: "destructive",
-        });
       } else {
-        toast({
-          title: "Success",
-          description: "Brand updated successfully.",
-        });
         setIsDialogOpen(false);
         // Re-fetch brands after update
         const { data: brandsData, error: fetchError } = await supabase
@@ -198,16 +160,7 @@ const BrandManagementPage = () => {
 
       if (error) {
         console.error("Error adding brand:", error);
-        toast({
-          title: "Error",
-          description: `Failed to add brand: ${error.message}`,
-          variant: "destructive",
-        });
       } else {
-        toast({
-          title: "Success",
-          description: "Brand added successfully.",
-        });
         setIsDialogOpen(false);
         // Re-fetch brands after addition
         const { data: brandsData, error: fetchError } = await supabase

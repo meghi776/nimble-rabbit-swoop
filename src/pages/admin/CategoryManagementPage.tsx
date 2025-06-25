@@ -14,7 +14,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 
 interface Category {
@@ -31,7 +30,6 @@ const CategoryManagementPage = () => {
   const [currentCategory, setCurrentCategory] = useState<Category | null>(null);
   const [categoryName, setCategoryName] = useState('');
   const [categoryDescription, setCategoryDescription] = useState('');
-  const { toast } = useToast();
 
   const fetchCategories = async () => {
     setLoading(true);
@@ -44,11 +42,6 @@ const CategoryManagementPage = () => {
     if (error) {
       console.error("Error fetching categories:", error);
       setError(error.message);
-      toast({
-        title: "Error",
-        description: `Failed to load categories: ${error.message}`,
-        variant: "destructive",
-      });
     } else {
       setCategories(data || []);
     }
@@ -84,27 +77,14 @@ const CategoryManagementPage = () => {
 
     if (error) {
       console.error("Error deleting category:", error);
-      toast({
-        title: "Error",
-        description: `Failed to delete category: ${error.message}`,
-        variant: "destructive",
-      });
     } else {
-      toast({
-        title: "Success",
-        description: "Category deleted successfully.",
-      });
       fetchCategories();
     }
   };
 
   const handleSubmit = async () => {
     if (!categoryName.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Category name cannot be empty.",
-        variant: "destructive",
-      });
+      console.error("Category name cannot be empty.");
       return;
     }
 
@@ -117,16 +97,7 @@ const CategoryManagementPage = () => {
 
       if (error) {
         console.error("Error updating category:", error);
-        toast({
-          title: "Error",
-          description: `Failed to update category: ${error.message}`,
-          variant: "destructive",
-        });
       } else {
-        toast({
-          title: "Success",
-          description: "Category updated successfully.",
-        });
         setIsDialogOpen(false);
         fetchCategories();
       }
@@ -138,16 +109,7 @@ const CategoryManagementPage = () => {
 
       if (error) {
         console.error("Error adding category:", error);
-        toast({
-          title: "Error",
-          description: `Failed to add category: ${error.message}`,
-          variant: "destructive",
-        });
       } else {
-        toast({
-          title: "Success",
-          description: "Category added successfully.",
-        });
         setIsDialogOpen(false);
         fetchCategories();
       }

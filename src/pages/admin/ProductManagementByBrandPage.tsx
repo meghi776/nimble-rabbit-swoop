@@ -15,7 +15,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
 import { PlusCircle, Edit, Trash2, ArrowLeft, Upload, Download, XCircle, Search } from 'lucide-react';
 import { useSession } from '@/contexts/SessionContext';
 import Papa from 'papaparse';
@@ -52,8 +51,7 @@ const ProductManagementByBrandPage = () => {
   const [canvasHeight, setCanvasHeight] = useState<string>('600');
   const [searchQuery, setSearchQuery] = useState<string>(''); // New state for search query
   const debounceTimeoutRef = useRef<number | null>(null); // Ref for debounce timeout
-  const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set()); // New state for bulk selection
-  const { toast } = useToast();
+  const [selectedProductIds, setSelectedProductIds] = new Set<string>(); // New state for bulk selection
   const { user } = useSession();
   const importFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -78,7 +76,6 @@ const ProductManagementByBrandPage = () => {
     if (categoryError) {
       console.error("Error fetching category:", categoryError);
       setError(categoryError.message);
-      toast({ title: "Error", description: `Failed to load category: ${categoryError.message}`, variant: "destructive" });
       setLoading(false);
       return;
     }
@@ -93,7 +90,6 @@ const ProductManagementByBrandPage = () => {
     if (brandError) {
       console.error("Error fetching brand:", brandError);
       setError(brandError.message);
-      toast({ title: "Error", description: `Failed to load brand: ${brandError.message}`, variant: "destructive" });
       setLoading(false);
       return;
     }
@@ -126,7 +122,6 @@ const ProductManagementByBrandPage = () => {
     if (productsError) {
       console.error("Error fetching products:", productsError);
       setError(productsError.message);
-      toast({ title: "Error", description: `Failed to load products: ${productsError.message}`, variant: "destructive" });
     } else {
       setProducts(data.map(p => ({
         ...p,
@@ -190,11 +185,6 @@ const ProductManagementByBrandPage = () => {
           .remove([`mockups/${fileName}`]); // Assuming mockups are stored in 'mockups/' subfolder
         if (storageError) {
           console.error("Error deleting mockup image from storage:", storageError);
-          toast({
-            title: "Error",
-            description: `Failed to delete mockup image: ${storageError.message}`,
-            variant: "destructive",
-          });
           return false;
         }
       }
@@ -208,11 +198,6 @@ const ProductManagementByBrandPage = () => {
         .eq('id', mockupId);
       if (deleteMockupError) {
         console.error("Error deleting mockup entry:", deleteMockupError);
-        toast({
-          title: "Error",
-          description: `Failed to delete associated mockup: ${deleteMockupError.message}`,
-          variant: "destructive",
-        });
         return false;
       }
     }
@@ -225,11 +210,6 @@ const ProductManagementByBrandPage = () => {
 
     if (error) {
       console.error("Error deleting product:", error);
-      toast({
-        title: "Error",
-        description: `Failed to delete product: ${error.message}`,
-        variant: "destructive",
-      });
       return false;
     }
     return true;
@@ -242,10 +222,6 @@ const ProductManagementByBrandPage = () => {
     setLoading(true);
     const success = await deleteSingleProduct(id, mockupId, mockupImageUrl);
     if (success) {
-      toast({
-        title: "Success",
-        description: "Product and associated mockup deleted successfully.",
-      });
       fetchProducts();
     }
     setLoading(false);
@@ -262,11 +238,6 @@ const ProductManagementByBrandPage = () => {
 
     if (error) {
       console.error(`Error uploading image to ${bucketName}/${subfolder}:`, error);
-      toast({
-        title: "Error",
-        description: `Failed to upload image: ${error.message}`,
-        variant: "destructive",
-      });
       return null;
     }
 
@@ -279,29 +250,17 @@ const ProductManagementByBrandPage = () => {
 
   const handleSubmit = async () => {
     if (!productName.trim() || !productPrice.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Product name and price cannot be empty.",
-        variant: "destructive",
-      });
+      console.error("Product name and price cannot be empty.");
       return;
     }
 
     if (!categoryId || !brandId) {
-      toast({
-        title: "Error",
-        description: "Category ID or Brand ID is missing.",
-        variant: "destructive",
-      });
+      console.error("Category ID or Brand ID is missing.");
       return;
     }
 
     if (!user?.id) {
-      toast({
-        title: "Authentication Error",
-        description: "User not authenticated. Please log in.",
-        variant: "destructive",
-      });
+      console.error("User not authenticated. Please log in.");
       setLoading(false);
       return;
     }
@@ -318,11 +277,7 @@ const ProductManagementByBrandPage = () => {
       }
     } else if (!currentMockupImageUrl && !currentProduct) {
       // If adding a new product and no mockup image is provided
-      toast({
-        title: "Validation Error",
-        description: "Please upload a mockup image for the new product.",
-        variant: "destructive",
-      });
+      console.error("Please upload a mockup image for the new product.");
       setLoading(false);
       return;
     }
@@ -347,11 +302,6 @@ const ProductManagementByBrandPage = () => {
 
       if (error) {
         console.error("Error updating product:", error);
-        toast({
-          title: "Error",
-          description: `Failed to update product: ${error.message}`,
-          variant: "destructive",
-        });
         setLoading(false);
         return;
       }
@@ -374,11 +324,6 @@ const ProductManagementByBrandPage = () => {
 
       if (error) {
         console.error("Error adding product:", error);
-        toast({
-          title: "Error",
-          description: `Failed to add product: ${error.message}`,
-          variant: "destructive",
-        });
         setLoading(false);
         return;
       }
@@ -400,11 +345,6 @@ const ProductManagementByBrandPage = () => {
 
         if (mockupUpdateError) {
           console.error("Error updating mockup:", mockupUpdateError);
-          toast({
-            title: "Error",
-            description: `Failed to update mockup: ${mockupUpdateError.message}`,
-            variant: "destructive",
-          });
           setLoading(false);
           return;
         }
@@ -422,21 +362,12 @@ const ProductManagementByBrandPage = () => {
 
         if (mockupInsertError) {
           console.error("Error inserting mockup:", mockupInsertError);
-          toast({
-            title: "Error",
-            description: `Failed to add mockup: ${mockupInsertError.message}`,
-            variant: "destructive",
-          });
           setLoading(false);
           return;
         }
       }
     }
 
-    toast({
-      title: "Success",
-      description: `Product and mockup ${currentProduct ? 'updated' : 'added'} successfully.`,
-    });
     setIsDialogOpen(false);
     fetchProducts();
     setLoading(false);
@@ -464,18 +395,17 @@ const ProductManagementByBrandPage = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast({ title: "Success", description: "Products exported successfully as CSV." });
   };
 
   const handleImportProducts = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) {
-      toast({ title: "No file selected", description: "Please select a CSV file to import.", variant: "destructive" });
+      console.error("No file selected. Please select a CSV file to import.");
       return;
     }
 
     if (file.type !== 'text/csv') {
-      toast({ title: "Invalid file type", description: "Please upload a CSV file.", variant: "destructive" });
+      console.error("Invalid file type. Please upload a CSV file.");
       return;
     }
 
@@ -486,11 +416,6 @@ const ProductManagementByBrandPage = () => {
       complete: async (results) => {
         if (results.errors.length > 0) {
           console.error("CSV Parsing Errors:", results.errors);
-          toast({
-            title: "CSV Parsing Error",
-            description: `Some rows could not be parsed. First error: ${results.errors[0].message}`,
-            variant: "destructive",
-          });
           setLoading(false);
           return;
         }
@@ -537,18 +462,6 @@ const ProductManagementByBrandPage = () => {
           }
         }
 
-        if (successfulImports > 0) {
-          toast({
-            title: "Import Complete",
-            description: `${successfulImports} product(s) imported/updated successfully. ${failedImports > 0 ? `${failedImports} failed.` : ''}`,
-          });
-        } else {
-          toast({
-            title: "Import Failed",
-            description: "No products were imported or updated. Please check the console for errors and ensure your CSV format is correct.",
-            variant: "destructive",
-          });
-        }
         fetchProducts(); // Re-fetch products to update the list
         setLoading(false);
         if (importFileInputRef.current) {
@@ -557,11 +470,6 @@ const ProductManagementByBrandPage = () => {
       },
       error: (err) => {
         console.error("CSV Parsing Error:", err);
-        toast({
-          title: "CSV Parsing Error",
-          description: `Failed to parse CSV file: ${err.message}`,
-          variant: "destructive",
-        });
         setLoading(false);
       }
     });
@@ -590,11 +498,7 @@ const ProductManagementByBrandPage = () => {
 
   const handleBulkDelete = async () => {
     if (selectedProductIds.size === 0) {
-      toast({
-        title: "No products selected",
-        description: "Please select at least one product to delete.",
-        variant: "destructive",
-      });
+      console.error("No products selected. Please select at least one product to delete.");
       return;
     }
 
@@ -616,19 +520,6 @@ const ProductManagementByBrandPage = () => {
           failedDeletions++;
         }
       }
-    }
-
-    if (successfulDeletions > 0) {
-      toast({
-        title: "Deletion Complete",
-        description: `${successfulDeletions} product(s) deleted successfully. ${failedDeletions > 0 ? `${failedDeletions} failed.` : ''}`,
-      });
-    } else {
-      toast({
-        title: "Deletion Failed",
-        description: "No products were deleted. Please check the console for errors.",
-        variant: "destructive",
-      });
     }
 
     fetchProducts(); // Re-fetch products to update the list

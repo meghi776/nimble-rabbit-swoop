@@ -16,7 +16,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/components/ui/use-toast";
 import { useSession } from '@/contexts/SessionContext';
 
 interface Profile {
@@ -40,7 +39,6 @@ const UserManagementPage = () => {
   const [newPassword, setNewPassword] = useState(''); // New state for new user password
   const [newFirstName, setNewFirstName] = useState(''); // New state for new user first name
   const [newLastName, setNewLastName] = useState(''); // New state for new user last name
-  const { toast } = useToast();
   const { user: currentUser, session } = useSession(); // Get the current user and session
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -54,11 +52,6 @@ const UserManagementPage = () => {
     if (error) {
       console.error("Error fetching profiles:", error);
       setError(error.message);
-      toast({
-        title: "Error",
-        description: `Failed to load users: ${error.message}`,
-        variant: "destructive",
-      });
     } else {
       setProfiles(data || []);
     }
@@ -111,16 +104,7 @@ const UserManagementPage = () => {
 
     if (error) {
       console.error("Error deleting profile:", error);
-      toast({
-        title: "Error",
-        description: `Failed to delete profile: ${error.message}`,
-        variant: "destructive",
-      });
     } else {
-      toast({
-        title: "Success",
-        description: "User profile deleted successfully.",
-      });
       fetchProfiles(); // Re-fetch profiles to update the list
     }
     setLoading(false);
@@ -141,16 +125,7 @@ const UserManagementPage = () => {
 
     if (error) {
       console.error("Error updating profile:", error);
-      toast({
-        title: "Error",
-        description: `Failed to update profile: ${error.message}`,
-        variant: "destructive",
-      });
     } else {
-      toast({
-        title: "Success",
-        description: "User profile updated successfully.",
-      });
       setIsEditModalOpen(false);
       fetchProfiles(); // Re-fetch profiles to update the list
     }
@@ -167,20 +142,12 @@ const UserManagementPage = () => {
 
   const handleSubmitAddUser = async () => {
     if (!newEmail.trim() || !newPassword.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Email and password cannot be empty.",
-        variant: "destructive",
-      });
+      console.error("Email and password cannot be empty.");
       return;
     }
 
     if (!session || !session.access_token) {
-      toast({
-        title: "Authentication Error",
-        description: "You must be logged in to create users. Please log in again.",
-        variant: "destructive",
-      });
+      console.error("You must be logged in to create users. Please log in again.");
       setLoading(false);
       return;
     }
@@ -240,33 +207,17 @@ const UserManagementPage = () => {
           errorMessage = invokeError.message;
         }
 
-        toast({
-          title: "Error",
-          description: errorMessage,
-          variant: "destructive",
-        });
+        setError(errorMessage);
       } else if (data && (data as any).error) { // This handles cases where function returns 200 but with an error payload
         console.error("Edge Function returned error in data payload (status 200):", (data as any).error);
-        toast({
-          title: "Error",
-          description: `Failed to create user: ${(data as any).error}`,
-          variant: "destructive",
-        });
+        setError(`Failed to create user: ${(data as any).error}`);
       } else {
-        toast({
-          title: "Success",
-          description: "User account created successfully!",
-        });
         setIsAddUserModalOpen(false);
         fetchProfiles(); // Re-fetch profiles to show the new user
       }
     } catch (err) {
       console.error("Network or unexpected error invoking Edge Function:", err);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred while creating the user.",
-        variant: "destructive",
-      });
+      setError("An unexpected error occurred while creating the user.");
     } finally {
       setLoading(false);
     }

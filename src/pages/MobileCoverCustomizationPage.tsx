@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { useToast } from "@/components/ui/use-toast";
 import {
   Dialog,
   DialogContent,
@@ -95,7 +94,6 @@ const MobileCoverCustomizationPage = () => {
   const designAreaRef = useRef<HTMLDivElement>(null);
   const canvasContentRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { toast } = useToast();
   const isMobile = useIsMobile();
   const { user } = useSession();
 
@@ -191,7 +189,6 @@ const MobileCoverCustomizationPage = () => {
       if (productError) {
         console.error("Error fetching product:", productError);
         setError(productError.message);
-        toast({ title: "Error", description: `Failed to load product: ${productError.message}`, variant: "destructive" });
       } else if (productData) {
         console.log("Fetched productData:", productData); // Log product data
         console.log("Mockups data from productData:", productData?.mockups); // Log mockups data
@@ -222,7 +219,6 @@ const MobileCoverCustomizationPage = () => {
             setDesignElements(loadedElements);
           } catch (parseError) {
             console.error("Error parsing design data:", parseError);
-            toast({ title: "Error", description: "Failed to parse existing design data.", variant: "destructive" });
           }
         }
         setDemoOrderPrice(productData.price?.toFixed(2) || '0.00');
@@ -290,7 +286,7 @@ const MobileCoverCustomizationPage = () => {
 
   const addImageElement = (imageUrl: string, id: string) => {
     if (!product) {
-      toast({ title: "Error", description: "Product details not loaded. Cannot add image.", variant: "destructive" });
+      console.error("Product details not loaded. Cannot add image.");
       return;
     }
     // Set default width and height to 100% of canvas, and position at (0,0)
@@ -632,11 +628,6 @@ const MobileCoverCustomizationPage = () => {
 
     if (error) {
       console.error(`Error uploading image to ${bucketName}/${subfolder}:`, error);
-      toast({
-        title: "Error",
-        description: `Failed to upload image: ${error.message}`,
-        variant: "destructive",
-      });
       return null;
     }
 
@@ -649,7 +640,7 @@ const MobileCoverCustomizationPage = () => {
 
   const captureDesignForPreview = async (includeMockup: boolean = true) => { // Added includeMockup parameter
     if (!canvasContentRef.current || !product) {
-      toast({ title: "Error", description: "Design area not found or product not loaded.", variant: "destructive" });
+      console.error("Design area not found or product not loaded.");
       return null;
     }
 
@@ -709,9 +700,9 @@ const MobileCoverCustomizationPage = () => {
       }
       // Check for specific html2canvas error messages related to tainting
       if (err.message && err.message.includes("Tainted canvases may not be exported")) {
-        toast({ title: "Preview Failed: CORS Issue", description: "The design contains images from another domain that are not configured for CORS. Please ensure Supabase Storage CORS settings are correct (Allowed Origins: *, Allowed Methods: GET).", variant: "destructive" });
+        console.error("Preview Failed: CORS Issue", "The design contains images from another domain that are not configured for CORS. Please ensure Supabase Storage CORS settings are correct (Allowed Origins: *, Allowed Methods: GET).");
       } else {
-        toast({ title: "Preview Failed", description: err.message || "An unexpected error occurred while generating preview.", variant: "destructive" });
+        console.error("Preview Failed", err.message || "An unexpected error occurred while generating preview.");
       }
       return null;
     } finally {
@@ -748,7 +739,7 @@ const MobileCoverCustomizationPage = () => {
 
     // 2. Add the element to state with the temporary URL
     if (!product) {
-      toast({ title: "Error", description: "Product details not loaded. Cannot add image.", variant: "destructive" });
+      console.error("Product details not loaded. Cannot add image.");
       return;
     }
     const newElement: DesignElement = {
@@ -763,7 +754,7 @@ const MobileCoverCustomizationPage = () => {
     };
     setDesignElements(prev => [...prev, newElement]);
     setSelectedElementId(newElement.id);
-    toast({ title: "Image Added", description: "Your image is being uploaded in the background." });
+    console.log("Image Added", "Your image is being uploaded in the background.");
 
     // Clear the file input immediately
     if (fileInputRef.current) {
@@ -779,29 +770,29 @@ const MobileCoverCustomizationPage = () => {
           prev.map(el => (el.id === newElementId ? { ...el, value: uploadedUrl } : el))
         );
         URL.revokeObjectURL(tempImageUrl); // Revoke the temporary URL
-        toast({ title: "Upload Complete", description: "Your image has been saved to the server." });
+        console.log("Upload Complete", "Your image has been saved to the server.");
       } else {
         // If upload fails, remove the element or show a persistent error
         setDesignElements(prev => prev.filter(el => el.id !== newElementId));
         URL.revokeObjectURL(tempImageUrl);
-        toast({ title: "Upload Failed", description: "Could not upload image to server. Please try again.", variant: "destructive" });
+        console.error("Upload Failed", "Could not upload image to server. Please try again.");
       }
     } catch (err: any) {
       console.error("Error during image upload:", err);
       setDesignElements(prev => prev.filter(el => el.id !== newElementId));
       URL.revokeObjectURL(tempImageUrl);
-      toast({ title: "Upload Error", description: `An error occurred during upload: ${err.message}`, variant: "destructive" });
+      console.error("Upload Error", `An error occurred during upload: ${err.message}`);
     }
   };
 
   const handleBuyNowClick = () => {
     if (!user) {
-      toast({ title: "Authentication Required", description: "Please log in to place an order.", variant: "destructive" });
+      console.error("Authentication Required", "Please log in to place an order.");
       navigate('/login');
       return;
     }
     if (!product) {
-      toast({ title: "Error", description: "Product not loaded. Cannot proceed with order.", variant: "destructive" });
+      console.error("Error", "Product not loaded. Cannot proceed with order.");
       return;
     }
     setIsCheckoutModalOpen(true);
@@ -809,7 +800,7 @@ const MobileCoverCustomizationPage = () => {
 
   const handlePlaceOrder = async (isDemo: boolean) => {
     if (!product || !user?.id) {
-      toast({ title: "Error", description: "Product or user information missing.", variant: "destructive" });
+      console.error("Error", "Product or user information missing.");
       return;
     }
 
@@ -822,11 +813,11 @@ const MobileCoverCustomizationPage = () => {
     const finalOrderType = isDemo ? 'demo' : 'normal';
 
     if (!isDemo && (!finalCustomerName.trim() || !finalCustomerAddress.trim() || !finalCustomerPhone.trim())) {
-      toast({ title: "Validation Error", description: "Please fill in all customer details.", variant: "destructive" });
+      console.error("Validation Error", "Please fill in all customer details.");
       return;
     }
     if (isDemo && (!finalCustomerAddress.trim() || isNaN(finalTotalPrice))) {
-      toast({ title: "Validation Error", description: "Please provide a valid price and address for the demo order.", variant: "destructive" });
+      console.error("Validation Error", "Please provide a valid price and address for the demo order.");
       return;
     }
 
@@ -884,7 +875,7 @@ const MobileCoverCustomizationPage = () => {
         throw new Error(`Failed to place order: ${orderInsertError.message}`);
       }
 
-      toast({ title: "Success", description: isDemo ? "Demo order placed successfully!" : "Your order has been placed successfully!" });
+      console.log("Order placed successfully!");
       setIsCheckoutModalOpen(false);
       setIsDemoOrderModalOpen(false);
       
@@ -896,7 +887,7 @@ const MobileCoverCustomizationPage = () => {
 
     } catch (err: any) {
       console.error("Error placing order:", err);
-      toast({ title: "Order Failed", description: err.message || "An unexpected error occurred while placing your order.", variant: "destructive" });
+      console.error("Order Failed", err.message || "An unexpected error occurred while placing your order.");
     } finally {
       setIsPlacingOrder(false);
     }
@@ -904,12 +895,12 @@ const MobileCoverCustomizationPage = () => {
 
   const handleDemoOrderClick = () => {
     if (!user) {
-      toast({ title: "Authentication Required", description: "Please log in to place a demo order.", variant: "destructive" });
+      console.error("Authentication Required", "Please log in to place a demo order.");
       navigate('/login');
       return;
     }
     if (!product) {
-      toast({ title: "Error", description: "Product not loaded. Cannot place demo order.", variant: "destructive" });
+      console.error("Error", "Product not loaded. Cannot place demo order.");
       return;
     }
     setIsDemoOrderModalOpen(true);
@@ -917,7 +908,7 @@ const MobileCoverCustomizationPage = () => {
 
   const handleAddTextElement = () => {
     if (!product) {
-      toast({ title: "Error", description: "Product details not loaded. Cannot add text.", variant: "destructive" });
+      console.error("Product details not loaded. Cannot add text.");
       return;
     }
     const defaultText = "New Text";
@@ -945,7 +936,7 @@ const MobileCoverCustomizationPage = () => {
     };
     setDesignElements(prev => [...prev, newElement]);
     setSelectedElementId(newElement.id);
-    toast({ title: "Success", description: "New text element added!" });
+    console.log("Success", "New text element added!");
   };
 
   const handleCanvasClick = (e: React.MouseEvent) => {
@@ -1109,7 +1100,7 @@ const MobileCoverCustomizationPage = () => {
                         className="absolute -top-2 -left-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center cursor-pointer"
                         onClick={() => deleteElement(el.id)}
                       >
-                        <XCircle className="h-4 w-4 text-white" />
+                        <XCircle className="h-4 w-4" />
                       </div>
                       <div
                         className="absolute -top-2 -right-2 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center cursor-grab"

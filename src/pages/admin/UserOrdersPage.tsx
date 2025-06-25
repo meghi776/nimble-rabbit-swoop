@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/components/ui/use-toast";
 import { Loader2, Eye, Trash2, Image as ImageIcon, ArrowLeft, ArrowDownWideNarrow, ArrowUpWideNarrow } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -46,7 +45,6 @@ const UserOrdersPage = () => {
   const [userName, setUserName] = useState<string | null>(null);
   const [sortColumn, setSortColumn] = useState<string>('created_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  const { toast } = useToast();
 
   const orderStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Demo']; // Added 'Demo' status
 
@@ -70,11 +68,6 @@ const UserOrdersPage = () => {
     if (profileError) {
       console.error("Error fetching user profile:", profileError);
       setError(profileError.message);
-      toast({
-        title: "Error",
-        description: `Failed to load user details: ${profileError.message}`,
-        variant: "destructive",
-      });
       setLoading(false);
       return;
     }
@@ -103,11 +96,6 @@ const UserOrdersPage = () => {
     if (ordersError) {
       console.error("Error fetching orders:", ordersError);
       setError(ordersError.message);
-      toast({
-        title: "Error",
-        description: `Failed to load orders: ${ordersError.message}`,
-        variant: "destructive",
-      });
     } else {
       setOrders(data || []);
     }
@@ -142,16 +130,7 @@ const UserOrdersPage = () => {
 
     if (error) {
       console.error("Error updating order status:", error);
-      toast({
-        title: "Error",
-        description: `Failed to update order status: ${error.message}`,
-        variant: "destructive",
-      });
     } else {
-      toast({
-        title: "Success",
-        description: "Order status updated successfully.",
-      });
       setIsEditStatusModalOpen(false);
       fetchUserAndOrders(); // Re-fetch orders to update the list
     }
@@ -174,11 +153,6 @@ const UserOrdersPage = () => {
           .remove([`orders/${fileName}`]); // Ensure correct path for removal
         if (storageError) {
           console.error("Error deleting order image from storage:", storageError);
-          toast({
-            title: "Error",
-            description: `Failed to delete order image: ${storageError.message}`,
-            variant: "destructive",
-          });
           setLoading(false);
           return;
         }
@@ -192,16 +166,7 @@ const UserOrdersPage = () => {
 
     if (error) {
       console.error("Error deleting order:", error);
-      toast({
-        title: "Error",
-        description: `Failed to delete order: ${error.message}`,
-        variant: "destructive",
-      });
     } else {
-      toast({
-        title: "Success",
-        description: "Order deleted successfully.",
-      });
       fetchUserAndOrders(); // Re-fetch orders to update the list
     }
     setLoading(false);

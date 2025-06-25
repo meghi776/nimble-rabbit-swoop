@@ -14,7 +14,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useToast } from "@/components/ui/use-toast";
 import { Loader2, Eye, Trash2, Image as ImageIcon, ArrowDownWideNarrow, ArrowUpWideNarrow, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
@@ -59,8 +58,7 @@ const OrderManagementPage = () => {
   const [orderTypeFilter, setOrderTypeFilter] = useState<string>('normal');
   const [selectedUserIdFilter, setSelectedUserIdFilter] = useState<string>('all'); // New state for user filter
   const [userList, setUserList] = useState<UserListItem[]>([]); // New state for user list
-  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
-  const { toast } = useToast();
+  const [selectedOrderIds, setSelectedOrderIds] = new Set<string>();
 
   const orderStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
 
@@ -101,30 +99,15 @@ const OrderManagementPage = () => {
           }
         }
         setError(errorMessage);
-        toast({
-          title: "Error",
-          description: `Failed to load orders: ${errorMessage}`,
-          variant: "destructive",
-        });
       } else if (data && data.orders) {
         setOrders(data.orders || []);
         setUserList(data.users || []); // Set the user list for the dropdown
       } else {
         setError("Unexpected response from server.");
-        toast({
-          title: "Error",
-          description: "Unexpected response from server while fetching orders.",
-          variant: "destructive",
-        });
       }
     } catch (err: any) {
       console.error("Network or unexpected error:", err);
       setError(err.message || "An unexpected error occurred.");
-      toast({
-        title: "Error",
-        description: `An unexpected error occurred: ${err.message}`,
-        variant: "destructive",
-      });
     } finally {
       setLoading(false);
     }
@@ -158,16 +141,7 @@ const OrderManagementPage = () => {
 
     if (error) {
       console.error("Error updating order status:", error);
-      toast({
-        title: "Error",
-        description: `Failed to update order status: ${error.message}`,
-        variant: "destructive",
-      });
     } else {
-      toast({
-        title: "Success",
-        description: "Order status updated successfully.",
-      });
       setIsEditStatusModalOpen(false);
       fetchOrders();
     }
@@ -183,11 +157,6 @@ const OrderManagementPage = () => {
           .remove([`orders/${fileName}`]);
         if (storageError) {
           console.error("Error deleting order image from storage:", storageError);
-          toast({
-            title: "Error",
-            description: `Failed to delete order image: ${storageError.message}`,
-            variant: "destructive",
-          });
           return false;
         }
       }
@@ -200,11 +169,6 @@ const OrderManagementPage = () => {
 
     if (error) {
       console.error("Error deleting order:", error);
-      toast({
-        title: "Error",
-        description: `Failed to delete order: ${error.message}`,
-        variant: "destructive",
-      });
       return false;
     }
     return true;
@@ -217,10 +181,6 @@ const OrderManagementPage = () => {
     setLoading(true);
     const success = await deleteSingleOrder(id, imageUrl);
     if (success) {
-      toast({
-        title: "Success",
-        description: "Order deleted successfully.",
-      });
       fetchOrders();
     }
     setLoading(false);
@@ -249,11 +209,7 @@ const OrderManagementPage = () => {
 
   const handleBulkDelete = async () => {
     if (selectedOrderIds.size === 0) {
-      toast({
-        title: "No orders selected",
-        description: "Please select at least one order to delete.",
-        variant: "destructive",
-      });
+      console.error("No orders selected. Please select at least one order to delete.");
       return;
     }
 
@@ -277,30 +233,13 @@ const OrderManagementPage = () => {
       }
     }
 
-    if (successfulDeletions > 0) {
-      toast({
-        title: "Deletion Complete",
-        description: `${successfulDeletions} order(s) deleted successfully. ${failedDeletions > 0 ? `${failedDeletions} failed.` : ''}`,
-      });
-    } else {
-      toast({
-        title: "Deletion Failed",
-        description: "No orders were deleted. Please check the console for errors.",
-        variant: "destructive",
-      });
-    }
-
     fetchOrders();
     setLoading(false);
   };
 
   const handleBulkDownloadDesigns = async () => {
     if (selectedOrderIds.size === 0) {
-      toast({
-        title: "No designs selected",
-        description: "Please select at least one order to download its design.",
-        variant: "destructive",
-      });
+      console.error("No designs selected. Please select at least one order to download its design.");
       return;
     }
 
@@ -336,25 +275,12 @@ const OrderManagementPage = () => {
       zip.generateAsync({ type: "blob" })
         .then(function (content) {
           saveAs(content, "selected_designs.zip");
-          toast({
-            title: "Download Complete",
-            description: `${downloadedCount} design(s) downloaded successfully. ${failedCount > 0 ? `${failedCount} failed.` : ''}`,
-          });
         })
         .catch(err => {
           console.error("Error generating zip file:", err);
-          toast({
-            title: "Download Failed",
-            description: `Failed to create zip file: ${err.message}`,
-            variant: "destructive",
-          });
         });
     } else {
-      toast({
-        title: "Download Failed",
-        description: "No designs were successfully downloaded.",
-        variant: "destructive",
-      });
+      console.error("Download Failed", "No designs were successfully downloaded.");
     }
     setLoading(false);
   };

@@ -2,8 +2,6 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Toaster } from '@/components/ui/sonner';
-import { toast } from 'sonner';
 
 interface SessionContextType {
   session: Session | null;
@@ -33,7 +31,6 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       } else if (event === 'SIGNED_OUT') {
         if (location.pathname.startsWith('/admin')) {
           navigate('/login'); // Redirect unauthenticated users from admin to login
-          toast.info("You have been signed out. Please log in to access admin features.");
         }
       }
     });
@@ -45,7 +42,6 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       setLoading(false);
       if (!initialSession && location.pathname.startsWith('/admin')) {
         navigate('/login');
-        toast.info("Please log in to access admin features.");
       }
     });
 
@@ -55,7 +51,6 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   return (
     <SessionContext.Provider value={{ session, user, loading }}>
       {children}
-      <Toaster />
     </SessionContext.Provider>
   );
 };

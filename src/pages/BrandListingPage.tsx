@@ -33,7 +33,6 @@ const BrandListingPage = () => {
       if (categoryError) {
         console.error("Error fetching category:", categoryError);
         setError(categoryError.message);
-        // toast({ title: "Error", description: `Failed to load category: ${categoryError.message}`, variant: "destructive" });
         setLoading(false);
         return;
       }
@@ -49,7 +48,6 @@ const BrandListingPage = () => {
       if (brandsError) {
         console.error("Error fetching brands:", brandsError);
         setError(brandsError.message);
-        // toast({ title: "Error", description: `Failed to load brands: ${brandsError.message}`, variant: "destructive" });
       } else {
         setBrands(brandsData || []);
       }

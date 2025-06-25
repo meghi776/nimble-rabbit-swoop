@@ -13,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/components/ui/use-toast";
 import { Loader2, Eye, Trash2, Image as ImageIcon, ArrowDownWideNarrow, ArrowUpWideNarrow } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
@@ -46,7 +45,6 @@ const DemoOrderListingPage = () => {
   const [newStatus, setNewStatus] = useState<string>('');
   const [sortColumn, setSortColumn] = useState<string>('created_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  const { toast } = useToast();
 
   const orderStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Demo'];
 
@@ -76,29 +74,14 @@ const DemoOrderListingPage = () => {
           }
         }
         setError(errorMessage);
-        toast({
-          title: "Error",
-          description: `Failed to load demo orders: ${errorMessage}`,
-          variant: "destructive",
-        });
       } else if (data && data.orders) {
         setOrders(data.orders || []);
       } else {
         setError("Unexpected response from server.");
-        toast({
-          title: "Error",
-          description: "Unexpected response from server while fetching demo orders.",
-          variant: "destructive",
-        });
       }
     } catch (err: any) {
       console.error("Network or unexpected error:", err);
       setError(err.message || "An unexpected error occurred.");
-      toast({
-        title: "Error",
-        description: `An unexpected error occurred: ${err.message}`,
-        variant: "destructive",
-      });
     } finally {
       setLoading(false);
     }
@@ -132,16 +115,7 @@ const DemoOrderListingPage = () => {
 
     if (error) {
       console.error("Error updating order status:", error);
-      toast({
-        title: "Error",
-        description: `Failed to update order status: ${error.message}`,
-        variant: "destructive",
-      });
     } else {
-      toast({
-        title: "Success",
-        description: "Order status updated successfully.",
-      });
       setIsEditStatusModalOpen(false);
       fetchOrders();
     }
@@ -163,11 +137,6 @@ const DemoOrderListingPage = () => {
           .remove([`orders/${fileName}`]);
         if (storageError) {
           console.error("Error deleting order image from storage:", storageError);
-          toast({
-            title: "Error",
-            description: `Failed to delete order image: ${storageError.message}`,
-            variant: "destructive",
-          });
           setLoading(false);
           return;
         }
@@ -181,16 +150,7 @@ const DemoOrderListingPage = () => {
 
     if (error) {
       console.error("Error deleting order:", error);
-      toast({
-        title: "Error",
-        description: `Failed to delete order: ${error.message}`,
-        variant: "destructive",
-      });
     } else {
-      toast({
-        title: "Success",
-        description: "Order deleted successfully.",
-      });
       fetchOrders();
     }
     setLoading(false);
