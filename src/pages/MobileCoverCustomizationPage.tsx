@@ -28,8 +28,7 @@ import {
   ShoppingCart,
   XCircle,
   RotateCw,
-  Download,
-  Save, // Added Save icon back
+  Download, // Only Download icon remains
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -66,7 +65,7 @@ interface TouchState {
   startX: number;
   startY: number;
   initialElementX: number;
-  initialElementY: number;
+  initialElementY: 0;
   initialDistance?: number;
   initialElementWidth?: number;
   initialElementHeight?: number;
@@ -637,130 +636,7 @@ const MobileCoverCustomizationPage = () => {
     return publicUrlData.publicUrl;
   };
 
-  const handleSaveDesign = async () => {
-    if (!product) return;
-
-    setLoading(true);
-    let updatedDesignElements: DesignElement[] = [];
-    let firstUploadedImageUrl: string | null = null;
-
-    for (const el of designElements) {
-      if (el.type === 'image' && el.value.startsWith('blob:')) {
-        try {
-          const response = await fetch(el.value);
-          const blob = await response.blob();
-          const uploadedUrl = await handleFileUpload(blob, 'order-mockups', 'user-uploads'); // Upload to 'user-uploads' subfolder
-          if (uploadedUrl) {
-            updatedDesignElements.push({ ...el, value: uploadedUrl });
-            if (!firstUploadedImageUrl) {
-              firstUploadedImageUrl = uploadedUrl;
-            }
-            // Revoke the blob URL after successful upload
-            URL.revokeObjectURL(el.value);
-          } else {
-            // If upload fails, keep the original blob URL but warn
-            updatedDesignElements.push(el);
-            toast({
-              title: "Upload Failed",
-              description: `Failed to upload image for element ${el.id}. It might not persist.`,
-              variant: "destructive",
-            });
-          }
-        } catch (fetchError) {
-          console.error("Error fetching blob for upload:", fetchError);
-          updatedDesignElements.push(el);
-          toast({
-            title: "Upload Error",
-            description: `Could not process image for upload: ${fetchError}. It might not persist.`,
-            variant: "destructive",
-          });
-        }
-      } else {
-        updatedDesignElements.push(el);
-      }
-    }
-
-    setDesignElements(updatedDesignElements); // Update state with new URLs
-    const designData = JSON.stringify(updatedDesignElements);
-
-    // Fetch user's profile for naming
-    let designerName = 'Customer';
-    if (user?.id) {
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('first_name, last_name')
-        .eq('id', user.id)
-        .single();
-
-      if (profileError) {
-        console.error("Error fetching user profile for design name:", profileError);
-        // Continue with default name if profile fetch fails
-      } else if (profileData) {
-        designerName = `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim();
-        if (!designerName) designerName = 'Customer'; // Fallback if names are empty
-      }
-    }
-
-    const designDisplayName = `${product.name} - ${designerName}'s Design`;
-
-    const { data: existingMockup, error: fetchMockupError } = await supabase
-      .from('mockups')
-      .select('id, image_url')
-      .eq('product_id', product.id)
-      .limit(1);
-
-    if (fetchMockupError) {
-      console.error("Error checking existing mockup:", fetchMockupError);
-      toast({ title: "Error", description: `Failed to save design: ${fetchMockupError.message}`, variant: "destructive" });
-      setLoading(false);
-      return;
-    }
-
-    let finalMockupImageUrlForDB = mockupOverlayImageUrl; // Default to existing mockup image
-
-    // If there's a new user-uploaded image and no existing mockup image, or if we want to update it
-    if (firstUploadedImageUrl && (!mockupOverlayImageUrl || !existingMockup?.[0]?.image_url)) {
-      finalMockupImageUrlForDB = firstUploadedImageUrl;
-    }
-
-    if (existingMockup && existingMockup.length > 0) {
-      const { error: updateError } = await supabase
-        .from('mockups')
-        .update({ 
-          name: designDisplayName, 
-          designer: designerName, 
-          design_data: designData,
-          image_url: finalMockupImageUrlForDB // Update mockup image URL if changed/new
-        })
-        .eq('id', existingMockup[0].id);
-
-      if (updateError) {
-        console.error("Error updating mockup design:", updateError);
-        toast({ title: "Error", description: `Failed to update design: ${updateError.message}`, variant: "destructive" });
-      } else {
-        toast({ title: "Success", description: "Design saved successfully!" });
-      }
-    } else {
-      const { error: insertError } = await supabase
-        .from('mockups')
-        .insert({
-          product_id: product.id,
-          image_url: finalMockupImageUrlForDB, // Use the uploaded image URL
-          name: designDisplayName, // Updated name
-          designer: designerName, // Updated designer
-          design_data: designData,
-          user_id: user?.id || null,
-        });
-
-      if (insertError) {
-        console.error("Error inserting new mockup with design:", insertError);
-        toast({ title: "Error", description: `Failed to save design: ${insertError.message}`, variant: "destructive" });
-      } else {
-        toast({ title: "Success", description: "Design saved successfully!" });
-      }
-    }
-    setLoading(false);
-  };
+  // Removed handleSaveDesign function
 
   const handleDownloadDesign = async () => {
     if (!canvasContentRef.current || !product) {
@@ -1045,9 +921,6 @@ const MobileCoverCustomizationPage = () => {
           {product?.name || 'Loading Product...'}
         </h1>
         <div className="flex items-center space-x-2">
-          <Button onClick={handleSaveDesign} disabled={loading || isPlacingOrder} variant="outline">
-            <Save className="mr-2 h-4 w-4" /> Save Design
-          </Button>
           <Button onClick={handleDownloadDesign} disabled={loading || isPlacingOrder} variant="outline">
             <Download className="mr-2 h-4 w-4" /> Download Design
           </Button>
