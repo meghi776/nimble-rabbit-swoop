@@ -959,7 +959,19 @@ const MobileCoverCustomizationPage = () => {
                         <div
                           className="absolute -bottom-2 -right-2 w-4 h-4 bg-blue-500 rounded-full cursor-nwse-resize"
                           onMouseDown={(e) => handleResizeStart(e, el.id)}
-                          onTouchStart={(e) => handleResizeStart(e, el.id)}
+                          onTouchStart={(e) => {
+                            touchState.current = {
+                              mode: 'resizing',
+                              startX: e.touches[0].clientX,
+                              startY: e.touches[0].clientY,
+                              initialElementX: el.x,
+                              initialElementY: el.y,
+                              initialElementWidth: el.width,
+                              initialElementHeight: el.height,
+                              activeElementId: el.id,
+                            };
+                            handleResizeStart(e, el.id); // Call the existing logic
+                          }}
                         />
                       )}
                       {/* Resize handle for text */}
@@ -967,7 +979,18 @@ const MobileCoverCustomizationPage = () => {
                         <div
                           className="absolute -bottom-2 -right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center cursor-nwse-resize"
                           onMouseDown={(e) => handleResizeStart(e, el.id)}
-                          onTouchStart={(e) => handleResizeStart(e, el.id)}
+                          onTouchStart={(e) => {
+                            touchState.current = {
+                              mode: 'resizing',
+                              startX: e.touches[0].clientX,
+                              startY: e.touches[0].clientY,
+                              initialElementX: el.x,
+                              initialElementY: el.y,
+                              initialFontSize: el.fontSize,
+                              activeElementId: el.id,
+                            };
+                            handleResizeStart(e, el.id); // Call the existing logic
+                          }}
                         >
                           <PlusCircle className="h-4 w-4 text-white" />
                         </div>
@@ -977,13 +1000,33 @@ const MobileCoverCustomizationPage = () => {
                         className="absolute -top-2 -left-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center cursor-pointer"
                         onClick={() => deleteElement(el.id)}
                       >
-                        <XCircle className="h-4 w-4" />
+                        <XCircle className="h-4 w-4 text-white" />
                       </div>
                       {/* Rotation handle */}
                       <div
                         className="absolute -top-2 -right-2 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center cursor-grab"
                         onMouseDown={(e) => handleRotateStart(e, el.id)}
-                        onTouchStart={(e) => handleRotateStart(e, el.id)}
+                        onTouchStart={(e) => {
+                          const elementDiv = (e.currentTarget as HTMLElement).parentElement;
+                          if (!elementDiv || !designAreaRef.current) return;
+                          const elementRect = elementDiv.getBoundingClientRect();
+                          const designAreaRect = designAreaRef.current.getBoundingClientRect();
+                          const elementCenterX = el.x + elementRect.width / 2;
+                          const elementCenterY = el.y + elementRect.height / 2;
+                          const initialAngle = Math.atan2(e.touches[0].clientY - (designAreaRect.top + elementCenterY), e.touches[0].clientX - (designAreaRect.left + elementCenterX));
+
+                          touchState.current = {
+                            mode: 'rotating',
+                            startX: e.touches[0].clientX,
+                            startY: e.touches[0].clientY,
+                            initialElementX: el.x,
+                            initialElementY: el.y,
+                            initialAngle: initialAngle,
+                            initialRotation: el.rotation,
+                            activeElementId: el.id,
+                          };
+                          handleRotateStart(e, el.id); // Call the existing logic
+                        }}
                       >
                         <RotateCw className="h-4 w-4 text-white" />
                       </div>
@@ -1095,25 +1138,8 @@ const MobileCoverCustomizationPage = () => {
             </Button>
           </>
         )}
-        {/* Buy Now Button (always visible) */}
-        <Button variant="default" className="flex flex-col h-auto p-2 bg-blue-600 hover:bg-blue-700 text-white" onClick={handleBuyNowClick} disabled={isPlacingOrder}>
-          <ShoppingCart className="h-6 w-6" />
-          <span className="text-xs mt-1">Buy Now</span>
-        </Button>
-        {/* Delete button for any selected element (now only here) */}
-        {selectedElementId && (
-          <Button
-            variant="destructive"
-            className="flex flex-col h-auto p-2"
-            onClick={() => {
-              deleteElement(selectedElementId);
-              setSelectedElementId(null);
-            }}
-          >
-            <Trash2 className="h-6 w-6" />
-            <span className="text-xs mt-1">Delete</span>
-          </Button>
-        )}
+        {/* Removed Buy Now Button */}
+        {/* Removed Delete button for any selected element */}
       </div>
 
       <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
@@ -1137,7 +1163,7 @@ const MobileCoverCustomizationPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Checkout Modal */}
+      {/* Checkout Modal (kept for potential future use or if triggered elsewhere) */}
       <Dialog open={isCheckoutModalOpen} onOpenChange={setIsCheckoutModalOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
