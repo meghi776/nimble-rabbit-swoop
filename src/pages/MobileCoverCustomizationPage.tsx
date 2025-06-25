@@ -245,15 +245,15 @@ const MobileCoverCustomizationPage = () => {
       toast({ title: "Error", description: "Product details not loaded. Cannot add image.", variant: "destructive" });
       return;
     }
-    // Set default width and height to 100% of canvas
-    const defaultImageWidth = product.canvas_width;
-    const defaultImageHeight = product.canvas_height;
+    // Set default width and height to 50% of canvas, and center it
+    const defaultImageWidth = product.canvas_width * 0.5;
+    const defaultImageHeight = product.canvas_height * 0.5;
     const newElement: DesignElement = {
       id: `image-${Date.now()}`,
       type: 'image',
       value: imageUrl,
-      x: 0, // Position at top-left
-      y: 0, // Position at top-left
+      x: (product.canvas_width - defaultImageWidth) / 2, // Centered X
+      y: (product.canvas_height - defaultImageHeight) / 2, // Centered Y
       width: defaultImageWidth,
       height: defaultImageHeight,
       rotation: 0,
@@ -703,11 +703,13 @@ const MobileCoverCustomizationPage = () => {
         throw new Error("Design area not found for order image capture.");
       }
 
+      // Temporarily remove border from selected element for screenshot
       const selectedElementDiv = document.querySelector(`[data-element-id="${selectedElementId}"]`);
       if (selectedElementDiv) {
         selectedElementDiv.classList.remove('border-2', 'border-blue-500');
       }
 
+      // Temporarily enable pointer events on mockup overlay for html2canvas to capture it
       if (mockupImageElement instanceof HTMLElement) {
         originalMockupPointerEvents = mockupImageElement.style.pointerEvents;
         mockupImageElement.style.pointerEvents = 'auto';
@@ -778,6 +780,7 @@ const MobileCoverCustomizationPage = () => {
       console.error("Error placing order:", err);
       toast({ title: "Order Failed", description: err.message || "An unexpected error occurred while placing your order.", variant: "destructive" });
     } finally {
+      // Restore original styles
       if (mockupImageElement instanceof HTMLElement) {
         mockupImageElement.style.pointerEvents = originalMockupPointerEvents;
       }
