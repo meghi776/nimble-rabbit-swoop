@@ -676,14 +676,18 @@ const MobileCoverCustomizationPage = () => {
         mockupImageElement.style.pointerEvents = 'auto';
       }
 
+      console.log("Attempting to capture canvas with html2canvas...");
       const canvas = await html2canvas(canvasContentRef.current, {
         useCORS: true,
         allowTaint: true,
         backgroundColor: null,
         scale: 1 / scaleFactor, // Crucial for capturing at original resolution
       });
+      console.log("html2canvas capture successful.");
 
       const dataUrl = canvas.toDataURL('image/png');
+      console.log("Canvas toDataURL successful.");
+
       const link = document.createElement('a');
       link.href = dataUrl;
       link.download = `${product.name.replace(/\s/g, '_')}_custom_design.png`;
@@ -694,8 +698,18 @@ const MobileCoverCustomizationPage = () => {
       toast({ title: "Success", description: "Design downloaded successfully!" });
 
     } catch (err: any) {
-      console.error("Error downloading design:", err);
-      toast({ title: "Download Failed", description: err.message || "An unexpected error occurred during download.", variant: "destructive" });
+      console.error("Detailed Error during download process:", err);
+      console.error("Error name:", err.name);
+      console.error("Error message:", err.message);
+      if (err.stack) {
+        console.error("Error stack:", err.stack);
+      }
+      // Check for specific html2canvas error messages related to tainting
+      if (err.message && err.message.includes("Tainted canvases may not be exported")) {
+        toast({ title: "Download Failed: CORS Issue", description: "The design contains images from another domain that are not configured for CORS. Please ensure Supabase Storage CORS settings are correct (Allowed Origins: *, Allowed Methods: GET).", variant: "destructive" });
+      } else {
+        toast({ title: "Download Failed", description: err.message || "An unexpected error occurred during download.", variant: "destructive" });
+      }
     } finally {
       // Restore original styles
       if (mockupImageElement instanceof HTMLElement) {
@@ -1079,6 +1093,7 @@ const MobileCoverCustomizationPage = () => {
                       src={proxyImageUrl(el.value)} // Always use proxyImageUrl for consistency
                       alt="design element"
                       className="w-full h-full object-contain"
+                      crossOrigin="anonymous" // Added for CORS compatibility with html2canvas
                     />
                   )}
                   {selectedElementId === el.id && ( // Render handles for both text and image elements
