@@ -647,7 +647,7 @@ const MobileCoverCustomizationPage = () => {
     return publicUrlData.publicUrl;
   };
 
-  const captureDesignForPreview = async () => {
+  const captureDesignForPreview = async (includeMockup: boolean = true) => { // Added includeMockup parameter
     if (!canvasContentRef.current || !product) {
       toast({ title: "Error", description: "Design area not found or product not loaded.", variant: "destructive" });
       return null;
@@ -678,10 +678,13 @@ const MobileCoverCustomizationPage = () => {
         selectedElementDiv.classList.remove('border-2', 'border-blue-500');
       }
 
-      // Temporarily enable pointer events on mockup overlay for html2canvas to capture it
+      // Temporarily hide mockup if not needed for capture
       if (mockupImageElement instanceof HTMLElement) {
         originalMockupPointerEvents = mockupImageElement.style.pointerEvents;
-        mockupImageElement.style.pointerEvents = 'auto';
+        mockupImageElement.style.pointerEvents = 'auto'; // Ensure it's capturable if needed
+        if (!includeMockup) {
+          mockupImageElement.style.display = 'none'; // Hide the mockup
+        }
       }
 
       console.log("Attempting to capture canvas with html2canvas...");
@@ -715,6 +718,9 @@ const MobileCoverCustomizationPage = () => {
       // Restore original styles
       if (mockupImageElement instanceof HTMLElement) {
         mockupImageElement.style.pointerEvents = originalMockupPointerEvents;
+        if (!includeMockup) {
+          mockupImageElement.style.display = ''; // Show the mockup again
+        }
       }
       if (selectedElementDiv) {
         selectedElementDiv.classList.add('border-2', 'border-blue-500');
@@ -724,7 +730,7 @@ const MobileCoverCustomizationPage = () => {
 
   const handlePreviewDesign = async () => {
     setLoading(true);
-    const imageUrl = await captureDesignForPreview();
+    const imageUrl = await captureDesignForPreview(); // Default to including mockup for preview
     if (imageUrl) {
       setPreviewImageUrl(imageUrl);
       setIsPreviewModalOpen(true);
@@ -828,7 +834,8 @@ const MobileCoverCustomizationPage = () => {
     let orderedDesignImageUrl: string | null = null;
     
     try {
-      orderedDesignImageUrl = await captureDesignForPreview();
+      // Capture design WITHOUT the mockup for the actual order image
+      orderedDesignImageUrl = await captureDesignForPreview(false); 
       if (!orderedDesignImageUrl) {
         throw new Error("Failed to capture design for order.");
       }
