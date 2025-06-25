@@ -279,14 +279,14 @@ const MobileCoverCustomizationPage = () => {
     }
   }, [designElements, selectedElementId]);
 
-  const addImageElement = (imageUrl: string) => {
+  const addImageElement = (imageUrl: string, id: string) => {
     if (!product) {
       toast({ title: "Error", description: "Product details not loaded. Cannot add image.", variant: "destructive" });
       return;
     }
     // Set default width and height to 100% of canvas, and position at (0,0)
     const newElement: DesignElement = {
-      id: `image-${Date.now()}`,
+      id: id,
       type: 'image',
       value: imageUrl,
       x: 0, // Position at 0
@@ -295,7 +295,7 @@ const MobileCoverCustomizationPage = () => {
       height: product.canvas_height, // 100% height
       rotation: 0,
     };
-    setDesignElements([...designElements, newElement]);
+    setDesignElements(prev => [...prev, newElement]);
     setSelectedElementId(newElement.id);
   };
 
@@ -697,25 +697,55 @@ const MobileCoverCustomizationPage = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    setLoading(true);
-    toast({ title: "Uploading Image", description: "Please wait while your image is being uploaded...", duration: 3000 });
+    // 1. Create a temporary blob URL for immediate display
+    const tempImageUrl = URL.createObjectURL(file);
+    const newElementId = `image-${Date.now()}`;
 
+    // 2. Add the element to state with the temporary URL
+    if (!product) {
+      toast({ title: "Error", description: "Product details not loaded. Cannot add image.", variant: "destructive" });
+      return;
+    }
+    const newElement: DesignElement = {
+      id: newElementId,
+      type: 'image',
+      value: tempImageUrl, // Use temporary URL
+      x: 0,
+      y: 0,
+      width: product.canvas_width,
+      height: product.canvas_height,
+      rotation: 0,
+    };
+    setDesignElements(prev => [...prev, newElement]);
+    setSelectedElementId(newElement.id);
+    toast({ title: "Image Added", description: "Your image is being uploaded in the background.", duration: 3000 });
+
+    // Clear the file input immediately
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+
+    // 3. Start the actual upload in the background
     try {
-      const uploadedUrl = await handleFileUpload(file, 'order-mockups', 'user-uploads'); // Upload to 'user-uploads' subfolder
+      const uploadedUrl = await handleFileUpload(file, 'order-mockups', 'user-uploads');
       if (uploadedUrl) {
-        addImageElement(uploadedUrl);
-        toast({ title: "Success", description: "Image uploaded and added to design." });
+        // 4. Update the element with the permanent URL once upload is complete
+        setDesignElements(prev =>
+          prev.map(el => (el.id === newElementId ? { ...el, value: uploadedUrl } : el))
+        );
+        URL.revokeObjectURL(tempImageUrl); // Revoke the temporary URL
+        toast({ title: "Upload Complete", description: "Your image has been saved to the server." });
       } else {
-        toast({ title: "Upload Failed", description: "Could not upload image. Please try again.", variant: "destructive" });
+        // If upload fails, remove the element or show a persistent error
+        setDesignElements(prev => prev.filter(el => el.id !== newElementId));
+        URL.revokeObjectURL(tempImageUrl);
+        toast({ title: "Upload Failed", description: "Could not upload image to server. Please try again.", variant: "destructive" });
       }
     } catch (err: any) {
       console.error("Error during image upload:", err);
+      setDesignElements(prev => prev.filter(el => el.id !== newElementId));
+      URL.revokeObjectURL(tempImageUrl);
       toast({ title: "Upload Error", description: `An error occurred during upload: ${err.message}`, variant: "destructive" });
-    } finally {
-      setLoading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''; // Clear the file input
-      }
     }
   };
 
