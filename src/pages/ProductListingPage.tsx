@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from 'lucide-react';
+import { Input } from "@/components/ui/input"; // Import Input component
+import { ArrowLeft, Search } from 'lucide-react'; // Import Search icon
 
 interface Product {
   id: string;
@@ -20,6 +21,8 @@ const ProductListingPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>(''); // New state for search query
+  const debounceTimeoutRef = useRef<number | null>(null); // Ref for debounce timeout
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -82,6 +85,11 @@ const ProductListingPage = () => {
         return;
       }
 
+      // Apply search filter if searchQuery is not empty
+      if (searchQuery) {
+        query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
+      }
+
       const { data, error: productsError } = await query.order('name', { ascending: true });
 
       if (productsError) {
@@ -93,8 +101,20 @@ const ProductListingPage = () => {
       setLoading(false);
     };
 
-    fetchProducts();
-  }, [categoryId, brandId]);
+    // Debounce the fetchProducts call
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+    debounceTimeoutRef.current = setTimeout(() => {
+      fetchProducts();
+    }, 300) as unknown as number; // Cast to number for clearTimeout
+
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, [categoryId, brandId, searchQuery]); // Re-run effect when searchQuery changes
 
   return (
     <div className="min-h-screen flex flex-col items-center p-4 bg-gray-50 dark:bg-gray-900">
@@ -105,9 +125,19 @@ const ProductListingPage = () => {
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
-          <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 flex-grow">
             {title}
           </h1>
+          <div className="relative w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search products..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 pr-3 py-2 rounded-md border border-input bg-background shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            />
+          </div>
         </div>
 
         {loading && (
