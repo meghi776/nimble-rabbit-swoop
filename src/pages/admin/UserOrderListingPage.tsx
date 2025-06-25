@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Table,
@@ -15,9 +15,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/components/ui/use-toast";
-import { Loader2, Eye, Trash2, Image as ImageIcon, ArrowDownWideNarrow, ArrowUpWideNarrow } from 'lucide-react';
+import { Loader2, Eye, Trash2, Image as ImageIcon, ArrowDownWideNarrow, ArrowUpWideNarrow, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
+import JSZip from 'jszip'; // Import JSZip
+import { saveAs } from 'file-saver'; // Import saveAs
 
 interface Order {
   id: string;
@@ -292,6 +294,71 @@ const OrderManagementPage = () => {
     setLoading(false);
   };
 
+  const handleBulkDownloadDesigns = async () => {
+    if (selectedOrderIds.size === 0) {
+      toast({
+        title: "No designs selected",
+        description: "Please select at least one order to download its design.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    const zip = new JSZip();
+    let downloadedCount = 0;
+    let failedCount = 0;
+
+    const downloadPromises = Array.from(selectedOrderIds).map(async (orderId) => {
+      const order = orders.find(o => o.id === orderId);
+      if (order && order.ordered_design_image_url) {
+        try {
+          const response = await fetch(order.ordered_design_image_url);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const blob = await response.blob();
+          const fileName = `${order.products?.name || 'design'}_${order.id.substring(0, 8)}_${format(new Date(order.created_at), 'yyyyMMdd')}.png`;
+          zip.file(fileName, blob);
+          downloadedCount++;
+        } catch (err) {
+          console.error(`Failed to download design for order ${order.id}:`, err);
+          failedCount++;
+        }
+      } else {
+        failedCount++;
+      }
+    });
+
+    await Promise.all(downloadPromises);
+
+    if (downloadedCount > 0) {
+      zip.generateAsync({ type: "blob" })
+        .then(function (content) {
+          saveAs(content, "selected_designs.zip");
+          toast({
+            title: "Download Complete",
+            description: `${downloadedCount} design(s) downloaded successfully. ${failedCount > 0 ? `${failedCount} failed.` : ''}`,
+          });
+        })
+        .catch(err => {
+          console.error("Error generating zip file:", err);
+          toast({
+            title: "Download Failed",
+            description: `Failed to create zip file: ${err.message}`,
+            variant: "destructive",
+          });
+        });
+    } else {
+      toast({
+        title: "Download Failed",
+        description: "No designs were successfully downloaded.",
+        variant: "destructive",
+      });
+    }
+    setLoading(false);
+  };
+
   const handleSort = (column: string) => {
     if (sortColumn === column) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -320,13 +387,22 @@ const OrderManagementPage = () => {
           <CardTitle>All Orders</CardTitle>
           <div className="flex items-center space-x-4">
             {selectedOrderIds.size > 0 && (
-              <Button
-                variant="destructive"
-                onClick={handleBulkDelete}
-                disabled={loading}
-              >
-                <Trash2 className="mr-2 h-4 w-4" /> Delete Selected ({selectedOrderIds.size})
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  onClick={handleBulkDownloadDesigns}
+                  disabled={loading}
+                >
+                  <Download className="mr-2 h-4 w-4" /> Download Designs ({selectedOrderIds.size})
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleBulkDelete}
+                  disabled={loading}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete Selected ({selectedOrderIds.size})
+                </Button>
+              </>
             )}
             <div className="flex items-center space-x-2">
               <Label htmlFor="order-type-filter">Type:</Label>
