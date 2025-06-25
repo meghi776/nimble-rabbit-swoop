@@ -15,7 +15,7 @@ serve(async (req) => {
   let sortColumn = 'created_at';
   let sortDirection = 'desc';
   let orderType: string | null = null;
-  let userIdFilter: string | null = null; // New: userId filter
+  let userIdFilter: string | null = null;
 
   let requestBody: any = {};
   try {
@@ -120,7 +120,7 @@ serve(async (req) => {
       console.log(`Edge Function: Applying type filter: ${orderType}`);
     }
 
-    if (userIdFilter) { // New: Apply user ID filter
+    if (userIdFilter) {
       query = query.eq('user_id', userIdFilter);
       console.log(`Edge Function: Applying user_id filter: ${userIdFilter}`);
     } else {
@@ -141,10 +141,9 @@ serve(async (req) => {
     console.log(`Edge Function: Fetched ${ordersData.length} orders.`);
 
     // Manually fetch emails for each user_id from auth.users
-    // Fetch all users to populate the dropdown on the frontend
     const { data: usersData, error: usersError } = await supabaseAdmin.auth.admin.listUsers({
       page: 1,
-      perPage: 1000, // Adjust as needed for very large user bases
+      perPage: 1000,
     });
 
     if (usersError) {
@@ -161,6 +160,14 @@ serve(async (req) => {
     let ordersWithEmails = ordersData.map(order => ({
       ...order,
       user_email: userEmailMap.get(order.user_id) || null,
+    }));
+
+    // Define userListForFrontend here
+    const userListForFrontend = usersData.users.map(user => ({
+      id: user.id,
+      email: user.email,
+      first_name: user.user_metadata?.first_name || null,
+      last_name: user.user_metadata?.last_name || null,
     }));
 
     // Apply client-side sorting for user_email if requested
