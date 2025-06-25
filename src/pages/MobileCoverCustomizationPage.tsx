@@ -23,7 +23,7 @@ import {
   Text,
   Palette,
   LayoutTemplate,
-  Image,
+  Image, // This 'Image' is the Lucide icon component
   ArrowLeft,
   ShoppingCart,
   XCircle,
@@ -653,7 +653,7 @@ const MobileCoverCustomizationPage = () => {
       // Pre-load mockup image to ensure it's in cache and rendered
       if (mockupOverlayImageUrl) {
         await new Promise((resolve) => {
-          const img = new Image();
+          const img = new window.Image(); // Use window.Image here
           img.crossOrigin = 'Anonymous'; // Important for CORS
           img.onload = () => resolve(true);
           img.onerror = (e) => {
