@@ -29,6 +29,7 @@ import {
   XCircle,
   RotateCw,
   Download,
+  Eye, // Import Eye icon for preview
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -111,6 +112,10 @@ const MobileCoverCustomizationPage = () => {
 
   // New state for the mockup overlay image URL
   const [mockupOverlayImageUrl, setMockupOverlayImageUrl] = useState<string | null>(null);
+
+  // State for preview modal
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
   // Responsive canvas states
   const [actualCanvasWidth, setActualCanvasWidth] = useState(0);
@@ -642,13 +647,12 @@ const MobileCoverCustomizationPage = () => {
     return publicUrlData.publicUrl;
   };
 
-  const handleDownloadDesign = async () => {
+  const captureDesignForPreview = async () => {
     if (!canvasContentRef.current || !product) {
       toast({ title: "Error", description: "Design area not found or product not loaded.", variant: "destructive" });
-      return;
+      return null;
     }
 
-    setLoading(true);
     let originalMockupPointerEvents = '';
     const mockupImageElement = canvasContentRef.current.querySelector('img[alt="Phone Mockup Overlay"]');
     const selectedElementDiv = document.querySelector(`[data-element-id="${selectedElementId}"]`);
@@ -657,13 +661,12 @@ const MobileCoverCustomizationPage = () => {
       // Pre-load mockup image to ensure it's in cache and rendered
       if (mockupOverlayImageUrl) {
         await new Promise((resolve) => {
-          const img = new window.Image(); // Use window.Image here
-          img.crossOrigin = 'Anonymous'; // Important for CORS
+          const img = new window.Image();
+          img.crossOrigin = 'Anonymous';
           img.onload = () => resolve(true);
           img.onerror = (e) => {
             console.error("Error loading mockup image for html2canvas:", e);
-            toast({ title: "Image Load Error", description: "Failed to load mockup image for download. It might appear broken.", variant: "destructive" });
-            resolve(false); // Resolve to continue even if image fails
+            resolve(false);
           };
           img.src = proxyImageUrl(mockupOverlayImageUrl);
         });
@@ -680,40 +683,18 @@ const MobileCoverCustomizationPage = () => {
         mockupImageElement.style.pointerEvents = 'auto';
       }
 
-      console.log("Attempting to capture canvas with html2canvas...");
       const canvas = await html2canvas(canvasContentRef.current, {
         useCORS: true,
         allowTaint: true,
         backgroundColor: null,
-        scale: 1 / scaleFactor, // Crucial for capturing at original resolution
+        scale: 1 / scaleFactor,
       });
-      console.log("html2canvas capture successful.");
-
-      const dataUrl = canvas.toDataURL('image/png');
-      console.log("Canvas toDataURL successful.");
-
-      const link = document.createElement('a');
-      link.href = dataUrl;
-      link.download = `${product.name.replace(/\s/g, '_')}_custom_design.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      toast({ title: "Success", description: "Design downloaded successfully!" });
+      return canvas.toDataURL('image/png');
 
     } catch (err: any) {
-      console.error("Detailed Error during download process:", err);
-      console.error("Error name:", err.name);
-      console.error("Error message:", err.message);
-      if (err.stack) {
-        console.error("Error stack:", err.stack);
-      }
-      // Check for specific html2canvas error messages related to tainting
-      if (err.message && err.message.includes("Tainted canvases may not be exported")) {
-        toast({ title: "Download Failed: CORS Issue", description: "The design contains images from another domain that are not configured for CORS. Please ensure Supabase Storage CORS settings are correct (Allowed Origins: *, Allowed Methods: GET).", variant: "destructive" });
-      } else {
-        toast({ title: "Download Failed", description: err.message || "An unexpected error occurred during download.", variant: "destructive" });
-      }
+      console.error("Error capturing design for preview:", err);
+      toast({ title: "Preview Failed", description: err.message || "An error occurred while generating preview.", variant: "destructive" });
+      return null;
     } finally {
       // Restore original styles
       if (mockupImageElement instanceof HTMLElement) {
@@ -722,8 +703,17 @@ const MobileCoverCustomizationPage = () => {
       if (selectedElementDiv) {
         selectedElementDiv.classList.add('border-2', 'border-blue-500');
       }
-      setLoading(false);
     }
+  };
+
+  const handlePreviewDesign = async () => {
+    setLoading(true);
+    const imageUrl = await captureDesignForPreview();
+    if (imageUrl) {
+      setPreviewImageUrl(imageUrl);
+      setIsPreviewModalOpen(true);
+    }
+    setLoading(false);
   };
 
   const handleImageFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -820,35 +810,14 @@ const MobileCoverCustomizationPage = () => {
 
     setIsPlacingOrder(true);
     let orderedDesignImageUrl: string | null = null;
-    let originalMockupPointerEvents = '';
-    const mockupImageElement = canvasContentRef.current?.querySelector('img[alt="Phone Mockup Overlay"]');
-
+    
     try {
-      if (!canvasContentRef.current) {
-        throw new Error("Design area not found for order image capture.");
+      orderedDesignImageUrl = await captureDesignForPreview();
+      if (!orderedDesignImageUrl) {
+        throw new Error("Failed to capture design for order.");
       }
 
-      // Temporarily remove border from selected element for screenshot
-      const selectedElementDiv = document.querySelector(`[data-element-id="${selectedElementId}"]`);
-      if (selectedElementDiv) {
-        selectedElementDiv.classList.remove('border-2', 'border-blue-500');
-      }
-
-      // Temporarily enable pointer events on mockup overlay for html2canvas to capture it
-      if (mockupImageElement instanceof HTMLElement) {
-        originalMockupPointerEvents = mockupImageElement.style.pointerEvents;
-        mockupImageElement.style.pointerEvents = 'auto';
-      }
-
-      const canvas = await html2canvas(canvasContentRef.current, {
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: null,
-        scale: 1 / scaleFactor, // Crucial for capturing at original resolution
-      });
-      const dataUrl = canvas.toDataURL('image/png');
-
-      const blob = await (await fetch(dataUrl)).blob();
+      const blob = await (await fetch(orderedDesignImageUrl)).blob();
 
       const fileExt = 'png';
       const fileName = `${product.id}-${Date.now()}.${fileExt}`;
@@ -906,14 +875,6 @@ const MobileCoverCustomizationPage = () => {
       console.error("Error placing order:", err);
       toast({ title: "Order Failed", description: err.message || "An unexpected error occurred while placing your order.", variant: "destructive" });
     } finally {
-      // Restore original styles
-      if (mockupImageElement instanceof HTMLElement) {
-        mockupImageElement.style.pointerEvents = originalMockupPointerEvents;
-      }
-      const selectedElementDiv = document.querySelector(`[data-element-id="${selectedElementId}"]`);
-      if (selectedElementDiv) {
-        selectedElementDiv.classList.add('border-2', 'border-blue-500');
-      }
       setIsPlacingOrder(false);
     }
   };
@@ -998,8 +959,8 @@ const MobileCoverCustomizationPage = () => {
           {product?.name || 'Loading Product...'}
         </h1>
         <div className="flex items-center space-x-2">
-          <Button onClick={handleDownloadDesign} disabled={loading || isPlacingOrder} variant="outline">
-            <Download className="mr-2 h-4 w-4" /> Download Design
+          <Button onClick={handlePreviewDesign} disabled={loading || isPlacingOrder} variant="outline">
+            <Eye className="mr-2 h-4 w-4" /> Preview
           </Button>
           <Button onClick={handleDemoOrderClick} disabled={loading || isPlacingOrder} className="bg-green-600 hover:bg-green-700 text-white">
             {isPlacingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -1361,6 +1322,26 @@ const MobileCoverCustomizationPage = () => {
               {isPlacingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Confirm Demo Order
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview Design Modal */}
+      <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Design Preview</DialogTitle>
+            <DialogDescription>This is how your design will look.</DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-center items-center py-4">
+            {previewImageUrl ? (
+              <img src={previewImageUrl} alt="Design Preview" className="max-w-full h-auto border rounded-md" />
+            ) : (
+              <p>No preview available. Please try again.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setIsPreviewModalOpen(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
