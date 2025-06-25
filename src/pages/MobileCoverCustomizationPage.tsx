@@ -86,7 +86,7 @@ const MobileCoverCustomizationPage = () => {
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   
   // States for text properties (now directly in component, not modal)
-  const [currentTextContent, setCurrentTextContent] = useState(''); // Kept for initial sync, but editing happens on canvas
+  const [currentTextContent, setCurrentTextContent] = useState('');
   const [currentFontSize, setCurrentFontSize] = useState<number[]>([35]);
   const [currentTextColor, setCurrentTextColor] = useState('#000000');
   const [currentFontFamily, setCurrentFontFamily] = useState('Arial');
@@ -831,44 +831,17 @@ const MobileCoverCustomizationPage = () => {
                   onTouchEnd={handleTouchEnd}
                 >
                   {el.type === 'text' ? (
-                    selectedElementId === el.id ? (
-                      <Textarea
-                        value={el.value}
-                        onChange={(e) => updateElement(el.id, { value: e.target.value })}
-                        onBlur={() => setSelectedElementId(null)} // Deselect on blur
-                        autoFocus
-                        style={{
-                          fontSize: `${el.fontSize}px`,
-                          color: el.color,
-                          fontFamily: el.fontFamily,
-                          textShadow: el.textShadow ? '2px 2px 4px rgba(0,0,0,0.5)' : 'none',
-                          background: 'transparent',
-                          border: 'none',
-                          resize: 'none', // Disable textarea resize handle
-                          overflow: 'hidden', // Hide scrollbar
-                          width: 'auto', // Allow content to dictate width
-                          height: 'auto', // Allow content to dictate height
-                          minWidth: '20px', // Minimum size
-                          minHeight: '20px',
-                          padding: '0',
-                          margin: '0',
-                          lineHeight: '1', // Prevent extra line height
-                        }}
-                        className="outline-none" // Remove default focus outline
-                      />
-                    ) : (
-                      <span
-                        style={{
-                          fontSize: `${el.fontSize}px`,
-                          color: el.color,
-                          whiteSpace: 'nowrap',
-                          fontFamily: el.fontFamily,
-                          textShadow: el.textShadow ? '2px 2px 4px rgba(0,0,0,0.5)' : 'none',
-                        }}
-                      >
-                        {el.value}
-                      </span>
-                    )
+                    <span
+                      style={{
+                        fontSize: `${el.fontSize}px`,
+                        color: el.color,
+                        whiteSpace: 'nowrap',
+                        fontFamily: el.fontFamily,
+                        textShadow: el.textShadow ? '2px 2px 4px rgba(0,0,0,0.5)' : 'none',
+                      }}
+                    >
+                      {el.value}
+                    </span>
                   ) : (
                     <img
                       src={el.value}
@@ -938,7 +911,21 @@ const MobileCoverCustomizationPage = () => {
       <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-lg p-2 flex flex-wrap justify-around items-center border-t border-gray-200 dark:border-gray-700 z-10">
         {selectedTextElement ? (
           <>
-            {/* Text Editing Options (only font, color, shadow remain here) */}
+            {/* Text Content Input */}
+            <div className="flex flex-col items-center p-2 w-full md:w-auto">
+              <Label htmlFor="text-content" className="sr-only">Text Content</Label>
+              <Input
+                id="text-content"
+                placeholder="Edit text"
+                value={currentTextContent}
+                onChange={(e) => {
+                  setCurrentTextContent(e.target.value);
+                  updateElement(selectedTextElement.id, { value: e.target.value });
+                }}
+                className="w-full md:w-48 mb-2"
+              />
+            </div>
+            {/* Font Family Select */}
             <div className="flex flex-col items-center p-2 w-full md:w-auto">
               <Label htmlFor="font-family" className="text-xs mb-1">Font</Label>
               <Select value={currentFontFamily} onValueChange={(value) => {
@@ -957,6 +944,7 @@ const MobileCoverCustomizationPage = () => {
                 </SelectContent>
               </Select>
             </div>
+            {/* Text Color Input */}
             <div className="flex flex-col items-center p-2 w-full md:w-auto">
               <Label htmlFor="text-color" className="text-xs mb-1">Color</Label>
               <Input
@@ -971,6 +959,7 @@ const MobileCoverCustomizationPage = () => {
                 title="Custom Color"
               />
             </div>
+            {/* Text Shadow Switch */}
             <div className="flex items-center p-2 w-full md:w-auto justify-center">
               <Switch
                 id="text-shadow"
@@ -982,18 +971,6 @@ const MobileCoverCustomizationPage = () => {
               />
               <Label htmlFor="text-shadow" className="ml-2 text-xs">Shadow</Label>
             </div>
-            {/* Delete button for selected element (now also available on element itself) */}
-            <Button
-              variant="destructive"
-              className="flex flex-col h-auto p-2"
-              onClick={() => {
-                deleteElement(selectedElementId);
-                setSelectedElementId(null);
-              }}
-            >
-              <Trash2 className="h-6 w-6" />
-              <span className="text-xs mt-1">Delete</span>
-            </Button>
           </>
         ) : (
           <>
@@ -1014,24 +991,26 @@ const MobileCoverCustomizationPage = () => {
               <LayoutTemplate className="h-6 w-6" />
               <span className="text-xs mt-1">Readymade</span>
             </Button>
-            <Button variant="default" className="flex flex-col h-auto p-2 bg-blue-600 hover:bg-blue-700 text-white" onClick={handleBuyNowClick} disabled={isPlacingOrder}>
-              <ShoppingCart className="h-6 w-6" />
-              <span className="text-xs mt-1">Buy Now</span>
-            </Button>
-            {selectedElementId && (
-              <Button
-                variant="destructive"
-                className="flex flex-col h-auto p-2"
-                onClick={() => {
-                  deleteElement(selectedElementId);
-                  setSelectedElementId(null);
-                }}
-              >
-                <Trash2 className="h-6 w-6" />
-                <span className="text-xs mt-1">Delete</span>
-              </Button>
-            )}
           </>
+        )}
+        {/* Buy Now Button (always visible) */}
+        <Button variant="default" className="flex flex-col h-auto p-2 bg-blue-600 hover:bg-blue-700 text-white" onClick={handleBuyNowClick} disabled={isPlacingOrder}>
+          <ShoppingCart className="h-6 w-6" />
+          <span className="text-xs mt-1">Buy Now</span>
+        </Button>
+        {/* Delete button for any selected element (now only here) */}
+        {selectedElementId && (
+          <Button
+            variant="destructive"
+            className="flex flex-col h-auto p-2"
+            onClick={() => {
+              deleteElement(selectedElementId);
+              setSelectedElementId(null);
+            }}
+          >
+            <Trash2 className="h-6 w-6" />
+            <span className="text-xs mt-1">Delete</span>
+          </Button>
         )}
       </div>
 
