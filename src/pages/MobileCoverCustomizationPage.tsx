@@ -226,6 +226,7 @@ const MobileCoverCustomizationPage = () => {
 
             selection?.removeAllRanges();
             selection?.addRange(range);
+            spanRef.focus(); // Explicitly focus the element
           }
         }
       }
@@ -854,8 +855,8 @@ const MobileCoverCustomizationPage = () => {
       id: `text-${Date.now()}`,
       type: 'text',
       value: defaultText,
-      x: Math.max(0, centerX),
-      y: Math.max(0, centerY),
+      x: centerX, // Centered X
+      y: centerY, // Centered Y
       fontSize: defaultFontSize,
       color: defaultColor,
       fontFamily: defaultFontFamily,
@@ -1122,7 +1123,7 @@ const MobileCoverCustomizationPage = () => {
         {selectedTextElement ? (
           <div className="flex flex-col w-full items-center">
             {/* Font Family Horizontal List */}
-            <div className="flex items-center justify-center w-full overflow-x-auto py-1 px-2 scrollbar-hide">
+            <div className="flex items-center justify-center w-full overflow-x-auto py-1 px-4 scrollbar-hide">
               {fontFamilies.map((font) => (
                 <Button
                   key={font}
