@@ -268,13 +268,21 @@ const MobileCoverCustomizationPage = () => {
 
     const startX = e.clientX;
     const startY = e.clientY;
-    const startWidth = element.width || 0;
-    const startHeight = element.height || 0;
-
+    
     const onMouseMove = (moveEvent: MouseEvent) => {
-      const newWidth = Math.max(20, startWidth + (moveEvent.clientX - startX));
-      const newHeight = Math.max(20, startHeight + (moveEvent.clientY - startY));
-      updateElement(id, { width: newWidth, height: newHeight });
+      if (element.type === 'image') {
+        const startWidth = element.width || 0;
+        const startHeight = element.height || 0;
+        const newWidth = Math.max(20, startWidth + (moveEvent.clientX - startX));
+        const newHeight = Math.max(20, startHeight + (moveEvent.clientY - startY));
+        updateElement(id, { width: newWidth, height: newHeight });
+      } else if (element.type === 'text') {
+        const startFontSize = element.fontSize || 35; // Use current font size
+        // Scale font size based on vertical movement
+        const scaleFactor = (moveEvent.clientY - startY) / 10; // Adjust sensitivity as needed
+        const newFontSize = Math.max(10, startFontSize + scaleFactor); // Minimum font size 10
+        updateElement(id, { fontSize: newFontSize });
+      }
     };
 
     const onMouseUp = () => {
@@ -851,11 +859,21 @@ const MobileCoverCustomizationPage = () => {
                   )}
                   {selectedElementId === el.id && (
                     <>
+                      {/* Resize handle for images */}
                       {el.type === 'image' && (
                         <div
                           className="absolute -bottom-2 -right-2 w-4 h-4 bg-blue-500 rounded-full cursor-nwse-resize"
                           onMouseDown={(e) => handleResizeMouseDown(e, el.id)}
                         />
+                      )}
+                      {/* Resize handle for text */}
+                      {el.type === 'text' && (
+                        <div
+                          className="absolute -bottom-2 -right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center cursor-nwse-resize"
+                          onMouseDown={(e) => handleResizeMouseDown(e, el.id)}
+                        >
+                          <PlusCircle className="h-4 w-4 text-white" />
+                        </div>
                       )}
                       {/* Delete handle */}
                       <div
