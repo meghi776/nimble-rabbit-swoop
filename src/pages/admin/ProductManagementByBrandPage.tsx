@@ -19,6 +19,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { PlusCircle, Edit, Trash2, ArrowLeft, Upload, Download, XCircle, Search } from 'lucide-react';
 import { useSession } from '@/contexts/SessionContext';
 import Papa from 'papaparse';
+import { Checkbox } from '@/components/ui/checkbox'; // Import Checkbox
 
 interface Product {
   id: string;
@@ -51,6 +52,7 @@ const ProductManagementByBrandPage = () => {
   const [canvasHeight, setCanvasHeight] = useState<string>('600');
   const [searchQuery, setSearchQuery] = useState<string>(''); // New state for search query
   const debounceTimeoutRef = useRef<number | null>(null); // Ref for debounce timeout
+  const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set()); // New state for bulk selection
   const { toast } = useToast();
   const { user } = useSession();
   const importFileInputRef = useRef<HTMLInputElement>(null);
@@ -65,6 +67,7 @@ const ProductManagementByBrandPage = () => {
   const fetchProducts = async () => {
     setLoading(true);
     setError(null);
+    setSelectedProductIds(new Set()); // Clear selection on re-fetch
 
     // Fetch category name
     const { data: categoryData, error: categoryError } = await supabase
@@ -177,13 +180,7 @@ const ProductManagementByBrandPage = () => {
     setIsDialogOpen(true);
   };
 
-  const handleDeleteProduct = async (id: string, mockupId: string | null, mockupImageUrl: string | null) => {
-    if (!window.confirm("Are you sure you want to delete this product and its associated mockup? This action cannot be undone.")) {
-      return;
-    }
-
-    setLoading(true);
-
+  const deleteSingleProduct = async (id: string, mockupId: string | null, mockupImageUrl: string | null) => {
     // 1. Delete mockup image from storage if it exists and is a Supabase URL
     if (mockupImageUrl && isSupabaseStorageUrl(mockupImageUrl, 'order-mockups')) {
       const fileName = mockupImageUrl.split('/').pop();
@@ -198,8 +195,7 @@ const ProductManagementByBrandPage = () => {
             description: `Failed to delete mockup image: ${storageError.message}`,
             variant: "destructive",
           });
-          setLoading(false);
-          return;
+          return false;
         }
       }
     }
@@ -217,8 +213,7 @@ const ProductManagementByBrandPage = () => {
           description: `Failed to delete associated mockup: ${deleteMockupError.message}`,
           variant: "destructive",
         });
-        setLoading(false);
-        return;
+        return false;
       }
     }
 
@@ -235,7 +230,18 @@ const ProductManagementByBrandPage = () => {
         description: `Failed to delete product: ${error.message}`,
         variant: "destructive",
       });
-    } else {
+      return false;
+    }
+    return true;
+  };
+
+  const handleDeleteProduct = async (id: string, mockupId: string | null, mockupImageUrl: string | null) => {
+    if (!window.confirm("Are you sure you want to delete this product and its associated mockup? This action cannot be undone.")) {
+      return;
+    }
+    setLoading(true);
+    const success = await deleteSingleProduct(id, mockupId, mockupImageUrl);
+    if (success) {
       toast({
         title: "Success",
         description: "Product and associated mockup deleted successfully.",
@@ -561,6 +567,77 @@ const ProductManagementByBrandPage = () => {
     });
   };
 
+  const handleSelectProduct = (productId: string, isChecked: boolean) => {
+    setSelectedProductIds(prev => {
+      const newSelection = new Set(prev);
+      if (isChecked) {
+        newSelection.add(productId);
+      } else {
+        newSelection.delete(productId);
+      }
+      return newSelection;
+    });
+  };
+
+  const handleSelectAllProducts = (isChecked: boolean) => {
+    if (isChecked) {
+      const allProductIds = new Set(products.map(product => product.id));
+      setSelectedProductIds(allProductIds);
+    } else {
+      setSelectedProductIds(new Set());
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedProductIds.size === 0) {
+      toast({
+        title: "No products selected",
+        description: "Please select at least one product to delete.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to delete ${selectedProductIds.size} selected products? This action cannot be undone.`)) {
+      return;
+    }
+
+    setLoading(true);
+    let successfulDeletions = 0;
+    let failedDeletions = 0;
+
+    for (const productId of selectedProductIds) {
+      const productToDelete = products.find(p => p.id === productId);
+      if (productToDelete) {
+        const success = await deleteSingleProduct(productId, productToDelete.mockup_id, productToDelete.mockup_image_url);
+        if (success) {
+          successfulDeletions++;
+        } else {
+          failedDeletions++;
+        }
+      }
+    }
+
+    if (successfulDeletions > 0) {
+      toast({
+        title: "Deletion Complete",
+        description: `${successfulDeletions} product(s) deleted successfully. ${failedDeletions > 0 ? `${failedDeletions} failed.` : ''}`,
+      });
+    } else {
+      toast({
+        title: "Deletion Failed",
+        description: "No products were deleted. Please check the console for errors.",
+        variant: "destructive",
+      });
+    }
+
+    fetchProducts(); // Re-fetch products to update the list
+    setLoading(false);
+  };
+
+  const isAllSelected = products.length > 0 && selectedProductIds.size === products.length;
+  const isIndeterminate = selectedProductIds.size > 0 && selectedProductIds.size < products.length;
+
   return (
     <div className="p-4">
       <div className="flex items-center mb-6">
@@ -578,6 +655,15 @@ const ProductManagementByBrandPage = () => {
         <CardHeader className="flex flex-row justify-between items-center">
           <CardTitle>Products List</CardTitle>
           <div className="flex space-x-2 items-center">
+            {selectedProductIds.size > 0 && (
+              <Button
+                variant="destructive"
+                onClick={handleBulkDelete}
+                disabled={loading}
+              >
+                <Trash2 className="mr-2 h-4 w-4" /> Delete Selected ({selectedProductIds.size})
+              </Button>
+            )}
             <div className="relative w-48">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -624,6 +710,14 @@ const ProductManagementByBrandPage = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-[30px]">
+                          <Checkbox
+                            checked={isAllSelected}
+                            indeterminate={isIndeterminate}
+                            onCheckedChange={handleSelectAllProducts}
+                            aria-label="Select all products"
+                          />
+                        </TableHead>
                         <TableHead>Mockup Image</TableHead>
                         <TableHead>Name</TableHead>
                         <TableHead>Description</TableHead>
@@ -635,6 +729,13 @@ const ProductManagementByBrandPage = () => {
                     <TableBody>
                       {products.map((product) => (
                         <TableRow key={product.id}>
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedProductIds.has(product.id)}
+                              onCheckedChange={(checked) => handleSelectProduct(product.id, checked as boolean)}
+                              aria-label={`Select product ${product.name}`}
+                            />
+                          </TableCell>
                           <TableCell>
                             {product.mockup_image_url ? (
                               <img src={product.mockup_image_url} alt={product.name} className="w-16 h-16 object-cover rounded-md" />
