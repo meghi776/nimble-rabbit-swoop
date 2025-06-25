@@ -1177,8 +1177,10 @@ const MobileCoverCustomizationPage = () => {
             </Button>
           </>
         )}
-        {/* Removed Buy Now Button */}
-        {/* Removed Delete button for any selected element */}
+        <Button onClick={handleBuyNowClick} disabled={loading || isPlacingOrder} className="flex flex-col h-auto p-2 bg-blue-600 hover:bg-blue-700 text-white">
+          <ShoppingCart className="h-6 w-6" />
+          <span className="text-xs mt-1">Buy Now</span>
+        </Button>
       </div>
 
       <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
