@@ -111,6 +111,11 @@ const MobileCoverCustomizationPage = () => {
   // New state for the mockup overlay image URL
   const [mockupOverlayImageUrl, setMockupOverlayImageUrl] = useState<string | null>(null);
 
+  // Responsive canvas states
+  const [actualCanvasWidth, setActualCanvasWidth] = useState(0);
+  const [actualCanvasHeight, setActualCanvasHeight] = useState(0);
+  const [scaleFactor, setScaleFactor] = useState(1);
+
   const touchState = useRef<TouchState>({
     mode: 'none',
     startX: 0,
@@ -136,6 +141,37 @@ const MobileCoverCustomizationPage = () => {
 
   const textElementRefs = useRef<Map<string, HTMLDivElement>>(new Map()); // Changed to HTMLDivElement
   const lastCaretPosition = useRef<{ node: Node | null; offset: number } | null>(null);
+
+  // Effect to calculate scale factor based on container size
+  useEffect(() => {
+    const updateCanvasDimensions = () => {
+      if (designAreaRef.current && product) {
+        const containerWidth = designAreaRef.current.offsetWidth;
+        const newScaleFactor = containerWidth / product.canvas_width;
+        const newActualCanvasWidth = product.canvas_width * newScaleFactor;
+        const newActualCanvasHeight = product.canvas_height * newScaleFactor;
+
+        setActualCanvasWidth(newActualCanvasWidth);
+        setActualCanvasHeight(newActualCanvasHeight);
+        setScaleFactor(newScaleFactor);
+      }
+    };
+
+    // Initial calculation
+    updateCanvasDimensions();
+
+    // Set up ResizeObserver for dynamic scaling
+    const observer = new ResizeObserver(updateCanvasDimensions);
+    if (designAreaRef.current) {
+      observer.observe(designAreaRef.current);
+    }
+
+    return () => {
+      if (designAreaRef.current) {
+        observer.unobserve(designAreaRef.current);
+      }
+    };
+  }, [product]); // Re-run if product (and thus original canvas dimensions) changes
 
   useEffect(() => {
     const fetchProductAndMockup = async () => {
@@ -170,8 +206,8 @@ const MobileCoverCustomizationPage = () => {
             // Ensure loaded design elements conform to the new interface (add default width/height if missing)
             const loadedElements: DesignElement[] = JSON.parse(productData.mockups[0].design_data as string).map((el: any) => ({
               ...el,
-              width: el.width || (el.type === 'text' ? 200 : productData.canvas_width * 0.5), // Default width for text/image
-              height: el.height || (el.type === 'text' ? 40 : productData.canvas_height * 0.5), // Default height for text/image
+              width: el.width || (el.type === 'text' ? 200 : productData.canvas_width), // Default width for text/image
+              height: el.height || (el.type === 'text' ? 40 : productData.canvas_height), // Default height for text/image
             }));
             setDesignElements(loadedElements);
           } catch (parseError) {
@@ -279,23 +315,29 @@ const MobileCoverCustomizationPage = () => {
     }
   };
 
+  const getUnscaledCoords = (clientX: number, clientY: number) => {
+    if (!designAreaRef.current) return { x: 0, y: 0 };
+    const designAreaRect = designAreaRef.current.getBoundingClientRect();
+    return {
+      x: (clientX - designAreaRect.left) / scaleFactor,
+      y: (clientY - designAreaRect.top) / scaleFactor,
+    };
+  };
+
   const handleMouseDown = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     setSelectedElementId(id);
     const element = designElements.find(el => el.id === id);
     if (!element || !designAreaRef.current || !product) return;
 
-    const designAreaRect = designAreaRef.current.getBoundingClientRect();
-    const offsetX = e.clientX - (element.x + designAreaRect.left);
-    const offsetY = e.clientY - (element.y + designAreaRect.top);
+    const { x: unscaledClientX, y: unscaledClientY } = getUnscaledCoords(e.clientX, e.clientY);
+    const offsetX = unscaledClientX - element.x;
+    const offsetY = unscaledClientY - element.y;
 
     const onMouseMove = (moveEvent: MouseEvent) => {
-      let newX = moveEvent.clientX - designAreaRect.left - offsetX;
-      let newY = moveEvent.clientY - designAreaRect.top - offsetY;
-
-      // Removed boundary checks for dragging
-      // newX = Math.max(0, Math.min(newX, product.canvas_width - element.width));
-      // newY = Math.max(0, Math.min(newY, product.canvas_height - element.height));
+      const { x: currentUnscaledX, y: currentUnscaledY } = getUnscaledCoords(moveEvent.clientX, moveEvent.clientY);
+      let newX = currentUnscaledX - offsetX;
+      let newY = currentUnscaledY - offsetY;
 
       updateElement(id, { x: newX, y: newY });
     };
@@ -318,8 +360,7 @@ const MobileCoverCustomizationPage = () => {
     const clientX = isTouchEvent ? e.touches[0].clientX : e.clientX;
     const clientY = isTouchEvent ? e.touches[0].clientY : e.clientY;
 
-    const startX = clientX;
-    const startY = clientY;
+    const { x: unscaledStartX, y: unscaledStartY } = getUnscaledCoords(clientX, clientY);
     const startWidth = element.width;
     const startHeight = element.height;
 
@@ -340,14 +381,10 @@ const MobileCoverCustomizationPage = () => {
       const currentClientX = 'touches' in moveEvent ? moveEvent.touches[0].clientX : moveEvent.clientX;
       const currentClientY = 'touches' in moveEvent ? moveEvent.touches[0].clientY : moveEvent.clientY;
 
-      let newWidth = Math.max(20, startWidth + (currentClientX - startX));
-      let newHeight = Math.max(20, startHeight + (currentClientY - startY));
+      const { x: currentUnscaledX, y: currentUnscaledY } = getUnscaledCoords(currentClientX, currentClientY);
 
-      // Removed boundary checks for resize
-      // const maxAllowedWidth = product.canvas_width - element.x;
-      // const maxAllowedHeight = product.canvas_height - element.y;
-      // newWidth = Math.min(newWidth, maxAllowedWidth);
-      // newHeight = Math.min(newHeight, maxAllowedHeight);
+      let newWidth = Math.max(20, startWidth + (currentUnscaledX - unscaledStartX));
+      let newHeight = Math.max(20, startHeight + (currentUnscaledY - unscaledStartY));
 
       updateElement(id, { width: newWidth, height: newHeight });
     };
@@ -380,13 +417,15 @@ const MobileCoverCustomizationPage = () => {
     const elementDiv = (e.currentTarget as HTMLElement).parentElement;
     if (!elementDiv) return;
 
-    const elementRect = elementDiv.getBoundingClientRect();
     const designAreaRect = designAreaRef.current.getBoundingClientRect();
 
-    const elementCenterX = element.x + elementRect.width / 2;
-    const elementCenterY = element.y + elementRect.height / 2;
+    // Calculate center of the element in unscaled coordinates
+    const elementCenterX = element.x + element.width / 2;
+    const elementCenterY = element.y + element.height / 2;
 
-    const initialAngle = Math.atan2(clientY - (designAreaRect.top + elementCenterY), clientX - (designAreaRect.left + elementCenterX));
+    // Calculate initial angle based on unscaled client coordinates relative to unscaled element center
+    const { x: unscaledClientX, y: unscaledClientY } = getUnscaledCoords(clientX, clientY);
+    const initialAngle = Math.atan2(unscaledClientY - elementCenterY, unscaledClientX - elementCenterX);
     const initialRotation = element.rotation || 0;
 
     if (isTouchEvent) {
@@ -406,7 +445,8 @@ const MobileCoverCustomizationPage = () => {
       const currentClientX = 'touches' in moveEvent ? moveEvent.touches[0].clientX : moveEvent.clientX;
       const currentClientY = 'touches' in moveEvent ? moveEvent.touches[0].clientY : moveEvent.clientY;
 
-      const currentAngle = Math.atan2(currentClientY - (designAreaRect.top + elementCenterY), currentClientX - (designAreaRect.left + elementCenterX));
+      const { x: currentUnscaledX, y: currentUnscaledY } = getUnscaledCoords(currentClientX, currentClientY);
+      const currentAngle = Math.atan2(currentUnscaledY - elementCenterY, currentUnscaledX - elementCenterX);
       let newRotation = initialRotation + (currentAngle - initialAngle) * (180 / Math.PI);
 
       newRotation = (newRotation % 360 + 360) % 360;
@@ -450,17 +490,21 @@ const MobileCoverCustomizationPage = () => {
     } else if (e.touches.length === 2) { // Allow pinching for both text and image
       const touch1 = e.touches[0];
       const touch2 = e.touches[1];
+
+      const { x: unscaledTouch1X, y: unscaledTouch1Y } = getUnscaledCoords(touch1.clientX, touch1.clientY);
+      const { x: unscaledTouch2X, y: unscaledTouch2Y } = getUnscaledCoords(touch2.clientX, touch2.clientY);
+
       const initialDistance = Math.sqrt(
-        Math.pow(touch2.clientX - touch1.clientX, 2) +
-        Math.pow(touch2.clientY - touch1.clientY, 2)
+        Math.pow(unscaledTouch2X - unscaledTouch1X, 2) +
+        Math.pow(unscaledTouch2Y - unscaledTouch1Y, 2)
       );
-      const initialMidX = (touch1.clientX + touch2.clientX) / 2 - designAreaRect.left;
-      const initialMidY = (touch1.clientY + touch2.clientY) / 2 - designAreaRect.top;
+      const initialMidX = (unscaledTouch1X + unscaledTouch2X) / 2;
+      const initialMidY = (unscaledTouch1Y + unscaledTouch2Y) / 2;
 
       touchState.current = {
         mode: 'pinching',
-        startX: 0,
-        startY: 0,
+        startX: 0, // Not used in pinch mode
+        startY: 0, // Not used in pinch mode
         initialElementX: element.x,
         initialElementY: element.y,
         initialDistance: initialDistance,
@@ -485,42 +529,36 @@ const MobileCoverCustomizationPage = () => {
     const designAreaRect = designAreaRef.current.getBoundingClientRect();
 
     if (mode === 'dragging' && e.touches.length === 1) {
-      let newX = initialElementX + (e.touches[0].clientX - startX);
-      let newY = initialElementY + (e.touches[0].clientY - startY);
+      const { x: currentUnscaledX, y: currentUnscaledY } = getUnscaledCoords(e.touches[0].clientX, e.touches[0].clientY);
+      const { x: initialUnscaledX, y: initialUnscaledY } = getUnscaledCoords(startX, startY);
 
-      // Removed boundary checks for dragging
-      // newX = Math.max(0, Math.min(newX, product.canvas_width - element.width));
-      // newY = Math.max(0, Math.min(newY, product.canvas_height - element.height));
+      let newX = initialElementX + (currentUnscaledX - initialUnscaledX);
+      let newY = initialElementY + (currentUnscaledY - initialUnscaledY);
 
       updateElement(activeElementId, {
         x: newX,
         y: newY,
       });
     } else if (mode === 'resizing' && e.touches.length === 1) { // Allow resize for both text and image
-      const currentClientX = e.touches[0].clientX;
-      const currentClientY = e.touches[0].clientY;
+      const { x: currentUnscaledX, y: currentUnscaledY } = getUnscaledCoords(e.touches[0].clientX, e.touches[0].clientY);
+      const { x: initialUnscaledX, y: initialUnscaledY } = getUnscaledCoords(startX, startY);
 
       if (initialElementWidth !== undefined && initialElementHeight !== undefined) {
-        let newWidth = Math.max(20, initialElementWidth + (currentClientX - startX));
-        let newHeight = Math.max(20, initialElementHeight + (currentClientY - startY));
-
-      // Removed boundary checks for resize
-      // const maxAllowedWidth = product.canvas_width - element.x;
-      // const maxAllowedHeight = product.canvas_height - element.y;
-      // newWidth = Math.min(newWidth, maxAllowedWidth);
-      // newHeight = Math.min(newHeight, maxAllowedHeight);
+        let newWidth = Math.max(20, initialElementWidth + (currentUnscaledX - initialUnscaledX));
+        let newHeight = Math.max(20, initialElementHeight + (currentUnscaledY - initialUnscaledY));
 
         updateElement(activeElementId, { width: newWidth, height: newHeight });
       }
     } else if (mode === 'rotating' && e.touches.length === 1 && initialAngle !== undefined && initialRotation !== undefined) { // Allow rotate for both text and image
       const elementDiv = document.querySelector(`[data-element-id="${activeElementId}"]`);
       if (!elementDiv) return;
-      const elementRect = elementDiv.getBoundingClientRect();
+      
+      // Calculate center of the element in unscaled coordinates
+      const elementCenterX = element.x + element.width / 2;
+      const elementCenterY = element.y + element.height / 2;
 
-      const elementCenterX = element.x + elementRect.width / 2;
-      const elementCenterY = element.y + elementRect.height / 2;
-
-      const currentAngle = Math.atan2(e.touches[0].clientY - (designAreaRect.top + elementCenterY), e.touches[0].clientX - (designAreaRect.left + elementCenterX));
+      const { x: currentUnscaledX, y: currentUnscaledY } = getUnscaledCoords(e.touches[0].clientX, e.touches[0].clientY);
+      const currentAngle = Math.atan2(currentUnscaledY - elementCenterY, currentUnscaledX - elementCenterX);
       let newRotation = initialRotation + (currentAngle - initialAngle) * (180 / Math.PI);
       newRotation = (newRotation % 360 + 360) % 360;
       updateElement(activeElementId, { rotation: newRotation });
@@ -528,37 +566,31 @@ const MobileCoverCustomizationPage = () => {
     else if (mode === 'pinching' && e.touches.length === 2 && initialDistance !== undefined && initialMidX !== undefined && initialMidY !== undefined) { // Allow pinching for both text and image
       const touch1 = e.touches[0];
       const touch2 = e.touches[1];
+
+      const { x: unscaledTouch1X, y: unscaledTouch1Y } = getUnscaledCoords(touch1.clientX, touch1.clientY);
+      const { x: unscaledTouch2X, y: unscaledTouch2Y } = getUnscaledCoords(touch2.clientX, touch2.clientY);
+
       const newDistance = Math.sqrt(
-        Math.pow(touch2.clientX - touch1.clientX, 2) +
-        Math.pow(touch2.clientY - touch1.clientY, 2)
+        Math.pow(unscaledTouch2X - unscaledTouch1X, 2) +
+        Math.pow(unscaledTouch2Y - unscaledTouch1Y, 2)
       );
-      const scaleFactor = newDistance / initialDistance;
+      const scaleFactorChange = newDistance / initialDistance;
 
-      const currentMidX = (touch1.clientX + touch2.clientX) / 2 - designAreaRect.left;
-      const currentMidY = (touch1.clientY + touch2.clientY) / 2 - designAreaRect.top;
+      const currentMidX = (unscaledTouch1X + unscaledTouch2X) / 2;
+      const currentMidY = (unscaledTouch1Y + unscaledTouch2Y) / 2;
 
-      let newX = currentMidX - (initialMidX - initialElementX) * scaleFactor;
-      let newY = currentMidY - (initialMidY - initialElementY) * scaleFactor;
+      let newX = currentMidX - (initialMidX - initialElementX) * scaleFactorChange;
+      let newY = currentMidY - (initialMidY - initialElementY) * scaleFactorChange;
 
-      let newWidth = Math.max(20, (initialElementWidth || element.width) * scaleFactor);
-      let newHeight = Math.max(20, (initialElementHeight || element.height) * scaleFactor);
+      let newWidth = Math.max(20, (initialElementWidth || element.width) * scaleFactorChange);
+      let newHeight = Math.max(20, (initialElementHeight || element.height) * scaleFactorChange);
       
-      // Removed boundary checks for pinch-resize
-      // const maxAllowedWidth = product.canvas_width - newX;
-      // const maxAllowedHeight = product.canvas_height - newY;
-      // newWidth = Math.min(newWidth, maxAllowedWidth);
-      // newHeight = Math.min(newHeight, maxAllowedHeight);
-
-      // Also ensure position doesn't go negative
-      // newX = Math.max(0, newX);
-      // newY = Math.max(0, newY);
-
       updateElement(activeElementId, {
         width: newWidth,
         height: newHeight,
         x: newX,
         y: newY,
-        fontSize: element.type === 'text' && initialFontSize !== undefined ? Math.max(10, initialFontSize * scaleFactor) : element.fontSize,
+        fontSize: element.type === 'text' && initialFontSize !== undefined ? Math.max(10, initialFontSize * scaleFactorChange) : element.fontSize,
       });
     }
   };
@@ -714,6 +746,7 @@ const MobileCoverCustomizationPage = () => {
         useCORS: true,
         allowTaint: true,
         backgroundColor: null,
+        scale: 1 / scaleFactor, // Crucial for capturing at original resolution
       });
       const dataUrl = canvas.toDataURL('image/png');
 
@@ -891,8 +924,10 @@ const MobileCoverCustomizationPage = () => {
             ref={designAreaRef}
             className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center relative overflow-hidden p-4"
             style={{
-              width: `${product.canvas_width}px`,
-              height: `${product.canvas_height}px`,
+              // Use max-width and height auto to make it responsive
+              maxWidth: '100%',
+              height: 'auto',
+              aspectRatio: `${product.canvas_width} / ${product.canvas_height}`,
               backgroundSize: 'contain',
               backgroundRepeat: 'no-repeat',
               backgroundPosition: 'center',
@@ -904,8 +939,8 @@ const MobileCoverCustomizationPage = () => {
               ref={canvasContentRef}
               className="relative bg-white shadow-lg overflow-hidden"
               style={{
-                width: `${product.canvas_width}px`,
-                height: `${product.canvas_height}px`,
+                width: `${actualCanvasWidth}px`,
+                height: `${actualCanvasHeight}px`,
                 backgroundSize: 'contain',
                 backgroundRepeat: 'no-repeat',
                 backgroundPosition: 'center',
@@ -919,12 +954,12 @@ const MobileCoverCustomizationPage = () => {
                   data-element-id={el.id}
                   className={`absolute cursor-grab ${selectedElementId === el.id ? 'border-2 border-blue-500' : ''}`}
                   style={{
-                    left: el.x,
-                    top: el.y,
+                    left: el.x * scaleFactor,
+                    top: el.y * scaleFactor,
                     transform: `rotate(${el.rotation || 0}deg)`,
                     transformOrigin: 'center center',
-                    width: `${el.width}px`, // Use element's width
-                    height: `${el.height}px`, // Use element's height
+                    width: `${el.width * scaleFactor}px`, // Use scaled width
+                    height: `${el.height * scaleFactor}px`, // Use scaled height
                     zIndex: 5,
                     touchAction: 'none',
                   }}
@@ -946,7 +981,7 @@ const MobileCoverCustomizationPage = () => {
                       suppressContentEditableWarning={true}
                       className="outline-none w-full h-full flex items-center justify-center" // Added w-full h-full and flex properties
                       style={{
-                        fontSize: `${el.fontSize}px`,
+                        fontSize: `${(el.fontSize || 35) * scaleFactor}px`, // Scaled font size
                         color: el.color,
                         fontFamily: el.fontFamily,
                         textShadow: el.textShadow ? '2px 2px 4px rgba(0,0,0,0.5)' : 'none',
@@ -996,11 +1031,11 @@ const MobileCoverCustomizationPage = () => {
                         onTouchStart={(e) => {
                           const elementDiv = (e.currentTarget as HTMLElement).parentElement;
                           if (!elementDiv || !designAreaRef.current) return;
-                          const elementRect = elementDiv.getBoundingClientRect();
                           const designAreaRect = designAreaRef.current.getBoundingClientRect();
-                          const elementCenterX = el.x + elementRect.width / 2;
-                          const elementCenterY = el.y + elementRect.height / 2;
-                          const initialAngle = Math.atan2(e.touches[0].clientY - (designAreaRect.top + elementCenterY), e.touches[0].clientX - (designAreaRect.left + elementCenterX));
+                          const elementCenterX = el.x + el.width / 2;
+                          const elementCenterY = el.y + el.height / 2;
+                          const { x: unscaledClientX, y: unscaledClientY } = getUnscaledCoords(e.touches[0].clientX, e.touches[0].clientY);
+                          const initialAngle = Math.atan2(unscaledClientY - elementCenterY, unscaledClientX - elementCenterX);
 
                           touchState.current = {
                             mode: 'rotating',
