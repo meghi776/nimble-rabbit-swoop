@@ -47,13 +47,6 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-800 dark:to-gray-950">
-      <div className="text-center p-4">
-        <h1 className="text-4xl md:text-5xl font-extrabold mb-4 text-gray-900 dark:text-gray-50 drop-shadow-lg">Explore Our Products</h1>
-        <p className="text-lg md:text-xl text-gray-700 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
-          Choose a category to start customizing or browsing unique designs!
-        </p>
-      </div>
-
       {loading && (
         <p className="text-gray-600 dark:text-gray-300">Loading categories...</p>
       )}
