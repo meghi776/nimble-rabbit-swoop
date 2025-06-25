@@ -44,7 +44,6 @@ interface Product {
   image_url: string | null;
   canvas_width: number;
   canvas_height: number;
-  mockup_image_url?: string | null;
   price: number;
 }
 
@@ -114,6 +113,9 @@ const MobileCoverCustomizationPage = () => {
   const [demoOrderPrice, setDemoOrderPrice] = useState<string>('');
   const [demoOrderAddress, setDemoOrderAddress] = useState<string>('');
 
+  // New state for the mockup overlay image URL
+  const [mockupOverlayImageUrl, setMockupOverlayImageUrl] = useState<string | null>(null);
+
   const touchState = useRef<TouchState>({
     mode: 'none',
     startX: 0,
@@ -154,16 +156,21 @@ const MobileCoverCustomizationPage = () => {
         setError(productError.message);
         toast({ title: "Error", description: `Failed to load product: ${productError.message}`, variant: "destructive" });
       } else if (productData) {
-        console.log("Original mockup image URL from Supabase:", productData.mockups.length > 0 ? productData.mockups[0].image_url : "N/A");
         const proxiedMockupUrl = productData.mockups.length > 0 && productData.mockups[0].image_url
           ? proxyImageUrl(productData.mockups[0].image_url)
           : null;
-        console.log("Proxied mockup image URL (after proxyImageUrl):", proxiedMockupUrl);
+        
+        setMockupOverlayImageUrl(proxiedMockupUrl); // Set the new state for mockup image
 
         setProduct({
-          ...productData,
-          mockup_image_url: proxiedMockupUrl,
+          id: productData.id,
+          name: productData.name,
+          image_url: productData.image_url,
+          canvas_width: productData.canvas_width,
+          canvas_height: productData.canvas_height,
+          price: productData.price,
         });
+
         if (productData.mockups.length > 0 && productData.mockups[0].design_data) {
           try {
             setDesignElements(JSON.parse(productData.mockups[0].design_data as string));
@@ -597,7 +604,7 @@ const MobileCoverCustomizationPage = () => {
         .from('mockups')
         .insert({
           product_id: product.id,
-          image_url: product.mockup_image_url,
+          image_url: mockupOverlayImageUrl, // Use the new state variable for the mockup image URL
           name: `${product.name} Custom Design`,
           designer: 'Customer',
           design_data: designData,
@@ -1072,10 +1079,10 @@ const MobileCoverCustomizationPage = () => {
                 </div>
               ))}
 
-              {product.mockup_image_url && (
+              {mockupOverlayImageUrl && ( // Use the new state variable here
                 <img
-                  key={product.mockup_image_url}
-                  src={product.mockup_image_url}
+                  key={mockupOverlayImageUrl}
+                  src={mockupOverlayImageUrl}
                   alt="Phone Mockup Overlay"
                   className="absolute inset-0 w-full h-full object-contain pointer-events-none"
                   style={{ zIndex: 10 }}
