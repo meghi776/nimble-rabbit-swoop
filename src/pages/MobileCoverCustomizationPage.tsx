@@ -53,12 +53,12 @@ interface DesignElement {
   value: string;
   x: number;
   y: number;
-  width?: number;
-  height?: number;
-  fontSize?: number;
-  color?: string;
-  fontFamily?: string;
-  textShadow?: boolean;
+  width: number; // Made mandatory
+  height: number; // Made mandatory
+  fontSize?: number; // Only for text
+  color?: string; // Only for text
+  fontFamily?: string; // Only for text
+  textShadow?: boolean; // Only for text
   rotation?: number;
 }
 
@@ -139,7 +139,7 @@ const MobileCoverCustomizationPage = () => {
 
   const selectedTextElement = selectedElementId ? designElements.find(el => el.id === selectedElementId && el.type === 'text') : null;
 
-  const textElementRefs = useRef<Map<string, HTMLSpanElement>>(new Map());
+  const textElementRefs = useRef<Map<string, HTMLDivElement>>(new Map()); // Changed to HTMLDivElement
   const lastCaretPosition = useRef<{ node: Node | null; offset: number } | null>(null);
 
   useEffect(() => {
@@ -173,7 +173,13 @@ const MobileCoverCustomizationPage = () => {
 
         if (productData.mockups.length > 0 && productData.mockups[0].design_data) {
           try {
-            setDesignElements(JSON.parse(productData.mockups[0].design_data as string));
+            // Ensure loaded design elements conform to the new interface (add default width/height if missing)
+            const loadedElements: DesignElement[] = JSON.parse(productData.mockups[0].design_data as string).map((el: any) => ({
+              ...el,
+              width: el.width || (el.type === 'text' ? 200 : productData.canvas_width), // Default width for text/image
+              height: el.height || (el.type === 'text' ? 40 : productData.canvas_height), // Default height for text/image
+            }));
+            setDesignElements(loadedElements);
           } catch (parseError) {
             console.error("Error parsing design data:", parseError);
             toast({ title: "Error", description: "Failed to parse existing design data.", variant: "destructive" });
@@ -218,12 +224,13 @@ const MobileCoverCustomizationPage = () => {
     if (selectedElementId && lastCaretPosition.current) {
       const element = designElements.find(el => el.id === selectedElementId);
       if (element && element.type === 'text') {
-        const spanRef = textElementRefs.current.get(selectedElementId);
-        if (spanRef) {
+        const divRef = textElementRefs.current.get(selectedElementId);
+        if (divRef) {
           const selection = window.getSelection();
           const range = document.createRange();
 
-          const textNode = spanRef.firstChild;
+          // Find the actual text node within the contentEditable div
+          const textNode = divRef.firstChild;
 
           if (textNode && textNode.nodeType === Node.TEXT_NODE) {
             const newOffset = Math.min(lastCaretPosition.current.offset, textNode.length);
@@ -232,7 +239,7 @@ const MobileCoverCustomizationPage = () => {
 
             selection?.removeAllRanges();
             selection?.addRange(range);
-            spanRef.focus();
+            divRef.focus();
           }
         }
       }
@@ -280,15 +287,20 @@ const MobileCoverCustomizationPage = () => {
     e.stopPropagation();
     setSelectedElementId(id);
     const element = designElements.find(el => el.id === id);
-    if (!element || !designAreaRef.current) return;
+    if (!element || !designAreaRef.current || !product) return;
 
     const designAreaRect = designAreaRef.current.getBoundingClientRect();
     const offsetX = e.clientX - (element.x + designAreaRect.left);
     const offsetY = e.clientY - (element.y + designAreaRect.top);
 
     const onMouseMove = (moveEvent: MouseEvent) => {
-      const newX = moveEvent.clientX - designAreaRect.left - offsetX;
-      const newY = moveEvent.clientY - designAreaRect.top - offsetY;
+      let newX = moveEvent.clientX - designAreaRect.left - offsetX;
+      let newY = moveEvent.clientY - designAreaRect.top - offsetY;
+
+      // Boundary checks for dragging
+      newX = Math.max(0, Math.min(newX, product.canvas_width - element.width));
+      newY = Math.max(0, Math.min(newY, product.canvas_height - element.height));
+
       updateElement(id, { x: newX, y: newY });
     };
 
@@ -304,7 +316,7 @@ const MobileCoverCustomizationPage = () => {
   const handleResizeStart = (e: React.MouseEvent | React.TouchEvent, id: string) => {
     e.stopPropagation();
     const element = designElements.find(el => el.id === id);
-    if (!element) return;
+    if (!element || !product) return;
 
     const isTouchEvent = 'touches' in e;
     const clientX = isTouchEvent ? e.touches[0].clientX : e.clientX;
@@ -312,9 +324,8 @@ const MobileCoverCustomizationPage = () => {
 
     const startX = clientX;
     const startY = clientY;
-    const startWidth = element.width || 0;
-    const startHeight = element.height || 0;
-    const startFontSize = element.fontSize || 35;
+    const startWidth = element.width;
+    const startHeight = element.height;
 
     if (isTouchEvent) {
       touchState.current = {
@@ -325,7 +336,6 @@ const MobileCoverCustomizationPage = () => {
         initialElementY: element.y,
         initialElementWidth: element.width,
         initialElementHeight: element.height,
-        initialFontSize: element.fontSize,
         activeElementId: id,
       };
     }
@@ -334,15 +344,17 @@ const MobileCoverCustomizationPage = () => {
       const currentClientX = 'touches' in moveEvent ? moveEvent.touches[0].clientX : moveEvent.clientX;
       const currentClientY = 'touches' in moveEvent ? moveEvent.touches[0].clientY : moveEvent.clientY;
 
-      if (element.type === 'image') {
-        const newWidth = Math.max(20, startWidth + (currentClientX - startX));
-        const newHeight = Math.max(20, startHeight + (currentClientY - startY));
-        updateElement(id, { width: newWidth, height: newHeight });
-      } else if (element.type === 'text') {
-        const scaleFactor = (currentClientY - startY) / 10;
-        const newFontSize = Math.max(10, startFontSize + scaleFactor);
-        updateElement(id, { fontSize: newFontSize });
-      }
+      let newWidth = Math.max(20, startWidth + (currentClientX - startX));
+      let newHeight = Math.max(20, startHeight + (currentClientY - startY));
+
+      // Ensure element doesn't go beyond canvas boundaries during resize
+      const maxAllowedWidth = product.canvas_width - element.x;
+      const maxAllowedHeight = product.canvas_height - element.y;
+
+      newWidth = Math.min(newWidth, maxAllowedWidth);
+      newHeight = Math.min(newHeight, maxAllowedHeight);
+
+      updateElement(id, { width: newWidth, height: newHeight });
     };
 
     const onEnd = () => {
@@ -427,7 +439,7 @@ const MobileCoverCustomizationPage = () => {
     e.stopPropagation();
     setSelectedElementId(id);
     const element = designElements.find(el => el.id === id);
-    if (!element || !designAreaRef.current) return;
+    if (!element || !designAreaRef.current || !product) return;
 
     const designAreaRect = designAreaRef.current.getBoundingClientRect();
 
@@ -470,7 +482,7 @@ const MobileCoverCustomizationPage = () => {
   const handleTouchMove = (e: React.TouchEvent) => {
     e.preventDefault();
     const { mode, startX, startY, initialElementX, initialElementY, initialDistance, initialElementWidth, initialElementHeight, initialFontSize, initialMidX, initialMidY, initialAngle, initialRotation, activeElementId } = touchState.current;
-    if (!activeElementId || !designAreaRef.current) return;
+    if (!activeElementId || !designAreaRef.current || !product) return;
 
     const element = designElements.find(el => el.id === activeElementId);
     if (!element) return;
@@ -478,24 +490,33 @@ const MobileCoverCustomizationPage = () => {
     const designAreaRect = designAreaRef.current.getBoundingClientRect();
 
     if (mode === 'dragging' && e.touches.length === 1) {
-      const deltaX = e.touches[0].clientX - startX;
-      const deltaY = e.touches[0].clientY - startY;
+      let newX = initialElementX + (e.touches[0].clientX - startX);
+      let newY = initialElementY + (e.touches[0].clientY - startY);
+
+      // Boundary checks for dragging
+      newX = Math.max(0, Math.min(newX, product.canvas_width - element.width));
+      newY = Math.max(0, Math.min(newY, product.canvas_height - element.height));
+
       updateElement(activeElementId, {
-        x: initialElementX + deltaX,
-        y: initialElementY + deltaY,
+        x: newX,
+        y: newY,
       });
     } else if (mode === 'resizing' && e.touches.length === 1) {
       const currentClientX = e.touches[0].clientX;
       const currentClientY = e.touches[0].clientY;
 
-      if (element.type === 'image' && initialElementWidth !== undefined && initialElementHeight !== undefined) {
-        const newWidth = Math.max(20, initialElementWidth + (currentClientX - startX));
-        const newHeight = Math.max(20, initialElementHeight + (currentClientY - startY));
+      if (initialElementWidth !== undefined && initialElementHeight !== undefined) {
+        let newWidth = Math.max(20, initialElementWidth + (currentClientX - startX));
+        let newHeight = Math.max(20, initialElementHeight + (currentClientY - startY));
+
+        // Ensure element doesn't go beyond canvas boundaries during resize
+        const maxAllowedWidth = product.canvas_width - element.x;
+        const maxAllowedHeight = product.canvas_height - element.y;
+
+        newWidth = Math.min(newWidth, maxAllowedWidth);
+        newHeight = Math.min(newHeight, maxAllowedHeight);
+
         updateElement(activeElementId, { width: newWidth, height: newHeight });
-      } else if (element.type === 'text' && initialFontSize !== undefined) {
-        const scaleFactor = (currentClientY - startY) / 10;
-        const newFontSize = Math.max(10, initialFontSize + scaleFactor);
-        updateElement(activeElementId, { fontSize: newFontSize });
       }
     } else if (mode === 'rotating' && e.touches.length === 1 && initialAngle !== undefined && initialRotation !== undefined) {
       const elementDiv = document.querySelector(`[data-element-id="${activeElementId}"]`);
@@ -522,26 +543,30 @@ const MobileCoverCustomizationPage = () => {
       const currentMidX = (touch1.clientX + touch2.clientX) / 2 - designAreaRect.left;
       const currentMidY = (touch1.clientY + touch2.clientY) / 2 - designAreaRect.top;
 
-      const newX = currentMidX - (initialMidX - initialElementX) * scaleFactor;
-      const newY = currentMidY - (initialMidY - initialElementY) * scaleFactor;
+      let newX = currentMidX - (initialMidX - initialElementX) * scaleFactor;
+      let newY = currentMidY - (initialMidY - initialElementY) * scaleFactor;
 
-      if (element.type === 'image' && initialElementWidth !== undefined && initialElementHeight !== undefined) {
-        const newWidth = Math.max(20, initialElementWidth * scaleFactor);
-        const newHeight = Math.max(20, initialElementHeight * scaleFactor);
-        updateElement(activeElementId, {
-          width: newWidth,
-          height: newHeight,
-          x: newX,
-          y: newY,
-        });
-      } else if (element.type === 'text' && initialFontSize !== undefined) {
-        const newFontSize = Math.max(10, initialFontSize * scaleFactor);
-        updateElement(activeElementId, {
-          fontSize: newFontSize,
-          x: newX,
-          y: newY,
-        });
-      }
+      let newWidth = Math.max(20, (initialElementWidth || element.width) * scaleFactor);
+      let newHeight = Math.max(20, (initialElementHeight || element.height) * scaleFactor);
+      
+      // Ensure element doesn't go beyond canvas boundaries during pinch-resize
+      const maxAllowedWidth = product.canvas_width - newX;
+      const maxAllowedHeight = product.canvas_height - newY;
+
+      newWidth = Math.min(newWidth, maxAllowedWidth);
+      newHeight = Math.min(newHeight, maxAllowedHeight);
+
+      // Also ensure position doesn't go negative
+      newX = Math.max(0, newX);
+      newY = Math.max(0, newY);
+
+      updateElement(activeElementId, {
+        width: newWidth,
+        height: newHeight,
+        x: newX,
+        y: newY,
+        fontSize: element.type === 'text' && initialFontSize !== undefined ? Math.max(10, initialFontSize * scaleFactor) : element.fontSize,
+      });
     }
   };
 
@@ -855,8 +880,10 @@ const MobileCoverCustomizationPage = () => {
       id: `text-${Date.now()}`,
       type: 'text',
       value: defaultText,
-      x: centerX,
-      y: centerY,
+      x: centerX - 100, // Adjusted initial position to be more centered
+      y: centerY - 20,
+      width: 200, // Default width for text box
+      height: 40, // Default height for text box
       fontSize: defaultFontSize,
       color: defaultColor,
       fontFamily: defaultFontFamily,
@@ -874,7 +901,7 @@ const MobileCoverCustomizationPage = () => {
     }
   };
 
-  const handleTextContentInput = (e: React.FormEvent<HTMLSpanElement>, id: string) => {
+  const handleTextContentInput = (e: React.FormEvent<HTMLDivElement>, id: string) => { // Changed to HTMLDivElement
     const target = e.currentTarget;
     const selection = window.getSelection();
 
@@ -961,8 +988,8 @@ const MobileCoverCustomizationPage = () => {
                     top: el.y,
                     transform: `rotate(${el.rotation || 0}deg)`,
                     transformOrigin: 'center center',
-                    width: el.type === 'image' ? `${el.width}px` : 'auto',
-                    height: el.type === 'image' ? `${el.height}px` : 'auto',
+                    width: `${el.width}px`, // Use element's width
+                    height: `${el.height}px`, // Use element's height
                     zIndex: 5,
                     touchAction: 'none',
                   }}
@@ -972,7 +999,7 @@ const MobileCoverCustomizationPage = () => {
                   onTouchEnd={handleTouchEnd}
                 >
                   {el.type === 'text' ? (
-                    <span
+                    <div // Changed to div
                       ref={node => {
                         if (node) textElementRefs.current.set(el.id, node);
                         else textElementRefs.current.delete(el.id);
@@ -982,17 +1009,18 @@ const MobileCoverCustomizationPage = () => {
                       onBlur={() => {
                       }}
                       suppressContentEditableWarning={true}
+                      className="outline-none w-full h-full flex items-center justify-center" // Added w-full h-full and flex properties
                       style={{
                         fontSize: `${el.fontSize}px`,
                         color: el.color,
-                        whiteSpace: 'nowrap',
                         fontFamily: el.fontFamily,
                         textShadow: el.textShadow ? '2px 2px 4px rgba(0,0,0,0.5)' : 'none',
-                        outline: 'none',
+                        wordBreak: 'break-word', // Allow text to wrap
+                        overflow: 'hidden', // Hide overflow if text exceeds bounds
                       }}
                     >
                       {el.value}
-                    </span>
+                    </div>
                   ) : (
                     <img
                       src={el.value.startsWith('blob:') ? el.value : proxyImageUrl(el.value)}
@@ -1002,45 +1030,25 @@ const MobileCoverCustomizationPage = () => {
                   )}
                   {selectedElementId === el.id && (
                     <>
-                      {el.type === 'image' && (
-                        <div
-                          className="absolute -bottom-2 -right-2 w-4 h-4 bg-blue-500 rounded-full cursor-nwse-resize"
-                          onMouseDown={(e) => handleResizeStart(e, el.id)}
-                          onTouchStart={(e) => {
-                            touchState.current = {
-                              mode: 'resizing',
-                              startX: e.touches[0].clientX,
-                              startY: e.touches[0].clientY,
-                              initialElementX: el.x,
-                              initialElementY: el.y,
-                              initialElementWidth: el.width,
-                              initialElementHeight: el.height,
-                              activeElementId: el.id,
-                            };
-                            handleResizeStart(e, el.id);
-                          }}
-                        />
-                      )}
-                      {el.type === 'text' && (
-                        <div
-                          className="absolute -bottom-2 -right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center cursor-nwse-resize"
-                          onMouseDown={(e) => handleResizeStart(e, el.id)}
-                          onTouchStart={(e) => {
-                            touchState.current = {
-                              mode: 'resizing',
-                              startX: e.touches[0].clientX,
-                              startY: e.touches[0].clientY,
-                              initialElementX: el.x,
-                              initialElementY: el.y,
-                              initialFontSize: el.fontSize,
-                              activeElementId: el.id,
-                            };
-                            handleResizeStart(e, el.id);
-                          }}
-                        >
-                          <PlusCircle className="h-4 w-4 text-white" />
-                        </div>
-                      )}
+                      <div
+                        className="absolute -bottom-2 -right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center cursor-nwse-resize"
+                        onMouseDown={(e) => handleResizeStart(e, el.id)}
+                        onTouchStart={(e) => {
+                          touchState.current = {
+                            mode: 'resizing',
+                            startX: e.touches[0].clientX,
+                            startY: e.touches[0].clientY,
+                            initialElementX: el.x,
+                            initialElementY: el.y,
+                            initialElementWidth: el.width,
+                            initialElementHeight: el.height,
+                            activeElementId: el.id,
+                          };
+                          handleResizeStart(e, el.id);
+                        }}
+                      >
+                        <PlusCircle className="h-4 w-4 text-white" />
+                      </div>
                       <div
                         className="absolute -top-2 -left-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center cursor-pointer"
                         onClick={() => deleteElement(el.id)}
