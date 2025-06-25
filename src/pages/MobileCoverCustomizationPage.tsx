@@ -1052,7 +1052,7 @@ const MobileCoverCustomizationPage = () => {
                         className="absolute -top-2 -left-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center cursor-pointer"
                         onClick={() => deleteElement(el.id)}
                       >
-                        <XCircle className="h-4 w-4" />
+                        <XCircle className="h-4 w-4 text-white" />
                       </div>
                       {/* Rotation handle */}
                       <div
@@ -1080,7 +1080,7 @@ const MobileCoverCustomizationPage = () => {
                           handleRotateStart(e, el.id); // Call the existing logic
                         }}
                       >
-                        <RotateCw className="h-4 w-4" />
+                        <RotateCw className="h-4 w-4 text-white" />
                       </div>
                     </>
                   )}
