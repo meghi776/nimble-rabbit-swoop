@@ -763,7 +763,7 @@ const MobileCoverCustomizationPage = () => {
     };
     setDesignElements(prev => [...prev, newElement]);
     setSelectedElementId(newElement.id);
-    toast({ title: "Image Added", description: "Your image is being uploaded in the background.", duration: 3000 });
+    toast({ title: "Image Added", description: "Your image is being uploaded in the background." });
 
     // Clear the file input immediately
     if (fileInputRef.current) {
@@ -1084,7 +1084,7 @@ const MobileCoverCustomizationPage = () => {
                       crossOrigin="anonymous" // Added for CORS compatibility with html2canvas
                     />
                   )}
-                  {selectedElementId === el.id && ( // Render handles for both text and image elements
+                  {selectedElementId === el.id && el.type === 'text' && ( // Render handles ONLY for text elements
                     <>
                       <div
                         className="absolute -bottom-2 -right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center cursor-nwse-resize"
