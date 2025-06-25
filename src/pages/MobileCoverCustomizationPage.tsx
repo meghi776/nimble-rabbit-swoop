@@ -1069,33 +1069,32 @@ const MobileCoverCustomizationPage = () => {
       {/* Dynamic Footer */}
       <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-lg p-2 flex flex-wrap justify-around items-center border-t border-gray-200 dark:border-gray-700 z-10">
         {selectedTextElement ? (
-          <div className="flex flex-wrap items-center justify-center gap-x-2 p-1 w-full">
-            {/* Font Family Select */}
-            <div className="flex flex-col items-center">
-              <Label htmlFor="font-family" className="text-xs mb-1">Font</Label>
-              <Select value={currentFontFamily} onValueChange={(value) => {
-                setCurrentFontFamily(value);
-                updateElement(selectedTextElement.id, { fontFamily: value });
-              }}>
-                <SelectTrigger id="font-family" className="w-28 h-8 text-xs">
-                  <SelectValue placeholder="Font" />
-                </SelectTrigger>
-                <SelectContent>
-                  {fontFamilies.map((font) => (
-                    <SelectItem key={font} value={font} style={{ fontFamily: font }}>
-                      {font}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="flex flex-col w-full items-center">
+            {/* Font Family Horizontal List */}
+            <div className="flex items-center justify-center w-full overflow-x-auto py-1 px-2 scrollbar-hide">
+              {fontFamilies.map((font) => (
+                <Button
+                  key={font}
+                  variant={currentFontFamily === font ? 'default' : 'ghost'}
+                  size="sm"
+                  className={`flex-shrink-0 mx-1 h-8 text-xs ${currentFontFamily === font ? 'bg-blue-500 text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                  style={{ fontFamily: font }}
+                  onClick={() => {
+                    setCurrentFontFamily(font);
+                    updateElement(selectedTextElement.id, { fontFamily: font });
+                  }}
+                >
+                  {font}
+                </Button>
+              ))}
             </div>
 
             {/* Color Circles */}
-            <div className="flex items-center gap-1 p-1">
+            <div className="flex items-center justify-center gap-1 p-1 w-full overflow-x-auto scrollbar-hide">
                 {predefinedColors.map((color) => (
                     <div
                         key={color}
-                        className={`w-6 h-6 rounded-full cursor-pointer border-2 ${currentTextColor === color ? 'border-blue-500' : 'border-gray-300 dark:border-gray-600'}`}
+                        className={`w-6 h-6 rounded-full cursor-pointer border-2 flex-shrink-0 ${currentTextColor === color ? 'border-blue-500' : 'border-gray-300 dark:border-gray-600'}`}
                         style={{ backgroundColor: color }}
                         onClick={() => {
                             setCurrentTextColor(color);
