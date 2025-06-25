@@ -965,7 +965,7 @@ const MobileCoverCustomizationPage = () => {
                       className="w-full h-full object-contain"
                     />
                   )}
-                  {selectedElementId === el.id && ( // Render handles for both text and image elements
+                  {selectedElementId === el.id && el.type === 'text' && ( // Only render handles for text elements
                     <>
                       <div
                         className="absolute -bottom-2 -right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center cursor-nwse-resize"
