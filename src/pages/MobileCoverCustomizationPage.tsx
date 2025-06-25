@@ -607,23 +607,80 @@ const MobileCoverCustomizationPage = () => {
     };
   };
 
+  const handleFileUpload = async (file: Blob, bucketName: string, subfolder: string = '') => {
+    const fileExt = 'png'; // Assuming all uploads from canvas are png
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+    const filePath = subfolder ? `${subfolder}/${fileName}` : fileName;
+
+    const { data, error } = await supabase.storage
+      .from(bucketName)
+      .upload(filePath, file, {
+        contentType: 'image/png',
+        upsert: false,
+      });
+
+    if (error) {
+      console.error(`Error uploading image to ${bucketName}/${subfolder}:`, error);
+      toast({
+        title: "Error",
+        description: `Failed to upload image: ${error.message}`,
+        variant: "destructive",
+      });
+      return null;
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from(bucketName)
+      .getPublicUrl(filePath);
+
+    return publicUrlData.publicUrl;
+  };
+
   const handleSaveDesign = async () => {
     if (!product) return;
 
     setLoading(true);
-    const savableDesignElements = designElements.map(el => {
-      if (el.type === 'image' && el.value.startsWith('blob:')) {
-        toast({
-          title: "Warning",
-          description: "Temporary images (from your device) are not saved with the design. Please upload them to the server if you want them to persist.",
-          variant: "destructive",
-        });
-        return null;
-      }
-      return el;
-    }).filter(Boolean);
+    let updatedDesignElements: DesignElement[] = [];
+    let firstUploadedImageUrl: string | null = null;
 
-    const designData = JSON.stringify(savableDesignElements);
+    for (const el of designElements) {
+      if (el.type === 'image' && el.value.startsWith('blob:')) {
+        try {
+          const response = await fetch(el.value);
+          const blob = await response.blob();
+          const uploadedUrl = await handleFileUpload(blob, 'order-mockups', 'user-uploads'); // Upload to 'user-uploads' subfolder
+          if (uploadedUrl) {
+            updatedDesignElements.push({ ...el, value: uploadedUrl });
+            if (!firstUploadedImageUrl) {
+              firstUploadedImageUrl = uploadedUrl;
+            }
+            // Revoke the blob URL after successful upload
+            URL.revokeObjectURL(el.value);
+          } else {
+            // If upload fails, keep the original blob URL but warn
+            updatedDesignElements.push(el);
+            toast({
+              title: "Upload Failed",
+              description: `Failed to upload image for element ${el.id}. It might not persist.`,
+              variant: "destructive",
+            });
+          }
+        } catch (fetchError) {
+          console.error("Error fetching blob for upload:", fetchError);
+          updatedDesignElements.push(el);
+          toast({
+            title: "Upload Error",
+            description: `Could not process image for upload: ${fetchError}. It might not persist.`,
+            variant: "destructive",
+          });
+        }
+      } else {
+        updatedDesignElements.push(el);
+      }
+    }
+
+    setDesignElements(updatedDesignElements); // Update state with new URLs
+    const designData = JSON.stringify(updatedDesignElements);
 
     // Fetch user's profile for naming
     let designerName = 'Customer';
@@ -647,7 +704,7 @@ const MobileCoverCustomizationPage = () => {
 
     const { data: existingMockup, error: fetchMockupError } = await supabase
       .from('mockups')
-      .select('id')
+      .select('id, image_url')
       .eq('product_id', product.id)
       .limit(1);
 
@@ -658,10 +715,22 @@ const MobileCoverCustomizationPage = () => {
       return;
     }
 
+    let finalMockupImageUrlForDB = mockupOverlayImageUrl; // Default to existing mockup image
+
+    // If there's a new user-uploaded image and no existing mockup image, or if we want to update it
+    if (firstUploadedImageUrl && (!mockupOverlayImageUrl || !existingMockup?.[0]?.image_url)) {
+      finalMockupImageUrlForDB = firstUploadedImageUrl;
+    }
+
     if (existingMockup && existingMockup.length > 0) {
       const { error: updateError } = await supabase
         .from('mockups')
-        .update({ name: designDisplayName, designer: designerName, design_data: designData }) // Updated name and designer
+        .update({ 
+          name: designDisplayName, 
+          designer: designerName, 
+          design_data: designData,
+          image_url: finalMockupImageUrlForDB // Update mockup image URL if changed/new
+        })
         .eq('id', existingMockup[0].id);
 
       if (updateError) {
@@ -675,7 +744,7 @@ const MobileCoverCustomizationPage = () => {
         .from('mockups')
         .insert({
           product_id: product.id,
-          image_url: mockupOverlayImageUrl,
+          image_url: finalMockupImageUrlForDB, // Use the uploaded image URL
           name: designDisplayName, // Updated name
           designer: designerName, // Updated designer
           design_data: designData,
