@@ -41,7 +41,6 @@ import { proxyImageUrl } from '@/utils/imageProxy';
 interface Product {
   id: string;
   name: string;
-  image_url: string | null;
   canvas_width: number;
   canvas_height: number;
   price: number;
@@ -165,7 +164,6 @@ const MobileCoverCustomizationPage = () => {
         setProduct({
           id: productData.id,
           name: productData.name,
-          image_url: productData.image_url,
           canvas_width: productData.canvas_width,
           canvas_height: productData.canvas_height,
           price: productData.price,
@@ -255,10 +253,11 @@ const MobileCoverCustomizationPage = () => {
       id: `image-${Date.now()}`,
       type: 'image',
       value: imageUrl,
-      x: 0,
-      y: 0,
-      width: product.canvas_width,
-      height: product.canvas_height,
+      x: 0, // Fixed to canvas
+      y: 0, // Fixed to canvas
+      width: product.canvas_width, // Fixed to canvas width
+      height: product.canvas_height, // Fixed to canvas height
+      rotation: 0, // Fixed rotation
     };
     setDesignElements([...designElements, newElement]);
     setSelectedElementId(newElement.id);
@@ -316,7 +315,7 @@ const MobileCoverCustomizationPage = () => {
   const handleResizeStart = (e: React.MouseEvent | React.TouchEvent, id: string) => {
     e.stopPropagation();
     const element = designElements.find(el => el.id === id);
-    if (!element || !product) return;
+    if (!element || !product || element.type !== 'text') return; // Only allow resize for text
 
     const isTouchEvent = 'touches' in e;
     const clientX = isTouchEvent ? e.touches[0].clientX : e.clientX;
@@ -376,7 +375,7 @@ const MobileCoverCustomizationPage = () => {
   const handleRotateStart = (e: React.MouseEvent | React.TouchEvent, id: string) => {
     e.stopPropagation();
     const element = designElements.find(el => el.id === id);
-    if (!element || !designAreaRef.current) return;
+    if (!element || !designAreaRef.current || element.type !== 'text') return; // Only allow rotate for text
 
     const isTouchEvent = 'touches' in e;
     const clientX = isTouchEvent ? e.touches[0].clientX : e.clientX;
@@ -452,7 +451,7 @@ const MobileCoverCustomizationPage = () => {
         initialElementY: element.y,
         activeElementId: id,
       };
-    } else if (e.touches.length === 2) {
+    } else if (e.touches.length === 2 && element.type === 'text') { // Only allow pinching for text
       const touch1 = e.touches[0];
       const touch2 = e.touches[1];
       const initialDistance = Math.sqrt(
@@ -501,7 +500,7 @@ const MobileCoverCustomizationPage = () => {
         x: newX,
         y: newY,
       });
-    } else if (mode === 'resizing' && e.touches.length === 1) {
+    } else if (mode === 'resizing' && e.touches.length === 1 && element.type === 'text') { // Only allow resize for text
       const currentClientX = e.touches[0].clientX;
       const currentClientY = e.touches[0].clientY;
 
@@ -518,7 +517,7 @@ const MobileCoverCustomizationPage = () => {
 
         updateElement(activeElementId, { width: newWidth, height: newHeight });
       }
-    } else if (mode === 'rotating' && e.touches.length === 1 && initialAngle !== undefined && initialRotation !== undefined) {
+    } else if (mode === 'rotating' && e.touches.length === 1 && initialAngle !== undefined && initialRotation !== undefined && element.type === 'text') { // Only allow rotate for text
       const elementDiv = document.querySelector(`[data-element-id="${activeElementId}"]`);
       if (!elementDiv) return;
       const elementRect = elementDiv.getBoundingClientRect();
@@ -531,7 +530,7 @@ const MobileCoverCustomizationPage = () => {
       newRotation = (newRotation % 360 + 360) % 360;
       updateElement(activeElementId, { rotation: newRotation });
     }
-    else if (mode === 'pinching' && e.touches.length === 2 && initialDistance !== undefined && initialMidX !== undefined && initialMidY !== undefined) {
+    else if (mode === 'pinching' && e.touches.length === 2 && initialDistance !== undefined && initialMidX !== undefined && initialMidY !== undefined && element.type === 'text') { // Only allow pinching for text
       const touch1 = e.touches[0];
       const touch2 = e.touches[1];
       const newDistance = Math.sqrt(
@@ -1028,7 +1027,7 @@ const MobileCoverCustomizationPage = () => {
                       className="w-full h-full object-contain"
                     />
                   )}
-                  {selectedElementId === el.id && (
+                  {selectedElementId === el.id && el.type === 'text' && ( // Only render handles for text elements
                     <>
                       <div
                         className="absolute -bottom-2 -right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center cursor-nwse-resize"
