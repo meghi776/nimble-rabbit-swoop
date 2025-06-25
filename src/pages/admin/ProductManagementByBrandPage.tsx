@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -16,8 +16,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import { PlusCircle, Edit, Trash2, ArrowLeft, Upload, XCircle } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ArrowLeft, Upload, Download, XCircle } from 'lucide-react';
 import { useSession } from '@/contexts/SessionContext';
+import Papa from 'papaparse';
 
 interface Product {
   id: string;
@@ -50,6 +51,7 @@ const ProductManagementByBrandPage = () => {
   const [canvasHeight, setCanvasHeight] = useState<string>('600');
   const { toast } = useToast();
   const { user } = useSession();
+  const importFileInputRef = useRef<HTMLInputElement>(null);
 
   // Helper to check if a URL is from Supabase storage
   const isSupabaseStorageUrl = (url: string | null, bucketName: string) => {
@@ -414,6 +416,131 @@ const ProductManagementByBrandPage = () => {
     setLoading(false);
   };
 
+  const handleExportProducts = () => {
+    const dataToExport = products.map(product => ({
+      id: product.id,
+      category_id: product.category_id,
+      brand_id: product.brand_id,
+      name: product.name,
+      description: product.description || '',
+      price: product.price || 0,
+      canvas_width: product.canvas_width || 0,
+      canvas_height: product.canvas_height || 0,
+      mockup_id: product.mockup_id || '',
+      mockup_image_url: product.mockup_image_url || '',
+    }));
+
+    const csv = Papa.unparse(dataToExport);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute('download', `products_${brandId}_${categoryId}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({ title: "Success", description: "Products exported successfully as CSV." });
+  };
+
+  const handleImportProducts = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      toast({ title: "No file selected", description: "Please select a CSV file to import.", variant: "destructive" });
+      return;
+    }
+
+    if (file.type !== 'text/csv') {
+      toast({ title: "Invalid file type", description: "Please upload a CSV file.", variant: "destructive" });
+      return;
+    }
+
+    setLoading(true);
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        if (results.errors.length > 0) {
+          console.error("CSV Parsing Errors:", results.errors);
+          toast({
+            title: "CSV Parsing Error",
+            description: `Some rows could not be parsed. First error: ${results.errors[0].message}`,
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+
+        const importedProducts = results.data as any[];
+        let successfulImports = 0;
+        let failedImports = 0;
+
+        for (const row of importedProducts) {
+          try {
+            const productData = {
+              id: row.id || undefined, // Use undefined for new inserts, existing ID for updates
+              category_id: categoryId,
+              brand_id: brandId,
+              name: row.name,
+              description: row.description || null,
+              price: row.price ? parseFloat(row.price) : null,
+              canvas_width: row.canvas_width ? parseInt(row.canvas_width) : 300,
+              canvas_height: row.canvas_height ? parseInt(row.canvas_height) : 600,
+              // mockup_id and mockup_image_url are not directly imported via CSV for simplicity
+              // They would need separate logic for image uploads and mockup table management
+            };
+
+            // Validate required fields for import
+            if (!productData.name) {
+              console.warn(`Skipping row due to missing name: ${JSON.stringify(row)}`);
+              failedImports++;
+              continue;
+            }
+
+            const { error: upsertError } = await supabase
+              .from('products')
+              .upsert(productData, { onConflict: 'id' }); // Use onConflict to handle updates
+
+            if (upsertError) {
+              console.error("Error upserting product:", upsertError);
+              failedImports++;
+            } else {
+              successfulImports++;
+            }
+          } catch (e) {
+            console.error("Error processing imported row:", row, e);
+            failedImports++;
+          }
+        }
+
+        if (successfulImports > 0) {
+          toast({
+            title: "Import Complete",
+            description: `${successfulImports} product(s) imported/updated successfully. ${failedImports > 0 ? `${failedImports} failed.` : ''}`,
+          });
+        } else {
+          toast({
+            title: "Import Failed",
+            description: "No products were imported or updated. Please check the console for errors and ensure your CSV format is correct.",
+            variant: "destructive",
+          });
+        }
+        fetchProducts(); // Re-fetch products to update the list
+        setLoading(false);
+        if (importFileInputRef.current) {
+          importFileInputRef.current.value = ''; // Clear the file input
+        }
+      },
+      error: (err) => {
+        console.error("CSV Parsing Error:", err);
+        toast({
+          title: "CSV Parsing Error",
+          description: `Failed to parse CSV file: ${err.message}`,
+          variant: "destructive",
+        });
+        setLoading(false);
+      }
+    });
+  };
+
   return (
     <div className="p-4">
       <div className="flex items-center mb-6">
@@ -430,9 +557,24 @@ const ProductManagementByBrandPage = () => {
       <Card>
         <CardHeader className="flex flex-row justify-between items-center">
           <CardTitle>Products List</CardTitle>
-          <Button onClick={handleAddProduct}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Add Product
-          </Button>
+          <div className="flex space-x-2">
+            <Button onClick={handleExportProducts} variant="outline">
+              <Download className="mr-2 h-4 w-4" /> Export CSV
+            </Button>
+            <Input
+              type="file"
+              accept=".csv"
+              ref={importFileInputRef}
+              onChange={handleImportProducts}
+              className="hidden"
+            />
+            <Button onClick={() => importFileInputRef.current?.click()} variant="outline">
+              <Upload className="mr-2 h-4 w-4" /> Import CSV
+            </Button>
+            <Button onClick={handleAddProduct}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Add Product
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {loading && (
