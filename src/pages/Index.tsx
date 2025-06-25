@@ -12,6 +12,8 @@ interface Category {
 
 const Index = () => {
   const [categories, setCategories] = useState<Category[]>([]);
+  const [mobileCoverCategory, setMobileCoverCategory] = useState<Category | null>(null);
+  const [otherCategories, setOtherCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,7 +30,13 @@ const Index = () => {
         console.error("Error fetching categories:", error);
         setError(error.message);
       } else {
-        setCategories(data || []);
+        const fetchedCategories = data || [];
+        const mobileCover = fetchedCategories.find(cat => cat.name.toLowerCase() === 'mobile cover');
+        const others = fetchedCategories.filter(cat => cat.name.toLowerCase() !== 'mobile cover');
+        
+        setMobileCoverCategory(mobileCover || null);
+        setOtherCategories(others);
+        setCategories(fetchedCategories); // Keep all categories in state if needed elsewhere
       }
       setLoading(false);
     };
@@ -59,23 +67,31 @@ const Index = () => {
             <p className="text-gray-600 dark:text-gray-300">No categories found. Please add some from the admin panel.</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-4xl mx-auto">
-              {categories.map((category) => (
+              {mobileCoverCategory && (
                 <Link
-                  key={category.id}
-                  to={category.name.toLowerCase() === 'mobile cover'
-                    ? `/categories/${category.id}/brands`
-                    : `/categories/${category.id}/products`
-                  }
+                  key={mobileCoverCategory.id}
+                  to={`/categories/${mobileCoverCategory.id}/brands`}
                 >
                   <Card className="h-full flex flex-col justify-between hover:shadow-lg transition-shadow duration-200">
                     <CardHeader>
-                      <CardTitle className="text-xl">{category.name}</CardTitle>
+                      <CardTitle className="text-xl">{mobileCoverCategory.name}</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-sm text-gray-600 dark:text-gray-300">{category.description || 'No description.'}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">{mobileCoverCategory.description || 'No description.'}</p>
                     </CardContent>
                   </Card>
                 </Link>
+              )}
+              {otherCategories.map((category) => (
+                <Card key={category.id} className="h-full flex flex-col justify-between opacity-70 cursor-not-allowed">
+                  <CardHeader>
+                    <CardTitle className="text-xl">{category.name}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">{category.description || 'No description.'}</p>
+                    <p className="text-md font-semibold text-blue-500 mt-2">Coming Soon!</p>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           )}
