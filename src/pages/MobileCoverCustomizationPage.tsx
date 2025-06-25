@@ -1074,7 +1074,7 @@ const MobileCoverCustomizationPage = () => {
 
               {product.mockup_image_url && (
                 <img
-                  key={product.mockup_image_url} {/* Added key to force re-render */}
+                  key={product.mockup_image_url}
                   src={product.mockup_image_url}
                   alt="Phone Mockup Overlay"
                   className="absolute inset-0 w-full h-full object-contain pointer-events-none"
