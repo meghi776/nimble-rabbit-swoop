@@ -245,17 +245,15 @@ const MobileCoverCustomizationPage = () => {
       toast({ title: "Error", description: "Product details not loaded. Cannot add image.", variant: "destructive" });
       return;
     }
-    // Set default width and height to 50% of canvas, and center it
-    const defaultImageWidth = product.canvas_width * 0.5;
-    const defaultImageHeight = product.canvas_height * 0.5;
+    // Set default width and height to 100% of canvas, and position at (0,0)
     const newElement: DesignElement = {
       id: `image-${Date.now()}`,
       type: 'image',
       value: imageUrl,
-      x: (product.canvas_width - defaultImageWidth) / 2, // Centered X
-      y: (product.canvas_height - defaultImageHeight) / 2, // Centered Y
-      width: defaultImageWidth,
-      height: defaultImageHeight,
+      x: 0, // Position at 0
+      y: 0, // Position at 0
+      width: product.canvas_width, // 100% width
+      height: product.canvas_height, // 100% height
       rotation: 0,
     };
     setDesignElements([...designElements, newElement]);
@@ -506,11 +504,11 @@ const MobileCoverCustomizationPage = () => {
         let newWidth = Math.max(20, initialElementWidth + (currentClientX - startX));
         let newHeight = Math.max(20, initialElementHeight + (currentClientY - startY));
 
-        // Removed boundary checks for resize
-        // const maxAllowedWidth = product.canvas_width - element.x;
-        // const maxAllowedHeight = product.canvas_height - element.y;
-        // newWidth = Math.min(newWidth, maxAllowedWidth);
-        // newHeight = Math.min(newHeight, maxAllowedHeight);
+      // Removed boundary checks for resize
+      // const maxAllowedWidth = product.canvas_width - element.x;
+      // const maxAllowedHeight = product.canvas_height - element.y;
+      // newWidth = Math.min(newWidth, maxAllowedWidth);
+      // newHeight = Math.min(newHeight, maxAllowedHeight);
 
         updateElement(activeElementId, { width: newWidth, height: newHeight });
       }
