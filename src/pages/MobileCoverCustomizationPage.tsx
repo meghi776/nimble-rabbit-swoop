@@ -28,7 +28,8 @@ import {
   ShoppingCart,
   XCircle,
   RotateCw,
-  Save, // Added Save icon
+  Save,
+  Download, // Added Download icon
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -761,6 +762,60 @@ const MobileCoverCustomizationPage = () => {
     setLoading(false);
   };
 
+  const handleDownloadDesign = async () => {
+    if (!canvasContentRef.current || !product) {
+      toast({ title: "Error", description: "Design area not found or product not loaded.", variant: "destructive" });
+      return;
+    }
+
+    setLoading(true);
+    let originalMockupPointerEvents = '';
+    const mockupImageElement = canvasContentRef.current.querySelector('img[alt="Phone Mockup Overlay"]');
+    const selectedElementDiv = document.querySelector(`[data-element-id="${selectedElementId}"]`);
+
+    try {
+      // Temporarily remove border from selected element for screenshot
+      if (selectedElementDiv) {
+        selectedElementDiv.classList.remove('border-2', 'border-blue-500');
+      }
+
+      // Temporarily enable pointer events on mockup overlay for html2canvas to capture it
+      if (mockupImageElement instanceof HTMLElement) {
+        originalMockupPointerEvents = mockupImageElement.style.pointerEvents;
+        mockupImageElement.style.pointerEvents = 'auto';
+      }
+
+      const canvas = await html2canvas(canvasContentRef.current, {
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: null,
+        scale: 1 / scaleFactor, // Crucial for capturing at original resolution
+      });
+
+      const dataUrl = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = `${product.name.replace(/\s/g, '_')}_custom_design.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast({ title: "Success", description: "Design downloaded successfully!" });
+    } catch (err: any) {
+      console.error("Error downloading design:", err);
+      toast({ title: "Download Failed", description: err.message || "An unexpected error occurred during download.", variant: "destructive" });
+    } finally {
+      // Restore original styles
+      if (mockupImageElement instanceof HTMLElement) {
+        mockupImageElement.style.pointerEvents = originalMockupPointerEvents;
+      }
+      if (selectedElementDiv) {
+        selectedElementDiv.classList.add('border-2', 'border-blue-500');
+      }
+      setLoading(false);
+    }
+  };
+
   const handleImageFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -992,6 +1047,9 @@ const MobileCoverCustomizationPage = () => {
         <div className="flex items-center space-x-2">
           <Button onClick={handleSaveDesign} disabled={loading || isPlacingOrder} variant="outline">
             <Save className="mr-2 h-4 w-4" /> Save Design
+          </Button>
+          <Button onClick={handleDownloadDesign} disabled={loading || isPlacingOrder} variant="outline">
+            <Download className="mr-2 h-4 w-4" /> Download Design
           </Button>
           <Button onClick={handleDemoOrderClick} disabled={loading || isPlacingOrder} className="bg-green-600 hover:bg-green-700 text-white">
             {isPlacingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
