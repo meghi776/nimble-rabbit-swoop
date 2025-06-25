@@ -170,8 +170,8 @@ const MobileCoverCustomizationPage = () => {
             // Ensure loaded design elements conform to the new interface (add default width/height if missing)
             const loadedElements: DesignElement[] = JSON.parse(productData.mockups[0].design_data as string).map((el: any) => ({
               ...el,
-              width: el.width || (el.type === 'text' ? 200 : productData.canvas_width), // Default width for text/image
-              height: el.height || (el.type === 'text' ? 40 : productData.canvas_height), // Default height for text/image
+              width: el.width || (el.type === 'text' ? 200 : productData.canvas_width * 0.5), // Default width for text/image
+              height: el.height || (el.type === 'text' ? 40 : productData.canvas_height * 0.5), // Default height for text/image
             }));
             setDesignElements(loadedElements);
           } catch (parseError) {
@@ -245,15 +245,17 @@ const MobileCoverCustomizationPage = () => {
       toast({ title: "Error", description: "Product details not loaded. Cannot add image.", variant: "destructive" });
       return;
     }
+    const defaultImageWidth = product.canvas_width * 0.5;
+    const defaultImageHeight = product.canvas_height * 0.5;
     const newElement: DesignElement = {
       id: `image-${Date.now()}`,
       type: 'image',
       value: imageUrl,
-      x: 0, // Fixed to canvas
-      y: 0, // Fixed to canvas
-      width: product.canvas_width, // Fixed to canvas width
-      height: product.canvas_height, // Fixed to canvas height
-      rotation: 0, // Fixed rotation
+      x: (product.canvas_width - defaultImageWidth) / 2,
+      y: (product.canvas_height - defaultImageHeight) / 2,
+      width: defaultImageWidth,
+      height: defaultImageHeight,
+      rotation: 0,
     };
     setDesignElements([...designElements, newElement]);
     setSelectedElementId(newElement.id);
@@ -311,7 +313,7 @@ const MobileCoverCustomizationPage = () => {
   const handleResizeStart = (e: React.MouseEvent | React.TouchEvent, id: string) => {
     e.stopPropagation();
     const element = designElements.find(el => el.id === id);
-    if (!element || !product || element.type !== 'text') return; // Only allow resize for text
+    if (!element || !product) return;
 
     const isTouchEvent = 'touches' in e;
     const clientX = isTouchEvent ? e.touches[0].clientX : e.clientX;
@@ -371,7 +373,7 @@ const MobileCoverCustomizationPage = () => {
   const handleRotateStart = (e: React.MouseEvent | React.TouchEvent, id: string) => {
     e.stopPropagation();
     const element = designElements.find(el => el.id === id);
-    if (!element || !designAreaRef.current || element.type !== 'text') return; // Only allow rotate for text
+    if (!element || !designAreaRef.current) return;
 
     const isTouchEvent = 'touches' in e;
     const clientX = isTouchEvent ? e.touches[0].clientX : e.clientX;
@@ -447,7 +449,7 @@ const MobileCoverCustomizationPage = () => {
         initialElementY: element.y,
         activeElementId: id,
       };
-    } else if (e.touches.length === 2 && element.type === 'text') { // Only allow pinching for text
+    } else if (e.touches.length === 2) { // Allow pinching for both text and image
       const touch1 = e.touches[0];
       const touch2 = e.touches[1];
       const initialDistance = Math.sqrt(
@@ -496,7 +498,7 @@ const MobileCoverCustomizationPage = () => {
         x: newX,
         y: newY,
       });
-    } else if (mode === 'resizing' && e.touches.length === 1 && element.type === 'text') { // Only allow resize for text
+    } else if (mode === 'resizing' && e.touches.length === 1) { // Allow resize for both text and image
       const currentClientX = e.touches[0].clientX;
       const currentClientY = e.touches[0].clientY;
 
@@ -513,7 +515,7 @@ const MobileCoverCustomizationPage = () => {
 
         updateElement(activeElementId, { width: newWidth, height: newHeight });
       }
-    } else if (mode === 'rotating' && e.touches.length === 1 && initialAngle !== undefined && initialRotation !== undefined && element.type === 'text') { // Only allow rotate for text
+    } else if (mode === 'rotating' && e.touches.length === 1 && initialAngle !== undefined && initialRotation !== undefined) { // Allow rotate for both text and image
       const elementDiv = document.querySelector(`[data-element-id="${activeElementId}"]`);
       if (!elementDiv) return;
       const elementRect = elementDiv.getBoundingClientRect();
@@ -526,7 +528,7 @@ const MobileCoverCustomizationPage = () => {
       newRotation = (newRotation % 360 + 360) % 360;
       updateElement(activeElementId, { rotation: newRotation });
     }
-    else if (mode === 'pinching' && e.touches.length === 2 && initialDistance !== undefined && initialMidX !== undefined && initialMidY !== undefined && element.type === 'text') { // Only allow pinching for text
+    else if (mode === 'pinching' && e.touches.length === 2 && initialDistance !== undefined && initialMidX !== undefined && initialMidY !== undefined) { // Allow pinching for both text and image
       const touch1 = e.touches[0];
       const touch2 = e.touches[1];
       const newDistance = Math.sqrt(
@@ -866,7 +868,6 @@ const MobileCoverCustomizationPage = () => {
           {product?.name || 'Loading Product...'}
         </h1>
         <div className="flex items-center space-x-2">
-          {/* Removed Preview Button */}
           <Button onClick={handleDemoOrderClick} disabled={loading || isPlacingOrder} className="bg-green-600 hover:bg-green-700 text-white">
             {isPlacingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Demo Order
@@ -963,7 +964,7 @@ const MobileCoverCustomizationPage = () => {
                       className="w-full h-full object-contain"
                     />
                   )}
-                  {selectedElementId === el.id && el.type === 'text' && ( // Only render handles for text elements
+                  {selectedElementId === el.id && ( // Render handles for both text and image elements
                     <>
                       <div
                         className="absolute -bottom-2 -right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center cursor-nwse-resize"
@@ -1111,8 +1112,6 @@ const MobileCoverCustomizationPage = () => {
           </>
         )}
       </div>
-
-      {/* Removed Image Preview Dialog */}
 
       <Dialog open={isCheckoutModalOpen} onOpenChange={setIsCheckoutModalOpen}>
         <DialogContent className="sm:max-w-[425px]">
