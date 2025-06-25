@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ import {
   Eye,
   Download,
   ShoppingCart,
+  Check, // For save text button
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -67,7 +68,7 @@ interface TouchState {
   initialDistance?: number;
   initialElementWidth?: number;
   initialElementHeight?: number;
-  initialFontSize?: number; // Added for text scaling
+  initialFontSize?: number;
   initialMidX?: number;
   initialMidY?: number;
   activeElementId: string | null;
@@ -82,10 +83,9 @@ const MobileCoverCustomizationPage = () => {
   const [designElements, setDesignElements] = useState<DesignElement[]>([]);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   
-  // States for text properties dialog
-  const [isTextPropertiesModalOpen, setIsTextPropertiesModalOpen] = useState(false);
+  // States for text properties (now directly in component, not modal)
   const [currentTextContent, setCurrentTextContent] = useState('');
-  const [currentFontSize, setCurrentFontSize] = useState<number[]>([35]); // Default size 35
+  const [currentFontSize, setCurrentFontSize] = useState<number[]>([35]);
   const [currentTextColor, setCurrentTextColor] = useState('#000000');
   const [currentFontFamily, setCurrentFontFamily] = useState('Arial');
   const [currentTextShadowEnabled, setCurrentTextShadowEnabled] = useState(false);
@@ -104,9 +104,8 @@ const MobileCoverCustomizationPage = () => {
   const [customerAddress, setCustomerAddress] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('COD');
-  const [isPlacingOrder, setIsPlacingOrder] = useState(false); // New state for order placement loading
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
-  // New states for Demo Order Modal
   const [isDemoOrderModalOpen, setIsDemoOrderModalOpen] = useState(false);
   const [demoOrderPrice, setDemoOrderPrice] = useState<string>('');
   const [demoOrderAddress, setDemoOrderAddress] = useState<string>('');
@@ -130,6 +129,8 @@ const MobileCoverCustomizationPage = () => {
     'Lucida Sans Unicode', 'Tahoma', 'Trebuchet MS', 'Palatino Linotype',
     'Comic Sans MS', 'Arial Black', 'Garamond', 'Brush Script MT', 'cursive', 'sans-serif', 'serif', 'monospace'
   ];
+
+  const selectedTextElement = selectedElementId ? designElements.find(el => el.id === selectedElementId && el.type === 'text') : null;
 
   useEffect(() => {
     const fetchProductAndMockup = async () => {
@@ -157,7 +158,6 @@ const MobileCoverCustomizationPage = () => {
             toast({ title: "Error", description: "Failed to parse existing design data.", variant: "destructive" });
           }
         }
-        // Set default values for demo order price and address
         setDemoOrderPrice(productData.price?.toFixed(2) || '0.00');
         setDemoOrderAddress('Demo Address, Demo City, Demo State, 00000');
       }
@@ -179,6 +179,24 @@ const MobileCoverCustomizationPage = () => {
     };
   }, [designElements]);
 
+  // Update text editing states when a text element is selected
+  useEffect(() => {
+    if (selectedTextElement) {
+      setCurrentTextContent(selectedTextElement.value);
+      setCurrentFontSize([selectedTextElement.fontSize || 35]);
+      setCurrentTextColor(selectedTextElement.color || '#000000');
+      setCurrentFontFamily(selectedTextElement.fontFamily || 'Arial');
+      setCurrentTextShadowEnabled(selectedTextElement.textShadow || false);
+    } else {
+      // Reset text editing states when no text element is selected
+      setCurrentTextContent('');
+      setCurrentFontSize([35]);
+      setCurrentTextColor('#000000');
+      setCurrentFontFamily('Arial');
+      setCurrentTextShadowEnabled(false);
+    }
+  }, [selectedTextElement]);
+
   const addImageElement = (imageUrl: string) => {
     if (!product) {
       toast({ title: "Error", description: "Product details not loaded. Cannot add image.", variant: "destructive" });
@@ -197,11 +215,11 @@ const MobileCoverCustomizationPage = () => {
     setSelectedElementId(newElement.id);
   };
 
-  const updateElement = (id: string, updates: Partial<DesignElement>) => {
+  const updateElement = useCallback((id: string, updates: Partial<DesignElement>) => {
     setDesignElements(prev =>
       prev.map(el => (el.id === id ? { ...el, ...updates } : el))
     );
-  };
+  }, []);
 
   const deleteElement = (id: string) => {
     setDesignElements(prev => {
@@ -221,16 +239,6 @@ const MobileCoverCustomizationPage = () => {
     setSelectedElementId(id);
     const element = designElements.find(el => el.id === id);
     if (!element || !designAreaRef.current) return;
-
-    // If it's a text element, open the properties dialog
-    if (element.type === 'text') {
-      setCurrentTextContent(element.value);
-      setCurrentFontSize([element.fontSize || 35]); // Default to 35 if not set
-      setCurrentTextColor(element.color || '#000000');
-      setCurrentFontFamily(element.fontFamily || 'Arial');
-      setCurrentTextShadowEnabled(element.textShadow || false);
-      setIsTextPropertiesModalOpen(true);
-    }
 
     const designAreaRect = designAreaRef.current.getBoundingClientRect();
     const offsetX = e.clientX - (element.x + designAreaRect.left);
@@ -282,16 +290,6 @@ const MobileCoverCustomizationPage = () => {
     const element = designElements.find(el => el.id === id);
     if (!element || !designAreaRef.current || !product) return;
 
-    // If it's a text element, open the properties dialog
-    if (element.type === 'text') {
-      setCurrentTextContent(element.value);
-      setCurrentFontSize([element.fontSize || 35]);
-      setCurrentTextColor(element.color || '#000000');
-      setCurrentFontFamily(element.fontFamily || 'Arial');
-      setCurrentTextShadowEnabled(element.textShadow || false);
-      setIsTextPropertiesModalOpen(true);
-    }
-
     const designAreaRect = designAreaRef.current.getBoundingClientRect();
 
     if (e.touches.length === 1) {
@@ -320,9 +318,9 @@ const MobileCoverCustomizationPage = () => {
         initialElementX: element.x,
         initialElementY: element.y,
         initialDistance: initialDistance,
-        initialElementWidth: element.width, // For images
-        initialElementHeight: element.height, // For images
-        initialFontSize: element.fontSize, // For text
+        initialElementWidth: element.width,
+        initialElementHeight: element.height,
+        initialFontSize: element.fontSize,
         initialMidX: initialMidX - designAreaRect.left,
         initialMidY: initialMidY - designAreaRect.top,
         activeElementId: id,
@@ -372,7 +370,7 @@ const MobileCoverCustomizationPage = () => {
           y: newY,
         });
       } else if (element.type === 'text' && initialFontSize !== undefined) {
-        const newFontSize = Math.max(10, initialFontSize * scaleFactor); // Minimum font size 10
+        const newFontSize = Math.max(10, initialFontSize * scaleFactor);
         updateElement(activeElementId, {
           fontSize: newFontSize,
           x: newX,
@@ -487,10 +485,9 @@ const MobileCoverCustomizationPage = () => {
         selectedElementDiv.classList.remove('border-2', 'border-blue-500');
       }
 
-      // Temporarily adjust pointer-events for capture
       if (mockupImageElement instanceof HTMLElement) {
         originalMockupPointerEvents = mockupImageElement.style.pointerEvents;
-        mockupImageElement.style.pointerEvents = 'auto'; // Make it visible to html2canvas
+        mockupImageElement.style.pointerEvents = 'auto';
       }
 
       const canvas = await html2canvas(canvasContentRef.current, {
@@ -505,7 +502,6 @@ const MobileCoverCustomizationPage = () => {
       console.error("Error generating preview:", err);
       toast({ title: "Error", description: "Failed to generate preview image.", variant: "destructive" });
     } finally {
-      // Restore pointer-events
       if (mockupImageElement instanceof HTMLElement) {
         mockupImageElement.style.pointerEvents = originalMockupPointerEvents;
       }
@@ -532,10 +528,9 @@ const MobileCoverCustomizationPage = () => {
   };
 
   const handleBuyNowClick = () => {
-    console.log("handleBuyNowClick: Current user object:", user);
     if (!user) {
       toast({ title: "Authentication Required", description: "Please log in to place an order.", variant: "destructive" });
-      navigate('/login'); // Redirect to login if not authenticated
+      navigate('/login');
       return;
     }
     if (!product) {
@@ -547,7 +542,6 @@ const MobileCoverCustomizationPage = () => {
 
   const handlePlaceOrder = async (isDemo: boolean) => {
     if (!product || !user?.id) {
-      console.error("handlePlaceOrder: Product or user information missing. Product:", product, "User:", user);
       toast({ title: "Error", description: "Product or user information missing.", variant: "destructive" });
       return;
     }
@@ -569,14 +563,12 @@ const MobileCoverCustomizationPage = () => {
       return;
     }
 
-
-    setIsPlacingOrder(true); // Set loading state
+    setIsPlacingOrder(true);
     let orderedDesignImageUrl: string | null = null;
     let originalMockupPointerEvents = '';
     const mockupImageElement = canvasContentRef.current?.querySelector('img[alt="Phone Mockup Overlay"]');
 
     try {
-      // 1. Generate image of the customized product
       if (!canvasContentRef.current) {
         throw new Error("Design area not found for order image capture.");
       }
@@ -586,10 +578,9 @@ const MobileCoverCustomizationPage = () => {
         selectedElementDiv.classList.remove('border-2', 'border-blue-500');
       }
 
-      // Temporarily adjust pointer-events for capture
       if (mockupImageElement instanceof HTMLElement) {
         originalMockupPointerEvents = mockupImageElement.style.pointerEvents;
-        mockupImageElement.style.pointerEvents = 'auto'; // Make it visible to html2canvas
+        mockupImageElement.style.pointerEvents = 'auto';
       }
 
       const canvas = await html2canvas(canvasContentRef.current, {
@@ -599,16 +590,14 @@ const MobileCoverCustomizationPage = () => {
       });
       const dataUrl = canvas.toDataURL('image/png');
 
-      // Convert data URL to Blob
       const blob = await (await fetch(dataUrl)).blob();
 
-      // 2. Upload the generated image to Supabase Storage
       const fileExt = 'png';
       const fileName = `${product.id}-${Date.now()}.${fileExt}`;
-      const filePath = `orders/${fileName}`; // Store in an 'orders' subfolder
+      const filePath = `orders/${fileName}`;
 
       const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('order-mockups') // Assuming a bucket named 'order-mockups'
+        .from('order-mockups')
         .upload(filePath, blob, {
           contentType: 'image/png',
           upsert: false,
@@ -624,8 +613,6 @@ const MobileCoverCustomizationPage = () => {
 
       orderedDesignImageUrl = publicUrlData.publicUrl;
 
-      // 3. Save order details to the 'orders' table
-      console.log("Attempting to insert order with user_id:", user.id); // Log user.id here
       const { error: orderInsertError } = await supabase
         .from('orders')
         .insert({
@@ -638,31 +625,29 @@ const MobileCoverCustomizationPage = () => {
           status: finalStatus,
           total_price: finalTotalPrice,
           ordered_design_image_url: orderedDesignImageUrl,
-          ordered_design_data: designElements, // Save the design elements JSON
-          type: finalOrderType, // Set order type
+          ordered_design_data: designElements,
+          type: finalOrderType,
         });
 
       if (orderInsertError) {
-        console.error("Supabase insert error:", orderInsertError); // Log the full error object
+        console.error("Supabase insert error:", orderInsertError);
         throw new Error(`Failed to place order: ${orderInsertError.message}`);
       }
 
       toast({ title: "Success", description: isDemo ? "Demo order placed successfully!" : "Your order has been placed successfully!" });
       setIsCheckoutModalOpen(false);
-      setIsDemoOrderModalOpen(false); // Close demo modal
+      setIsDemoOrderModalOpen(false);
       
-      // Conditional redirection based on order type
       if (isDemo) {
-        navigate('/admin/demo-orders'); // Redirect to admin demo orders page
+        navigate('/admin/demo-orders');
       } else {
-        navigate('/orders'); // Redirect to user's normal orders history page
+        navigate('/orders');
       }
 
     } catch (err: any) {
       console.error("Error placing order:", err);
       toast({ title: "Order Failed", description: err.message || "An unexpected error occurred while placing your order.", variant: "destructive" });
     } finally {
-      // Restore pointer-events
       if (mockupImageElement instanceof HTMLElement) {
         mockupImageElement.style.pointerEvents = originalMockupPointerEvents;
       }
@@ -670,7 +655,7 @@ const MobileCoverCustomizationPage = () => {
       if (selectedElementDiv) {
         selectedElementDiv.classList.add('border-2', 'border-blue-500');
       }
-      setIsPlacingOrder(false); // Reset loading state
+      setIsPlacingOrder(false);
     }
   };
 
@@ -684,68 +669,63 @@ const MobileCoverCustomizationPage = () => {
       toast({ title: "Error", description: "Product not loaded. Cannot place demo order.", variant: "destructive" });
       return;
     }
-    setIsDemoOrderModalOpen(true); // Open the new demo order modal
+    setIsDemoOrderModalOpen(true);
   };
 
-  const handleSaveTextProperties = () => {
+  const handleAddTextElement = () => {
+    if (!product) {
+      toast({ title: "Error", description: "Product details not loaded. Cannot add text.", variant: "destructive" });
+      return;
+    }
+    const defaultText = "New Text";
+    const defaultFontSize = 35;
+    const defaultColor = '#000000';
+    const defaultFontFamily = 'Arial';
+    const defaultTextShadow = false;
+
+    // Calculate center position
+    const centerX = (product.canvas_width / 2) - (defaultText.length * (defaultFontSize / 2) / 2); // Rough centering
+    const centerY = (product.canvas_height / 2) - (defaultFontSize / 2);
+
+    const newElement: DesignElement = {
+      id: `text-${Date.now()}`,
+      type: 'text',
+      value: defaultText,
+      x: Math.max(0, centerX),
+      y: Math.max(0, centerY),
+      fontSize: defaultFontSize,
+      color: defaultColor,
+      fontFamily: defaultFontFamily,
+      textShadow: defaultTextShadow,
+    };
+    setDesignElements(prev => [...prev, newElement]);
+    setSelectedElementId(newElement.id); // Select the newly added element
+    toast({ title: "Success", description: "New text element added!" });
+  };
+
+  const handleUpdateTextProperties = () => {
+    if (!selectedTextElement) return;
+
     if (!currentTextContent.trim()) {
       toast({ title: "Error", description: "Text cannot be empty.", variant: "destructive" });
       return;
     }
 
-    if (selectedElementId && designElements.find(el => el.id === selectedElementId)?.type === 'text') {
-      // Update existing text element
-      updateElement(selectedElementId, {
-        value: currentTextContent,
-        fontSize: currentFontSize[0],
-        color: currentTextColor,
-        fontFamily: currentFontFamily,
-        textShadow: currentTextShadowEnabled,
-      });
-      toast({ title: "Success", description: "Text updated successfully!" });
-    } else {
-      // Add new text element
-      if (!product) {
-        toast({ title: "Error", description: "Product details not loaded. Cannot add text.", variant: "destructive" });
-        return;
-      }
-      // Calculate center position
-      const centerX = (product.canvas_width / 2) - (currentTextContent.length * (currentFontSize[0] / 2) / 2); // Rough centering
-      const centerY = (product.canvas_height / 2) - (currentFontSize[0] / 2);
-
-      const newElement: DesignElement = {
-        id: `text-${Date.now()}`,
-        type: 'text',
-        value: currentTextContent,
-        x: Math.max(0, centerX), // Ensure not off-canvas
-        y: Math.max(0, centerY), // Ensure not off-canvas
-        fontSize: currentFontSize[0],
-        color: currentTextColor,
-        fontFamily: currentFontFamily,
-        textShadow: currentTextShadowEnabled,
-      };
-      setDesignElements([...designElements, newElement]);
-      setSelectedElementId(newElement.id); // Select the newly added element
-      toast({ title: "Success", description: "New text element added!" });
-    }
-    setIsTextPropertiesModalOpen(false);
-    // Reset states to default for next add/edit
-    setCurrentTextContent('');
-    setCurrentFontSize([35]);
-    setCurrentTextColor('#000000');
-    setCurrentFontFamily('Arial');
-    setCurrentTextShadowEnabled(false);
-    setSelectedElementId(null); // Deselect after saving
+    updateElement(selectedTextElement.id, {
+      value: currentTextContent,
+      fontSize: currentFontSize[0],
+      color: currentTextColor,
+      fontFamily: currentFontFamily,
+      textShadow: currentTextShadowEnabled,
+    });
+    toast({ title: "Success", description: "Text properties updated!" });
   };
 
-  const handleAddTextClick = () => {
-    setSelectedElementId(null); // Ensure no element is selected for new text
-    setCurrentTextContent('');
-    setCurrentFontSize([35]); // Default size for new text
-    setCurrentTextColor('#000000');
-    setCurrentFontFamily('Arial');
-    setCurrentTextShadowEnabled(false);
-    setIsTextPropertiesModalOpen(true);
+  const handleCanvasClick = (e: React.MouseEvent) => {
+    // Deselect element if clicking on the canvas background
+    if (e.target === canvasContentRef.current || e.target === designAreaRef.current) {
+      setSelectedElementId(null);
+    }
   };
 
   return (
@@ -757,7 +737,7 @@ const MobileCoverCustomizationPage = () => {
         <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
           {product?.name || 'Loading Product...'}
         </h1>
-        <div className="flex items-center space-x-2"> {/* Group right-side buttons */}
+        <div className="flex items-center space-x-2">
           <Button onClick={handlePreviewClick} variant="ghost" size="icon">
             <Eye className="h-6 w-6 text-blue-600" />
           </Button>
@@ -780,7 +760,7 @@ const MobileCoverCustomizationPage = () => {
       )}
 
       {!loading && !error && product && (
-        <div className="flex-1 flex flex-col md:flex-row overflow-y-auto pb-24"> {/* Adjusted padding-bottom */}
+        <div className="flex-1 flex flex-col md:flex-row overflow-y-auto pb-24">
           <div
             ref={designAreaRef}
             className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center relative overflow-hidden p-4"
@@ -792,6 +772,7 @@ const MobileCoverCustomizationPage = () => {
               backgroundPosition: 'center',
               touchAction: 'none',
             }}
+            onClick={handleCanvasClick} // Handle clicks on the background
           >
             <div
               ref={canvasContentRef}
@@ -804,13 +785,8 @@ const MobileCoverCustomizationPage = () => {
                 backgroundPosition: 'center',
                 touchAction: 'none',
               }}
-              onClick={(e) => {
-                if (e.target === canvasContentRef.current) {
-                  fileInputRef.current?.click();
-                }
-              }}
+              onClick={handleCanvasClick} // Handle clicks on the background
             >
-              {/* Design elements (user's image, text) */}
               {designElements.map(el => (
                 <div
                   key={el.id}
@@ -822,7 +798,7 @@ const MobileCoverCustomizationPage = () => {
                     transformOrigin: 'center center',
                     width: el.type === 'image' ? `${el.width}px` : 'auto',
                     height: el.type === 'image' ? `${el.height}px` : 'auto',
-                    zIndex: 5, // Lower z-index for design elements
+                    zIndex: 5,
                     touchAction: 'none',
                   }}
                   onMouseDown={(e) => handleMouseDown(e, el.id)}
@@ -858,7 +834,6 @@ const MobileCoverCustomizationPage = () => {
                 </div>
               ))}
 
-              {/* Mockup overlay - always on top visually */}
               {product.mockup_image_url && (
                 <img
                   src={product.mockup_image_url}
@@ -890,77 +865,50 @@ const MobileCoverCustomizationPage = () => {
         className="hidden"
       />
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-lg p-2 flex justify-around items-center border-t border-gray-200 dark:border-gray-700 z-10">
-        <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={handleAddTextClick}>
-          <Text className="h-6 w-6" />
-          <span className="text-xs mt-1">Add Text</span>
-        </Button>
-        <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => fileInputRef.current?.click()}>
-          <Image className="h-6 w-6" />
-          <span className="text-xs mt-1">Your Photo</span>
-        </Button>
-        <Button variant="ghost" className="flex flex-col h-auto p-2">
-          <Palette className="h-6 w-6" />
-          <span className="text-xs mt-1">Back Color</span>
-        </Button>
-        <Button variant="ghost" className="flex flex-col h-auto p-2">
-          <LayoutTemplate className="h-6 w-6" />
-          <span className="text-xs mt-1">Readymade</span>
-        </Button>
-        <Button variant="default" className="flex flex-col h-auto p-2 bg-blue-600 hover:bg-blue-700 text-white" onClick={handleBuyNowClick} disabled={isPlacingOrder}>
-          <ShoppingCart className="h-6 w-6" />
-          <span className="text-xs mt-1">Buy Now</span>
-        </Button>
-        {selectedElementId && (
-          <Button
-            variant="destructive"
-            className="flex flex-col h-auto p-2"
-            onClick={() => {
-              deleteElement(selectedElementId);
-              setSelectedElementId(null); // Deselect after deleting
-            }}
-          >
-            <Trash2 className="h-6 w-6" />
-            <span className="text-xs mt-1">Delete</span>
-          </Button>
-        )}
-      </div>
-
-      {/* Text Properties Dialog */}
-      <Dialog open={isTextPropertiesModalOpen} onOpenChange={setIsTextPropertiesModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{selectedElementId && designElements.find(el => el.id === selectedElementId)?.type === 'text' ? 'Edit Text Properties' : 'Add New Text'}</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <Label htmlFor="text-content">Text Content</Label>
-            <Textarea
-              id="text-content"
-              placeholder="Type your text here..."
-              value={currentTextContent}
-              onChange={(e) => setCurrentTextContent(e.target.value)}
-            />
-
-            <Label htmlFor="font-size">Font Size: {currentFontSize[0]}</Label>
-            <Slider
-              id="font-size"
-              min={10}
-              max={100}
-              step={1}
-              value={currentFontSize}
-              onValueChange={setCurrentFontSize}
-            />
-
-            <Label htmlFor="text-color">Text Color</Label>
-            <div className="flex flex-wrap gap-2">
-              {predefinedColors.map((color) => (
-                <div
-                  key={color}
-                  className={`w-8 h-8 rounded-full cursor-pointer border-2 ${currentTextColor === color ? 'border-blue-500' : 'border-gray-300'}`}
-                  style={{ backgroundColor: color }}
-                  onClick={() => setCurrentTextColor(color)}
-                />
-              ))}
+      {/* Dynamic Footer */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-lg p-2 flex flex-wrap justify-around items-center border-t border-gray-200 dark:border-gray-700 z-10">
+        {selectedTextElement ? (
+          <>
+            {/* Text Editing Options */}
+            <div className="flex flex-col items-center p-2 w-full md:w-auto">
+              <Label htmlFor="text-content" className="sr-only">Text Content</Label>
+              <Input
+                id="text-content"
+                placeholder="Edit text"
+                value={currentTextContent}
+                onChange={(e) => setCurrentTextContent(e.target.value)}
+                className="w-full md:w-48 mb-2"
+              />
+            </div>
+            <div className="flex flex-col items-center p-2 w-full md:w-auto">
+              <Label htmlFor="font-size" className="text-xs mb-1">Size: {currentFontSize[0]}</Label>
+              <Slider
+                id="font-size"
+                min={10}
+                max={100}
+                step={1}
+                value={currentFontSize}
+                onValueChange={setCurrentFontSize}
+                className="w-full md:w-32"
+              />
+            </div>
+            <div className="flex flex-col items-center p-2 w-full md:w-auto">
+              <Label htmlFor="font-family" className="text-xs mb-1">Font</Label>
+              <Select value={currentFontFamily} onValueChange={setCurrentFontFamily}>
+                <SelectTrigger id="font-family" className="w-full md:w-32">
+                  <SelectValue placeholder="Font" />
+                </SelectTrigger>
+                <SelectContent>
+                  {fontFamilies.map((font) => (
+                    <SelectItem key={font} value={font} style={{ fontFamily: font }}>
+                      {font}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col items-center p-2 w-full md:w-auto">
+              <Label htmlFor="text-color" className="text-xs mb-1">Color</Label>
               <Input
                 id="text-color-custom"
                 type="color"
@@ -970,38 +918,69 @@ const MobileCoverCustomizationPage = () => {
                 title="Custom Color"
               />
             </div>
-
-            <Label htmlFor="font-family">Font Family</Label>
-            <Select value={currentFontFamily} onValueChange={setCurrentFontFamily}>
-              <SelectTrigger id="font-family">
-                <SelectValue placeholder="Select a font" />
-              </SelectTrigger>
-              <SelectContent>
-                {fontFamilies.map((font) => (
-                  <SelectItem key={font} value={font} style={{ fontFamily: font }}>
-                    {font}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center p-2 w-full md:w-auto justify-center">
               <Switch
                 id="text-shadow"
                 checked={currentTextShadowEnabled}
                 onCheckedChange={setCurrentTextShadowEnabled}
               />
-              <Label htmlFor="text-shadow">Text Shadow</Label>
+              <Label htmlFor="text-shadow" className="ml-2 text-xs">Shadow</Label>
             </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsTextPropertiesModalOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveTextProperties}>
-              {selectedElementId && designElements.find(el => el.id === selectedElementId)?.type === 'text' ? 'Save Changes' : 'Add Text'}
+            <Button variant="default" className="flex flex-col h-auto p-2 bg-blue-600 hover:bg-blue-700 text-white" onClick={handleUpdateTextProperties}>
+              <Check className="h-6 w-6" />
+              <span className="text-xs mt-1">Apply</span>
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <Button
+              variant="destructive"
+              className="flex flex-col h-auto p-2"
+              onClick={() => {
+                deleteElement(selectedElementId);
+                setSelectedElementId(null);
+              }}
+            >
+              <Trash2 className="h-6 w-6" />
+              <span className="text-xs mt-1">Delete</span>
+            </Button>
+          </>
+        ) : (
+          <>
+            {/* General Design Tools */}
+            <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={handleAddTextElement}>
+              <Text className="h-6 w-6" />
+              <span className="text-xs mt-1">Add Text</span>
+            </Button>
+            <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => fileInputRef.current?.click()}>
+              <Image className="h-6 w-6" />
+              <span className="text-xs mt-1">Your Photo</span>
+            </Button>
+            <Button variant="ghost" className="flex flex-col h-auto p-2">
+              <Palette className="h-6 w-6" />
+              <span className="text-xs mt-1">Back Color</span>
+            </Button>
+            <Button variant="ghost" className="flex flex-col h-auto p-2">
+              <LayoutTemplate className="h-6 w-6" />
+              <span className="text-xs mt-1">Readymade</span>
+            </Button>
+            <Button variant="default" className="flex flex-col h-auto p-2 bg-blue-600 hover:bg-blue-700 text-white" onClick={handleBuyNowClick} disabled={isPlacingOrder}>
+              <ShoppingCart className="h-6 w-6" />
+              <span className="text-xs mt-1">Buy Now</span>
+            </Button>
+            {selectedElementId && (
+              <Button
+                variant="destructive"
+                className="flex flex-col h-auto p-2"
+                onClick={() => {
+                  deleteElement(selectedElementId);
+                  setSelectedElementId(null);
+                }}
+              >
+                <Trash2 className="h-6 w-6" />
+                <span className="text-xs mt-1">Delete</span>
+              </Button>
+            )}
+          </>
+        )}
+      </div>
 
       <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
         <DialogContent className="sm:max-w-[600px]">

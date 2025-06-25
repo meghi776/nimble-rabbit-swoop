@@ -9,7 +9,6 @@ import MobileCoverCustomizationPage from "./pages/MobileCoverCustomizationPage";
 import AdminLayout from "./components/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import UserManagementPage from "./pages/admin/UserManagementPage";
-import ProductManagementPage from "./pages/admin/ProductManagementPage";
 import UserOrderListingPage from "./pages/admin/UserOrderListingPage";
 import UserOrdersPage from "./pages/admin/UserOrdersPage";
 import CategoryManagementPage from "./pages/admin/CategoryManagementPage";
@@ -21,7 +20,7 @@ import Login from "./pages/Login";
 import { SessionContextProvider } from "./contexts/SessionContext";
 import PublicLayout from "./components/PublicLayout";
 import OrderHistoryPage from "./pages/OrderHistoryPage";
-import DemoOrderListingPage from "./pages/admin/DemoOrderListingPage"; // New import
+import DemoOrderListingPage from "./pages/admin/DemoOrderListingPage";
 
 const queryClient = new QueryClient();
 
@@ -56,7 +55,7 @@ const App = () => (
               <Route path="categories" element={<CategoryManagementPage />} />
               <Route path="categories/:categoryId/brands" element={<BrandManagementPage />} />
               <Route path="categories/:categoryId/brands/:brandId/products" element={<ProductManagementByBrandPage />} />
-              <Route path="demo-orders" element={<DemoOrderListingPage />} /> {/* New route for Demo Orders */}
+              <Route path="demo-orders" element={<DemoOrderListingPage />} />
             </Route>
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
