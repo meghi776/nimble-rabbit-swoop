@@ -49,7 +49,7 @@ const App = () => (
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
               <Route path="users" element={<UserManagementPage />} />
-              <Route path="products" element={<ProductManagementPage />} />
+              <Route path="products" element={<ProductManagementPage />} /> {/* Ensure ProductManagementPage is correctly referenced */}
               <Route path="orders" element={<UserOrderListingPage />} />
               <Route path="orders/:userId" element={<UserOrdersPage />} />
               <Route path="categories" element={<CategoryManagementPage />} />
