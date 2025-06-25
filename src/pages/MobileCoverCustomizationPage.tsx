@@ -1090,23 +1090,6 @@ const MobileCoverCustomizationPage = () => {
               </Select>
             </div>
 
-            {/* Font Size Slider */}
-            <div className="flex flex-col items-center flex-1 min-w-[120px] max-w-[200px] px-2">
-                <Label htmlFor="font-size-slider" className="text-xs mb-1">Size</Label>
-                <Slider
-                    id="font-size-slider"
-                    min={10}
-                    max={100}
-                    step={1}
-                    value={currentFontSize}
-                    onValueChange={(value) => {
-                        setCurrentFontSize(value);
-                        updateElement(selectedTextElement.id, { fontSize: value[0] });
-                    }}
-                    className="w-full"
-                />
-            </div>
-
             {/* Color Circles */}
             <div className="flex items-center gap-1 p-1">
                 {predefinedColors.map((color) => (
@@ -1121,19 +1104,6 @@ const MobileCoverCustomizationPage = () => {
                         title={color}
                     />
                 ))}
-            </div>
-
-            {/* Text Shadow Switch */}
-            <div className="flex items-center p-1">
-              <Switch
-                id="text-shadow"
-                checked={currentTextShadowEnabled}
-                onCheckedChange={(checked) => {
-                  setCurrentTextShadowEnabled(checked);
-                  updateElement(selectedTextElement.id, { textShadow: checked });
-                }}
-              />
-              <Label htmlFor="text-shadow" className="ml-2 text-xs">Shadow</Label>
             </div>
           </div>
         ) : (
