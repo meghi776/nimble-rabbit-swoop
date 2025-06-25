@@ -612,7 +612,7 @@ const MobileCoverCustomizationPage = () => {
 
       if (insertError) {
         console.error("Error inserting new mockup with design:", insertError);
-        toast({ title: "Error", description: `Failed to save design: ${insert:Error.message}`, variant: "destructive" });
+        toast({ title: "Error", description: `Failed to save design: ${insertError.message}`, variant: "destructive" });
       } else {
         toast({ title: "Success", description: "Design saved successfully!" });
       }
