@@ -137,6 +137,11 @@ const MobileCoverCustomizationPage = () => {
 
   const selectedTextElement = selectedElementId ? designElements.find(el => el.id === selectedElementId && el.type === 'text') : null;
 
+  // Ref to store the contentEditable span elements
+  const textElementRefs = useRef<Map<string, HTMLSpanElement>>(new Map());
+  // Ref to store the last known caret position
+  const lastCaretPosition = useRef<{ node: Node | null; offset: number } | null>(null);
+
   useEffect(() => {
     const fetchProductAndMockup = async () => {
       setLoading(true);
@@ -199,6 +204,33 @@ const MobileCoverCustomizationPage = () => {
       setCurrentTextShadowEnabled(false);
     }
   }, [selectedTextElement]);
+
+  // Effect to restore caret position after text content updates
+  useEffect(() => {
+    if (selectedElementId && lastCaretPosition.current) {
+      const element = designElements.find(el => el.id === selectedElementId);
+      if (element && element.type === 'text') {
+        const spanRef = textElementRefs.current.get(selectedElementId);
+        if (spanRef) {
+          const selection = window.getSelection();
+          const range = document.createRange();
+
+          // Find the text node within the span. For simple text, it's usually the first child.
+          const textNode = spanRef.firstChild;
+
+          if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+            // Ensure the offset is within the bounds of the new text length
+            const newOffset = Math.min(lastCaretPosition.current.offset, textNode.length);
+            range.setStart(textNode, newOffset);
+            range.collapse(true); // Collapse to the start point
+
+            selection?.removeAllRanges();
+            selection?.addRange(range);
+          }
+        }
+      }
+    }
+  }, [designElements, selectedElementId]); // Re-run when designElements change (text content changes)
 
   const addImageElement = (imageUrl: string) => {
     if (!product) {
@@ -843,7 +875,21 @@ const MobileCoverCustomizationPage = () => {
   };
 
   const handleTextContentInput = (e: React.FormEvent<HTMLSpanElement>, id: string) => {
-    const newText = e.currentTarget.innerText;
+    const target = e.currentTarget;
+    const selection = window.getSelection();
+
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      // Only save if the caret is within the current target element
+      if (target.contains(range.commonAncestorContainer)) {
+        lastCaretPosition.current = {
+          node: range.commonAncestorContainer,
+          offset: range.startOffset,
+        };
+      }
+    }
+
+    const newText = target.innerText;
     updateElement(id, { value: newText });
   };
 
@@ -928,6 +974,10 @@ const MobileCoverCustomizationPage = () => {
                 >
                   {el.type === 'text' ? (
                     <span
+                      ref={node => { // Assign ref to the span element
+                        if (node) textElementRefs.current.set(el.id, node);
+                        else textElementRefs.current.delete(el.id);
+                      }}
                       contentEditable={selectedElementId === el.id} // Make editable when selected
                       onInput={(e) => handleTextContentInput(e, el.id)} // Update value on input
                       onBlur={() => {
