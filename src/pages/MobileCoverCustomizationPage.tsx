@@ -28,10 +28,11 @@ import {
   ShoppingCart,
   XCircle,
   RotateCw,
+  Save, // Added Save icon
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useSession } from '@/contexts/SessionContext'; // Corrected import path
+import { useSession } from '@/contexts/SessionContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { proxyImageUrl } from '@/utils/imageProxy';
@@ -920,6 +921,9 @@ const MobileCoverCustomizationPage = () => {
           {product?.name || 'Loading Product...'}
         </h1>
         <div className="flex items-center space-x-2">
+          <Button onClick={handleSaveDesign} disabled={loading || isPlacingOrder} variant="outline">
+            <Save className="mr-2 h-4 w-4" /> Save Design
+          </Button>
           <Button onClick={handleDemoOrderClick} disabled={loading || isPlacingOrder} className="bg-green-600 hover:bg-green-700 text-white">
             {isPlacingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Demo Order
