@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import { PlusCircle, Edit, Trash2, ArrowLeft, Upload, Download, XCircle } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ArrowLeft, Upload, Download, XCircle, Search } from 'lucide-react';
 import { useSession } from '@/contexts/SessionContext';
 import Papa from 'papaparse';
 
@@ -49,6 +49,8 @@ const ProductManagementByBrandPage = () => {
   const [currentMockupImageUrl, setCurrentMockupImageUrl] = useState<string | null>(null); // For displaying current mockup image
   const [canvasWidth, setCanvasWidth] = useState<string>('300');
   const [canvasHeight, setCanvasHeight] = useState<string>('600');
+  const [searchQuery, setSearchQuery] = useState<string>(''); // New state for search query
+  const debounceTimeoutRef = useRef<number | null>(null); // Ref for debounce timeout
   const { toast } = useToast();
   const { user } = useSession();
   const importFileInputRef = useRef<HTMLInputElement>(null);
@@ -95,7 +97,7 @@ const ProductManagementByBrandPage = () => {
     setBrandName(brandData?.name || 'Unknown Brand');
 
     // Fetch products and their associated mockups
-    const { data, error: productsError } = await supabase
+    let query = supabase
       .from('products')
       .select(`
         id,
@@ -109,8 +111,14 @@ const ProductManagementByBrandPage = () => {
         mockups(id, image_url)
       `)
       .eq('category_id', categoryId)
-      .eq('brand_id', brandId)
-      .order('name', { ascending: true });
+      .eq('brand_id', brandId);
+
+    // Apply search filter if searchQuery is not empty
+    if (searchQuery) {
+      query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
+    }
+
+    const { data, error: productsError } = await query.order('name', { ascending: true });
 
     if (productsError) {
       console.error("Error fetching products:", productsError);
@@ -128,9 +136,21 @@ const ProductManagementByBrandPage = () => {
 
   useEffect(() => {
     if (categoryId && brandId) {
-      fetchProducts();
+      // Debounce the fetchProducts call
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+      debounceTimeoutRef.current = setTimeout(() => {
+        fetchProducts();
+      }, 300) as unknown as number; // Cast to number for clearTimeout
     }
-  }, [categoryId, brandId]);
+
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, [categoryId, brandId, searchQuery]); // Re-run effect when searchQuery changes
 
   const handleAddProduct = () => {
     setCurrentProduct(null);
@@ -549,7 +569,7 @@ const ProductManagementByBrandPage = () => {
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">
+        <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 flex-grow">
           Products for {brandName || 'Brand'} ({categoryName || 'Category'})
         </h1>
       </div>
@@ -557,7 +577,17 @@ const ProductManagementByBrandPage = () => {
       <Card>
         <CardHeader className="flex flex-row justify-between items-center">
           <CardTitle>Products List</CardTitle>
-          <div className="flex space-x-2">
+          <div className="flex space-x-2 items-center">
+            <div className="relative w-48">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search products..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 pr-3 py-2 rounded-md border border-input bg-background shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
+            </div>
             <Button onClick={handleExportProducts} variant="outline">
               <Download className="mr-2 h-4 w-4" /> Export CSV
             </Button>
