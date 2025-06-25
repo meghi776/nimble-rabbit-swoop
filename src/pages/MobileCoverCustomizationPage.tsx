@@ -666,7 +666,8 @@ const MobileCoverCustomizationPage = () => {
           img.onload = () => resolve(true);
           img.onerror = (e) => {
             console.error("Error loading mockup image for html2canvas:", e);
-            resolve(false);
+            // Do not reject, allow html2canvas to proceed even if this image fails
+            resolve(false); 
           };
           img.src = proxyImageUrl(mockupOverlayImageUrl);
         });
@@ -683,17 +684,32 @@ const MobileCoverCustomizationPage = () => {
         mockupImageElement.style.pointerEvents = 'auto';
       }
 
+      console.log("Attempting to capture canvas with html2canvas...");
       const canvas = await html2canvas(canvasContentRef.current, {
         useCORS: true,
-        allowTaint: true,
+        allowTaint: true, // Allow tainting, but it will prevent toDataURL if not truly CORS-compliant
         backgroundColor: null,
         scale: 1 / scaleFactor,
       });
-      return canvas.toDataURL('image/png');
+      console.log("html2canvas capture successful.");
+
+      const dataUrl = canvas.toDataURL('image/png');
+      console.log("Canvas toDataURL successful.");
+      return dataUrl;
 
     } catch (err: any) {
-      console.error("Error capturing design for preview:", err);
-      toast({ title: "Preview Failed", description: err.message || "An error occurred while generating preview.", variant: "destructive" });
+      console.error("Detailed Error capturing design for preview:", err);
+      console.error("Error name:", err.name);
+      console.error("Error message:", err.message);
+      if (err.stack) {
+        console.error("Error stack:", err.stack);
+      }
+      // Check for specific html2canvas error messages related to tainting
+      if (err.message && err.message.includes("Tainted canvases may not be exported")) {
+        toast({ title: "Preview Failed: CORS Issue", description: "The design contains images from another domain that are not configured for CORS. Please ensure Supabase Storage CORS settings are correct (Allowed Origins: *, Allowed Methods: GET).", variant: "destructive" });
+      } else {
+        toast({ title: "Preview Failed", description: err.message || "An unexpected error occurred while generating preview.", variant: "destructive" });
+      }
       return null;
     } finally {
       // Restore original styles
