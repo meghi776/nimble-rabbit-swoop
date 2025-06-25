@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogDescription, // Import DialogDescription
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,15 +28,15 @@ import {
   Eye,
   Download,
   ShoppingCart,
-  XCircle, // Added for delete handle
-  RotateCw, // Added for rotate handle
+  XCircle,
+  RotateCw,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSession } from '@/contexts/SessionContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { proxyImageUrl } from '@/utils/imageProxy'; // Import the proxy utility
+import { proxyImageUrl } from '@/utils/imageProxy';
 
 interface Product {
   id: string;
@@ -60,7 +60,7 @@ interface DesignElement {
   color?: string;
   fontFamily?: string;
   textShadow?: boolean;
-  rotation?: number; // Added rotation property
+  rotation?: number;
 }
 
 interface TouchState {
@@ -75,8 +75,8 @@ interface TouchState {
   initialFontSize?: number;
   initialMidX?: number;
   initialMidY?: number;
-  initialAngle?: number; // Added for rotation
-  initialRotation?: number; // Added for rotation
+  initialAngle?: number;
+  initialRotation?: number;
   activeElementId: string | null;
 }
 
@@ -89,8 +89,6 @@ const MobileCoverCustomizationPage = () => {
   const [designElements, setDesignElements] = useState<DesignElement[]>([]);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   
-  // States for text properties (now directly in component, not modal)
-  // currentTextContent is now only used for initial setting of the contentEditable div
   const [currentFontSize, setCurrentFontSize] = useState<number[]>([35]);
   const [currentTextColor, setCurrentTextColor] = useState('#000000');
   const [currentFontFamily, setCurrentFontFamily] = useState('Arial');
@@ -139,9 +137,7 @@ const MobileCoverCustomizationPage = () => {
 
   const selectedTextElement = selectedElementId ? designElements.find(el => el.id === selectedElementId && el.type === 'text') : null;
 
-  // Ref to store the contentEditable span elements
   const textElementRefs = useRef<Map<string, HTMLSpanElement>>(new Map());
-  // Ref to store the last known caret position
   const lastCaretPosition = useRef<{ node: Node | null; offset: number } | null>(null);
 
   useEffect(() => {
@@ -158,12 +154,15 @@ const MobileCoverCustomizationPage = () => {
         setError(productError.message);
         toast({ title: "Error", description: `Failed to load product: ${productError.message}`, variant: "destructive" });
       } else if (productData) {
+        console.log("Original mockup image URL from Supabase:", productData.mockups.length > 0 ? productData.mockups[0].image_url : "N/A");
+        const proxiedMockupUrl = productData.mockups.length > 0 && productData.mockups[0].image_url
+          ? proxyImageUrl(productData.mockups[0].image_url)
+          : null;
+        console.log("Proxied mockup image URL (after proxyImageUrl):", proxiedMockupUrl);
+
         setProduct({
           ...productData,
-          // Use proxyImageUrl for mockup_image_url if it's an external URL
-          mockup_image_url: productData.mockups.length > 0 && productData.mockups[0].image_url
-            ? proxyImageUrl(productData.mockups[0].image_url)
-            : null,
+          mockup_image_url: proxiedMockupUrl,
         });
         if (productData.mockups.length > 0 && productData.mockups[0].design_data) {
           try {
@@ -194,7 +193,6 @@ const MobileCoverCustomizationPage = () => {
     };
   }, [designElements]);
 
-  // Update text editing states when a text element is selected
   useEffect(() => {
     if (selectedTextElement) {
       setCurrentFontSize([selectedTextElement.fontSize || 35]);
@@ -202,7 +200,6 @@ const MobileCoverCustomizationPage = () => {
       setCurrentFontFamily(selectedTextElement.fontFamily || 'Arial');
       setCurrentTextShadowEnabled(selectedTextElement.textShadow || false);
     } else {
-      // Reset text editing states when no text element is selected
       setCurrentFontSize([35]);
       setCurrentTextColor('#000000');
       setCurrentFontFamily('Arial');
@@ -210,7 +207,6 @@ const MobileCoverCustomizationPage = () => {
     }
   }, [selectedTextElement]);
 
-  // Effect to restore caret position after text content updates
   useEffect(() => {
     if (selectedElementId && lastCaretPosition.current) {
       const element = designElements.find(el => el.id === selectedElementId);
@@ -220,23 +216,21 @@ const MobileCoverCustomizationPage = () => {
           const selection = window.getSelection();
           const range = document.createRange();
 
-          // Find the text node within the span. For simple text, it's usually the first child.
           const textNode = spanRef.firstChild;
 
           if (textNode && textNode.nodeType === Node.TEXT_NODE) {
-            // Ensure the offset is within the bounds of the new text length
             const newOffset = Math.min(lastCaretPosition.current.offset, textNode.length);
             range.setStart(textNode, newOffset);
-            range.collapse(true); // Collapse to the start point
+            range.collapse(true);
 
             selection?.removeAllRanges();
             selection?.addRange(range);
-            spanRef.focus(); // Explicitly focus the element
+            spanRef.focus();
           }
         }
       }
     }
-  }, [designElements, selectedElementId]); // Re-run when designElements change (text content changes)
+  }, [designElements, selectedElementId]);
 
   const addImageElement = (imageUrl: string) => {
     if (!product) {
@@ -315,7 +309,6 @@ const MobileCoverCustomizationPage = () => {
     const startHeight = element.height || 0;
     const startFontSize = element.fontSize || 35;
 
-    // Set touchState for resizing if it's a touch event
     if (isTouchEvent) {
       touchState.current = {
         mode: 'resizing',
@@ -339,8 +332,8 @@ const MobileCoverCustomizationPage = () => {
         const newHeight = Math.max(20, startHeight + (currentClientY - startY));
         updateElement(id, { width: newWidth, height: newHeight });
       } else if (element.type === 'text') {
-        const scaleFactor = (currentClientY - startY) / 10; // Adjust sensitivity as needed
-        const newFontSize = Math.max(10, startFontSize + scaleFactor); // Minimum font size 10
+        const scaleFactor = (currentClientY - startY) / 10;
+        const newFontSize = Math.max(10, startFontSize + scaleFactor);
         updateElement(id, { fontSize: newFontSize });
       }
     };
@@ -351,13 +344,13 @@ const MobileCoverCustomizationPage = () => {
       document.removeEventListener('touchmove', onMove);
       document.removeEventListener('touchend', onEnd);
       if (isTouchEvent) {
-        touchState.current.mode = 'none'; // Reset touch mode
+        touchState.current.mode = 'none';
       }
     };
 
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onEnd);
-    document.addEventListener('touchmove', onMove, { passive: false }); // passive: false for preventDefault
+    document.addEventListener('touchmove', onMove, { passive: false });
     document.addEventListener('touchend', onEnd);
   };
 
@@ -370,21 +363,18 @@ const MobileCoverCustomizationPage = () => {
     const clientX = isTouchEvent ? e.touches[0].clientX : e.clientX;
     const clientY = isTouchEvent ? e.touches[0].clientY : e.clientY;
 
-    const elementDiv = (e.currentTarget as HTMLElement).parentElement; // The draggable div
+    const elementDiv = (e.currentTarget as HTMLElement).parentElement;
     if (!elementDiv) return;
 
     const elementRect = elementDiv.getBoundingClientRect();
     const designAreaRect = designAreaRef.current.getBoundingClientRect();
 
-    // Calculate the center of the element relative to the design area
     const elementCenterX = element.x + elementRect.width / 2;
     const elementCenterY = element.y + elementRect.height / 2;
 
-    // Calculate the initial angle from the element's center to the mouse click
     const initialAngle = Math.atan2(clientY - (designAreaRect.top + elementCenterY), clientX - (designAreaRect.left + elementCenterX));
     const initialRotation = element.rotation || 0;
 
-    // Set touchState for rotating if it's a touch event
     if (isTouchEvent) {
       touchState.current = {
         mode: 'rotating',
@@ -405,7 +395,6 @@ const MobileCoverCustomizationPage = () => {
       const currentAngle = Math.atan2(currentClientY - (designAreaRect.top + elementCenterY), currentClientX - (designAreaRect.left + elementCenterX));
       let newRotation = initialRotation + (currentAngle - initialAngle) * (180 / Math.PI);
 
-      // Normalize rotation to be between 0 and 360
       newRotation = (newRotation % 360 + 360) % 360;
 
       updateElement(id, { rotation: newRotation });
@@ -417,7 +406,7 @@ const MobileCoverCustomizationPage = () => {
       document.removeEventListener('touchmove', onMove);
       document.removeEventListener('touchend', onEnd);
       if (isTouchEvent) {
-        touchState.current.mode = 'none'; // Reset touch mode
+        touchState.current.mode = 'none';
       }
     };
 
@@ -456,8 +445,8 @@ const MobileCoverCustomizationPage = () => {
 
       touchState.current = {
         mode: 'pinching',
-        startX: 0, // Not used for pinching
-        startY: 0, // Not used for pinching
+        startX: 0,
+        startY: 0,
         initialElementX: element.x,
         initialElementY: element.y,
         initialDistance: initialDistance,
@@ -472,7 +461,7 @@ const MobileCoverCustomizationPage = () => {
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    e.preventDefault(); // Prevent scrolling while dragging/resizing
+    e.preventDefault();
     const { mode, startX, startY, initialElementX, initialElementY, initialDistance, initialElementWidth, initialElementHeight, initialFontSize, initialMidX, initialMidY, initialAngle, initialRotation, activeElementId } = touchState.current;
     if (!activeElementId || !designAreaRef.current) return;
 
@@ -497,8 +486,8 @@ const MobileCoverCustomizationPage = () => {
         const newHeight = Math.max(20, initialElementHeight + (currentClientY - startY));
         updateElement(activeElementId, { width: newWidth, height: newHeight });
       } else if (element.type === 'text' && initialFontSize !== undefined) {
-        const scaleFactor = (currentClientY - startY) / 10; // Adjust sensitivity as needed
-        const newFontSize = Math.max(10, initialFontSize + scaleFactor); // Minimum font size 10
+        const scaleFactor = (currentClientY - startY) / 10;
+        const newFontSize = Math.max(10, initialFontSize + scaleFactor);
         updateElement(activeElementId, { fontSize: newFontSize });
       }
     } else if (mode === 'rotating' && e.touches.length === 1 && initialAngle !== undefined && initialRotation !== undefined) {
@@ -852,7 +841,6 @@ const MobileCoverCustomizationPage = () => {
     const defaultFontFamily = 'Arial';
     const defaultTextShadow = false;
 
-    // Calculate center position
     const centerX = (product.canvas_width / 2);
     const centerY = (product.canvas_height / 2);
 
@@ -860,21 +848,20 @@ const MobileCoverCustomizationPage = () => {
       id: `text-${Date.now()}`,
       type: 'text',
       value: defaultText,
-      x: centerX, // Centered X
-      y: centerY, // Centered Y
+      x: centerX,
+      y: centerY,
       fontSize: defaultFontSize,
       color: defaultColor,
       fontFamily: defaultFontFamily,
       textShadow: defaultTextShadow,
-      rotation: 0, // Default rotation
+      rotation: 0,
     };
     setDesignElements(prev => [...prev, newElement]);
-    setSelectedElementId(newElement.id); // Select the newly added element
+    setSelectedElementId(newElement.id);
     toast({ title: "Success", description: "New text element added!" });
   };
 
   const handleCanvasClick = (e: React.MouseEvent) => {
-    // Deselect element if clicking on the canvas background
     if (e.target === canvasContentRef.current || e.target === designAreaRef.current) {
       setSelectedElementId(null);
     }
@@ -886,7 +873,6 @@ const MobileCoverCustomizationPage = () => {
 
     if (selection && selection.rangeCount > 0) {
       const range = selection.getRangeAt(0);
-      // Only save if the caret is within the current target element
       if (target.contains(range.commonAncestorContainer)) {
         lastCaretPosition.current = {
           node: range.commonAncestorContainer,
@@ -943,7 +929,7 @@ const MobileCoverCustomizationPage = () => {
               backgroundPosition: 'center',
               touchAction: 'none',
             }}
-            onClick={handleCanvasClick} // Handle clicks on the background
+            onClick={handleCanvasClick}
           >
             <div
               ref={canvasContentRef}
@@ -956,7 +942,7 @@ const MobileCoverCustomizationPage = () => {
                 backgroundPosition: 'center',
                 touchAction: 'none',
               }}
-              onClick={handleCanvasClick} // Handle clicks on the background
+              onClick={handleCanvasClick}
             >
               {designElements.map(el => (
                 <div
@@ -966,8 +952,8 @@ const MobileCoverCustomizationPage = () => {
                   style={{
                     left: el.x,
                     top: el.y,
-                    transform: `rotate(${el.rotation || 0}deg)`, // Apply rotation
-                    transformOrigin: 'center center', // Rotate around its own center
+                    transform: `rotate(${el.rotation || 0}deg)`,
+                    transformOrigin: 'center center',
                     width: el.type === 'image' ? `${el.width}px` : 'auto',
                     height: el.type === 'image' ? `${el.height}px` : 'auto',
                     zIndex: 5,
@@ -980,38 +966,35 @@ const MobileCoverCustomizationPage = () => {
                 >
                   {el.type === 'text' ? (
                     <span
-                      ref={node => { // Assign ref to the span element
+                      ref={node => {
                         if (node) textElementRefs.current.set(el.id, node);
                         else textElementRefs.current.delete(el.id);
                       }}
-                      contentEditable={selectedElementId === el.id} // Make editable when selected
-                      onInput={(e) => handleTextContentInput(e, el.id)} // Update value on input
+                      contentEditable={selectedElementId === el.id}
+                      onInput={(e) => handleTextContentInput(e, el.id)}
                       onBlur={() => {
-                        // Optional: deselect or save on blur if needed
-                        // setSelectedElementId(null); 
                       }}
-                      suppressContentEditableWarning={true} // Suppress React warning
+                      suppressContentEditableWarning={true}
                       style={{
                         fontSize: `${el.fontSize}px`,
                         color: el.color,
                         whiteSpace: 'nowrap',
                         fontFamily: el.fontFamily,
                         textShadow: el.textShadow ? '2px 2px 4px rgba(0,0,0,0.5)' : 'none',
-                        outline: 'none', // Remove default outline
+                        outline: 'none',
                       }}
                     >
                       {el.value}
                     </span>
                   ) : (
                     <img
-                      src={el.value.startsWith('blob:') ? el.value : proxyImageUrl(el.value)} // Use proxy for external images
+                      src={el.value.startsWith('blob:') ? el.value : proxyImageUrl(el.value)}
                       alt="design element"
                       className="w-full h-full object-contain"
                     />
                   )}
                   {selectedElementId === el.id && (
                     <>
-                      {/* Resize handle for images */}
                       {el.type === 'image' && (
                         <div
                           className="absolute -bottom-2 -right-2 w-4 h-4 bg-blue-500 rounded-full cursor-nwse-resize"
@@ -1027,11 +1010,10 @@ const MobileCoverCustomizationPage = () => {
                               initialElementHeight: el.height,
                               activeElementId: el.id,
                             };
-                            handleResizeStart(e, el.id); // Call the existing logic
+                            handleResizeStart(e, el.id);
                           }}
                         />
                       )}
-                      {/* Resize handle for text */}
                       {el.type === 'text' && (
                         <div
                           className="absolute -bottom-2 -right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center cursor-nwse-resize"
@@ -1046,20 +1028,18 @@ const MobileCoverCustomizationPage = () => {
                               initialFontSize: el.fontSize,
                               activeElementId: el.id,
                             };
-                            handleResizeStart(e, el.id); // Call the existing logic
+                            handleResizeStart(e, el.id);
                           }}
                         >
                           <PlusCircle className="h-4 w-4 text-white" />
                         </div>
                       )}
-                      {/* Delete handle */}
                       <div
                         className="absolute -top-2 -left-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center cursor-pointer"
                         onClick={() => deleteElement(el.id)}
                       >
                         <XCircle className="h-4 w-4 text-white" />
                       </div>
-                      {/* Rotation handle */}
                       <div
                         className="absolute -top-2 -right-2 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center cursor-grab"
                         onMouseDown={(e) => handleRotateStart(e, el.id)}
@@ -1082,7 +1062,7 @@ const MobileCoverCustomizationPage = () => {
                             initialRotation: el.rotation,
                             activeElementId: el.id,
                           };
-                          handleRotateStart(e, el.id); // Call the existing logic
+                          handleRotateStart(e, el.id);
                         }}
                       >
                         <RotateCw className="h-4 w-4 text-white" />
@@ -1094,7 +1074,7 @@ const MobileCoverCustomizationPage = () => {
 
               {product.mockup_image_url && (
                 <img
-                  src={product.mockup_image_url} // This is already proxied in useEffect
+                  src={product.mockup_image_url}
                   alt="Phone Mockup Overlay"
                   className="absolute inset-0 w-full h-full object-contain pointer-events-none"
                   style={{ zIndex: 10 }}
@@ -1123,11 +1103,9 @@ const MobileCoverCustomizationPage = () => {
         className="hidden"
       />
 
-      {/* Dynamic Footer */}
       <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-lg p-2 flex flex-wrap justify-around items-center border-t border-gray-200 dark:border-gray-700 z-10">
         {selectedTextElement ? (
           <div className="flex flex-col w-full items-center">
-            {/* Font Family Horizontal List */}
             <div className="flex items-center justify-center w-full overflow-x-auto py-1 px-4 scrollbar-hide">
               {fontFamilies.map((font) => (
                 <Button
@@ -1146,7 +1124,6 @@ const MobileCoverCustomizationPage = () => {
               ))}
             </div>
 
-            {/* Color Circles */}
             <div className="flex items-center justify-center gap-1 p-1 w-full overflow-x-auto scrollbar-hide">
                 {predefinedColors.map((color) => (
                     <div
@@ -1164,7 +1141,6 @@ const MobileCoverCustomizationPage = () => {
           </div>
         ) : (
           <>
-            {/* General Design Tools */}
             <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={handleAddTextElement}>
               <Text className="h-6 w-6" />
               <span className="text-xs mt-1">Add Text</span>
@@ -1189,7 +1165,7 @@ const MobileCoverCustomizationPage = () => {
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Design Preview</DialogTitle>
-            <DialogDescription>This is a preview of your customized design.</DialogDescription> {/* Added description */}
+            <DialogDescription>This is a preview of your customized design.</DialogDescription>
           </DialogHeader>
           <div className="flex justify-center items-center py-4">
             {previewImageUrl ? (
@@ -1207,12 +1183,11 @@ const MobileCoverCustomizationPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Checkout Modal (kept for potential future use or if triggered elsewhere) */}
       <Dialog open={isCheckoutModalOpen} onOpenChange={setIsCheckoutModalOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Checkout</DialogTitle>
-            <DialogDescription>Please provide your details to complete the order.</DialogDescription> {/* Added description */}
+            <DialogDescription>Please provide your details to complete the order.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
@@ -1280,12 +1255,11 @@ const MobileCoverCustomizationPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Demo Order Modal */}
       <Dialog open={isDemoOrderModalOpen} onOpenChange={setIsDemoOrderModalOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Place Demo Order</DialogTitle>
-            <DialogDescription>Enter details for your demo order. This will not be a real purchase.</DialogDescription> {/* Added description */}
+            <DialogDescription>Enter details for your demo order. This will not be a real purchase.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
