@@ -245,14 +245,15 @@ const MobileCoverCustomizationPage = () => {
       toast({ title: "Error", description: "Product details not loaded. Cannot add image.", variant: "destructive" });
       return;
     }
-    const defaultImageWidth = product.canvas_width * 0.5;
-    const defaultImageHeight = product.canvas_height * 0.5;
+    // Set default width and height to 100% of canvas
+    const defaultImageWidth = product.canvas_width;
+    const defaultImageHeight = product.canvas_height;
     const newElement: DesignElement = {
       id: `image-${Date.now()}`,
       type: 'image',
       value: imageUrl,
-      x: (product.canvas_width - defaultImageWidth) / 2,
-      y: (product.canvas_height - defaultImageHeight) / 2,
+      x: 0, // Position at top-left
+      y: 0, // Position at top-left
       width: defaultImageWidth,
       height: defaultImageHeight,
       rotation: 0,
