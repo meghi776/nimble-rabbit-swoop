@@ -25,8 +25,6 @@ import {
   LayoutTemplate,
   Image,
   ArrowLeft,
-  Eye,
-  Download,
   ShoppingCart,
   XCircle,
   RotateCw,
@@ -99,8 +97,6 @@ const MobileCoverCustomizationPage = () => {
   const isMobile = useIsMobile();
   const { user } = useSession();
 
-  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
-  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
@@ -658,64 +654,6 @@ const MobileCoverCustomizationPage = () => {
     }
   };
 
-  const handlePreviewClick = async () => {
-    if (!canvasContentRef.current) {
-      toast({ title: "Error", description: "Design area not found for preview.", variant: "destructive" });
-      return;
-    }
-
-    setLoading(true);
-    let originalMockupPointerEvents = '';
-    const mockupImageElement = canvasContentRef.current.querySelector('img[alt="Phone Mockup Overlay"]');
-
-    try {
-      const selectedElementDiv = document.querySelector(`[data-element-id="${selectedElementId}"]`);
-      if (selectedElementDiv) {
-        selectedElementDiv.classList.remove('border-2', 'border-blue-500');
-      }
-
-      if (mockupImageElement instanceof HTMLElement) {
-        originalMockupPointerEvents = mockupImageElement.style.pointerEvents;
-        mockupImageElement.style.pointerEvents = 'auto';
-      }
-
-      const canvas = await html2canvas(canvasContentRef.current, {
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: null,
-      });
-      const dataUrl = canvas.toDataURL('image/png');
-      setPreviewImageUrl(dataUrl);
-      setIsPreviewModalOpen(true);
-    } catch (err) {
-      console.error("Error generating preview:", err);
-      toast({ title: "Error", description: "Failed to generate preview image.", variant: "destructive" });
-    } finally {
-      if (mockupImageElement instanceof HTMLElement) {
-        mockupImageElement.style.pointerEvents = originalMockupPointerEvents;
-      }
-      const selectedElementDiv = document.querySelector(`[data-element-id="${selectedElementId}"]`);
-      if (selectedElementDiv) {
-        selectedElementDiv.classList.add('border-2', 'border-blue-500');
-      }
-      setLoading(false);
-    }
-  };
-
-  const handleDownloadImage = () => {
-    if (previewImageUrl) {
-      const link = document.createElement('a');
-      link.href = previewImageUrl;
-      link.download = `${product?.name || 'custom_design'}_preview.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      toast({ title: "Success", description: "Image downloaded successfully!" });
-    } else {
-      toast({ title: "Error", description: "No image to download. Please generate a preview first.", variant: "destructive" });
-    }
-  };
-
   const handleBuyNowClick = () => {
     if (!user) {
       toast({ title: "Authentication Required", description: "Please log in to place an order.", variant: "destructive" });
@@ -928,9 +866,7 @@ const MobileCoverCustomizationPage = () => {
           {product?.name || 'Loading Product...'}
         </h1>
         <div className="flex items-center space-x-2">
-          <Button onClick={handlePreviewClick} variant="ghost" size="icon">
-            <Eye className="h-6 w-6 text-blue-600" />
-          </Button>
+          {/* Removed Preview Button */}
           <Button onClick={handleDemoOrderClick} disabled={loading || isPlacingOrder} className="bg-green-600 hover:bg-green-700 text-white">
             {isPlacingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Demo Order
@@ -1176,27 +1112,7 @@ const MobileCoverCustomizationPage = () => {
         )}
       </div>
 
-      <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Design Preview</DialogTitle>
-            <DialogDescription>This is a preview of your customized design.</DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-center items-center py-4">
-            {previewImageUrl ? (
-              <img src={previewImageUrl} alt="Design Preview" className="max-w-full h-auto border rounded-md" />
-            ) : (
-              <p>No preview available. Please try again.</p>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsPreviewModalOpen(false)}>Close</Button>
-            <Button onClick={handleDownloadImage} disabled={!previewImageUrl}>
-              <Download className="mr-2 h-4 w-4" /> Download Image
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Removed Image Preview Dialog */}
 
       <Dialog open={isCheckoutModalOpen} onOpenChange={setIsCheckoutModalOpen}>
         <DialogContent className="sm:max-w-[425px]">
