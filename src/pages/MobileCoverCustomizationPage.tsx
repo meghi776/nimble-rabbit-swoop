@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useSession } from '@/contexts/SessionContext';
+import { useSession } from '@/contexts/Session/SessionContext'; // Corrected import path
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { proxyImageUrl } from '@/utils/imageProxy';
@@ -624,6 +624,26 @@ const MobileCoverCustomizationPage = () => {
 
     const designData = JSON.stringify(savableDesignElements);
 
+    // Fetch user's profile for naming
+    let designerName = 'Customer';
+    if (user?.id) {
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('first_name, last_name')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) {
+        console.error("Error fetching user profile for design name:", profileError);
+        // Continue with default name if profile fetch fails
+      } else if (profileData) {
+        designerName = `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim();
+        if (!designerName) designerName = 'Customer'; // Fallback if names are empty
+      }
+    }
+
+    const designDisplayName = `${product.name} - ${designerName}'s Design`;
+
     const { data: existingMockup, error: fetchMockupError } = await supabase
       .from('mockups')
       .select('id')
@@ -640,7 +660,7 @@ const MobileCoverCustomizationPage = () => {
     if (existingMockup && existingMockup.length > 0) {
       const { error: updateError } = await supabase
         .from('mockups')
-        .update({ design_data: designData })
+        .update({ name: designDisplayName, designer: designerName, design_data: designData }) // Updated name and designer
         .eq('id', existingMockup[0].id);
 
       if (updateError) {
@@ -654,11 +674,11 @@ const MobileCoverCustomizationPage = () => {
         .from('mockups')
         .insert({
           product_id: product.id,
-          image_url: mockupOverlayImageUrl, // Use the new state variable for the mockup image URL
-          name: `${product.name} Custom Design`,
-          designer: 'Customer',
+          image_url: mockupOverlayImageUrl,
+          name: designDisplayName, // Updated name
+          designer: designerName, // Updated designer
           design_data: designData,
-          user_id: (await supabase.auth.getUser()).data.user?.id || null,
+          user_id: user?.id || null,
         });
 
       if (insertError) {
