@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { MadeWithDyad } from "@/components/made-with-dyad";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { supabase } from '@/integrations/supabase/client';
@@ -99,7 +98,11 @@ const Index = () => {
           )}
         </>
       )}
-      <MadeWithDyad />
+      <div className="p-4 text-center mt-8">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          &copy; {new Date().getFullYear()} All rights reserved by Puppala Mohan
+        </p>
+      </div>
     </div>
   );
 };
