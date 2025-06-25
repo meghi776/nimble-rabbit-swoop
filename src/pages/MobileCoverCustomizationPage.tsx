@@ -260,7 +260,7 @@ const MobileCoverCustomizationPage = () => {
     setDesignElements(prev => {
       const elementToDelete = prev.find(el => el.id === id);
       if (elementToDelete && elementToDelete.type === 'image' && elementToDelete.value.startsWith('blob:')) {
-        URL.revokeObjectURL(elementToDelete.value);
+        URL.revokeObjectURL(el.value);
       }
       return prev.filter(el => el.id !== id);
     });
@@ -1074,6 +1074,7 @@ const MobileCoverCustomizationPage = () => {
 
               {product.mockup_image_url && (
                 <img
+                  key={product.mockup_image_url} {/* Added key to force re-render */}
                   src={product.mockup_image_url}
                   alt="Phone Mockup Overlay"
                   className="absolute inset-0 w-full h-full object-contain pointer-events-none"
