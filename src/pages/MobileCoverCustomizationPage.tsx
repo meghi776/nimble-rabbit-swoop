@@ -228,6 +228,8 @@ const MobileCoverCustomizationPage = () => {
   }, [productId]);
 
   useEffect(() => {
+    // This cleanup is still relevant for any blob URLs that might exist from previous interactions
+    // or if an upload fails and a blob URL is temporarily used.
     return () => {
       designElements.forEach(el => {
         if (el.type === 'image' && el.value.startsWith('blob:')) {
@@ -607,15 +609,15 @@ const MobileCoverCustomizationPage = () => {
     };
   };
 
-  const handleFileUpload = async (file: Blob, bucketName: string, subfolder: string = '') => {
-    const fileExt = 'png'; // Assuming all uploads from canvas are png
+  const handleFileUpload = async (file: File | Blob, bucketName: string, subfolder: string = '') => {
+    const fileExt = file instanceof File ? file.name.split('.').pop() : 'png'; // Get extension for File, default to png for Blob
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
     const filePath = subfolder ? `${subfolder}/${fileName}` : fileName;
 
     const { data, error } = await supabase.storage
       .from(bucketName)
       .upload(filePath, file, {
-        contentType: 'image/png',
+        contentType: file instanceof File ? file.type : 'image/png', // Use file.type for File, default for Blob
         upsert: false,
       });
 
@@ -648,42 +650,6 @@ const MobileCoverCustomizationPage = () => {
     const selectedElementDiv = document.querySelector(`[data-element-id="${selectedElementId}"]`);
 
     try {
-      // 1. Upload any blob: images to Supabase storage
-      const elementsToProcess = [...designElements]; // Create a copy to modify URLs
-      const uploadedBlobUrls: string[] = []; // To keep track of blob URLs to revoke
-
-      for (let i = 0; i < elementsToProcess.length; i++) {
-        const el = elementsToProcess[i];
-        if (el.type === 'image' && el.value.startsWith('blob:')) {
-          try {
-            const response = await fetch(el.value);
-            const blob = await response.blob();
-            const uploadedUrl = await handleFileUpload(blob, 'order-mockups', 'user-uploads'); // Upload to 'user-uploads' subfolder
-            if (uploadedUrl) {
-              elementsToProcess[i] = { ...el, value: uploadedUrl }; // Update the URL in the copy
-              uploadedBlobUrls.push(el.value); // Add original blob URL to revoke list
-            } else {
-              // If upload fails, keep the original blob URL but warn
-              toast({
-                title: "Upload Failed",
-                description: `Failed to upload image for element ${el.id}. It might appear broken in download.`,
-                variant: "destructive",
-              });
-            }
-          } catch (fetchError) {
-            console.error("Error fetching blob for upload during download:", fetchError);
-            toast({
-              title: "Upload Error",
-              description: `Could not process image for download: ${fetchError}. It might appear broken.`,
-              variant: "destructive",
-            });
-          }
-        }
-      }
-
-      // Temporarily update designElements state for html2canvas to use the new URLs
-      setDesignElements(elementsToProcess);
-
       // Temporarily remove border from selected element for screenshot
       if (selectedElementDiv) {
         selectedElementDiv.classList.remove('border-2', 'border-blue-500');
@@ -712,9 +678,6 @@ const MobileCoverCustomizationPage = () => {
 
       toast({ title: "Success", description: "Design downloaded successfully!" });
 
-      // Revoke original blob URLs after successful download
-      uploadedBlobUrls.forEach(blobUrl => URL.revokeObjectURL(blobUrl));
-
     } catch (err: any) {
       console.error("Error downloading design:", err);
       toast({ title: "Download Failed", description: err.message || "An unexpected error occurred during download.", variant: "destructive" });
@@ -726,39 +689,33 @@ const MobileCoverCustomizationPage = () => {
       if (selectedElementDiv) {
         selectedElementDiv.classList.add('border-2', 'border-blue-500');
       }
-      // Revert designElements state to original (or updated with permanent URLs if needed for other operations)
-      // For now, we'll just re-fetch to ensure consistency if the page is not reloaded
-      // A more robust solution might involve managing a separate state for "display" vs "persisted" URLs
       setLoading(false);
-      // Re-fetch product and mockup to ensure designElements are consistent with what's in DB or initial load
-      // This is a simple way to reset the state after the temporary URL handling for download
-      const { data: productData, error: productError } = await supabase
-        .from('products')
-        .select('*, mockups(image_url, design_data)')
-        .eq('id', productId)
-        .single();
-
-      if (productData) {
-        const loadedElements: DesignElement[] = JSON.parse(productData.mockups[0]?.design_data as string || '[]').map((el: any) => ({
-          ...el,
-          width: el.width || (el.type === 'text' ? 200 : productData.canvas_width),
-          height: el.height || (el.type === 'text' ? 40 : productData.canvas_height),
-        }));
-        setDesignElements(loadedElements);
-      }
     }
   };
 
-  const handleImageFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const imageUrl = URL.createObjectURL(file);
-    addImageElement(imageUrl);
-    toast({ title: "Success", description: "Image added to design." });
+    setLoading(true);
+    toast({ title: "Uploading Image", description: "Please wait while your image is being uploaded...", duration: 3000 });
 
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+    try {
+      const uploadedUrl = await handleFileUpload(file, 'order-mockups', 'user-uploads'); // Upload to 'user-uploads' subfolder
+      if (uploadedUrl) {
+        addImageElement(uploadedUrl);
+        toast({ title: "Success", description: "Image uploaded and added to design." });
+      } else {
+        toast({ title: "Upload Failed", description: "Could not upload image. Please try again.", variant: "destructive" });
+      }
+    } catch (err: any) {
+      console.error("Error during image upload:", err);
+      toast({ title: "Upload Error", description: `An error occurred during upload: ${err.message}`, variant: "destructive" });
+    } finally {
+      setLoading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''; // Clear the file input
+      }
     }
   };
 
@@ -1074,7 +1031,7 @@ const MobileCoverCustomizationPage = () => {
                     </div>
                   ) : (
                     <img
-                      src={el.value.startsWith('blob:') ? el.value : proxyImageUrl(el.value)}
+                      src={proxyImageUrl(el.value)} // Always use proxyImageUrl for consistency
                       alt="design element"
                       className="w-full h-full object-contain"
                     />
