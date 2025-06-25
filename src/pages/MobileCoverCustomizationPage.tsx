@@ -612,7 +612,7 @@ const MobileCoverCustomizationPage = () => {
 
       if (insertError) {
         console.error("Error inserting new mockup with design:", insertError);
-        toast({ title: "Error", description: `Failed to save design: ${insertError.message}`, variant: "destructive" });
+        toast({ title: "Error", description: `Failed to save design: ${insert:Error.message}`, variant: "destructive" });
       } else {
         toast({ title: "Success", description: "Design saved successfully!" });
       }
@@ -1178,10 +1178,6 @@ const MobileCoverCustomizationPage = () => {
             </Button>
           </>
         )}
-        <Button onClick={handleBuyNowClick} disabled={loading || isPlacingOrder} className="flex flex-col h-auto p-2 bg-blue-600 hover:bg-blue-700 text-white">
-          <ShoppingCart className="h-6 w-6" />
-          <span className="text-xs mt-1">Buy Now</span>
-        </Button>
       </div>
 
       <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
