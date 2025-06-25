@@ -895,7 +895,7 @@ const MobileCoverCustomizationPage = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900" data-testid="main-customization-page">
       <header className="flex items-center justify-between py-2 px-4 bg-white dark:bg-gray-800 shadow-md">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="h-6 w-6" />
@@ -1052,7 +1052,7 @@ const MobileCoverCustomizationPage = () => {
                         className="absolute -top-2 -left-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center cursor-pointer"
                         onClick={() => deleteElement(el.id)}
                       >
-                        <XCircle className="h-4 w-4 text-white" />
+                        <XCircle className="h-4 w-4" />
                       </div>
                       {/* Rotation handle */}
                       <div
@@ -1080,7 +1080,7 @@ const MobileCoverCustomizationPage = () => {
                           handleRotateStart(e, el.id); // Call the existing logic
                         }}
                       >
-                        <RotateCw className="h-4 w-4 text-white" />
+                        <RotateCw className="h-4 w-4" />
                       </div>
                     </>
                   )}
