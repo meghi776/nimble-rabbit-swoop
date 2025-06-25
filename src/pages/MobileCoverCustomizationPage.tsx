@@ -520,8 +520,8 @@ const MobileCoverCustomizationPage = () => {
         initialElementX: element.x,
         initialElementY: element.y,
         initialDistance: initialDistance,
-        initialElementWidth: element.width,
-        initialElementHeight: element.height,
+        initialElementWidth: initialElementWidth,
+        initialElementHeight: initialElementHeight,
         initialFontSize: element.fontSize,
         initialMidX: initialMidX,
         initialMidY: initialMidY,
@@ -868,7 +868,7 @@ const MobileCoverCustomizationPage = () => {
           status: finalStatus,
           total_price: finalTotalPrice,
           ordered_design_image_url: orderedDesignImageUrl,
-          ordered_design_data: designElements,
+          ordered_design_data: designElements, // Store the design elements here
           type: finalOrderType,
         });
 
