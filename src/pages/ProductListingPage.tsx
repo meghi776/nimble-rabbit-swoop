@@ -119,15 +119,12 @@ const ProductListingPage = () => {
   return (
     <div className="min-h-screen flex flex-col items-center p-4 bg-gray-50 dark:bg-gray-900">
       <div className="w-full max-w-4xl mx-auto">
-        <div className="flex items-center mb-6">
+        <div className="flex items-center mb-6 justify-between"> {/* Added justify-between here */}
           <Link to={brandId ? `/categories/${categoryId}/brands` : '/'} className="mr-4">
             <Button variant="outline" size="icon">
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
-          <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 flex-grow">
-            {title}
-          </h1>
           <div className="relative w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
