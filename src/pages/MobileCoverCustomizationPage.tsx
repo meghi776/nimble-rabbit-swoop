@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useSession } from '@/contexts/SessionContext';
+import { useSession } '@/contexts/SessionContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { proxyImageUrl } from '@/utils/imageProxy';
@@ -295,9 +295,9 @@ const MobileCoverCustomizationPage = () => {
       let newX = moveEvent.clientX - designAreaRect.left - offsetX;
       let newY = moveEvent.clientY - designAreaRect.top - offsetY;
 
-      // Boundary checks for dragging
-      newX = Math.max(0, Math.min(newX, product.canvas_width - element.width));
-      newY = Math.max(0, Math.min(newY, product.canvas_height - element.height));
+      // Removed boundary checks for dragging
+      // newX = Math.max(0, Math.min(newX, product.canvas_width - element.width));
+      // newY = Math.max(0, Math.min(newY, product.canvas_height - element.height));
 
       updateElement(id, { x: newX, y: newY });
     };
@@ -491,9 +491,9 @@ const MobileCoverCustomizationPage = () => {
       let newX = initialElementX + (e.touches[0].clientX - startX);
       let newY = initialElementY + (e.touches[0].clientY - startY);
 
-      // Boundary checks for dragging
-      newX = Math.max(0, Math.min(newX, product.canvas_width - element.width));
-      newY = Math.max(0, Math.min(newY, product.canvas_height - element.height));
+      // Removed boundary checks for dragging
+      // newX = Math.max(0, Math.min(newX, product.canvas_width - element.width));
+      // newY = Math.max(0, Math.min(newY, product.canvas_height - element.height));
 
       updateElement(activeElementId, {
         x: newX,
