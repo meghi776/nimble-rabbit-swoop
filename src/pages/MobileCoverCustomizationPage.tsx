@@ -1069,15 +1069,15 @@ const MobileCoverCustomizationPage = () => {
       {/* Dynamic Footer */}
       <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-lg p-2 flex flex-wrap justify-around items-center border-t border-gray-200 dark:border-gray-700 z-10">
         {selectedTextElement ? (
-          <>
+          <div className="flex flex-wrap items-center justify-center gap-x-2 p-1 w-full">
             {/* Font Family Select */}
-            <div className="flex flex-col items-center p-2 w-full md:w-auto">
+            <div className="flex flex-col items-center">
               <Label htmlFor="font-family" className="text-xs mb-1">Font</Label>
               <Select value={currentFontFamily} onValueChange={(value) => {
                 setCurrentFontFamily(value);
                 updateElement(selectedTextElement.id, { fontFamily: value });
               }}>
-                <SelectTrigger id="font-family" className="w-full md:w-32">
+                <SelectTrigger id="font-family" className="w-28 h-8 text-xs">
                   <SelectValue placeholder="Font" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1089,23 +1089,42 @@ const MobileCoverCustomizationPage = () => {
                 </SelectContent>
               </Select>
             </div>
-            {/* Text Color Input */}
-            <div className="flex flex-col items-center p-2 w-full md:w-auto">
-              <Label htmlFor="text-color" className="text-xs mb-1">Color</Label>
-              <Input
-                id="text-color-custom"
-                type="color"
-                value={currentTextColor}
-                onChange={(e) => {
-                  setCurrentTextColor(e.target.value);
-                  updateElement(selectedTextElement.id, { color: e.target.value });
-                }}
-                className="w-10 h-10 p-0 border-none cursor-pointer"
-                title="Custom Color"
-              />
+
+            {/* Font Size Slider */}
+            <div className="flex flex-col items-center flex-1 min-w-[120px] max-w-[200px] px-2">
+                <Label htmlFor="font-size-slider" className="text-xs mb-1">Size</Label>
+                <Slider
+                    id="font-size-slider"
+                    min={10}
+                    max={100}
+                    step={1}
+                    value={currentFontSize}
+                    onValueChange={(value) => {
+                        setCurrentFontSize(value);
+                        updateElement(selectedTextElement.id, { fontSize: value[0] });
+                    }}
+                    className="w-full"
+                />
             </div>
+
+            {/* Color Circles */}
+            <div className="flex items-center gap-1 p-1">
+                {predefinedColors.map((color) => (
+                    <div
+                        key={color}
+                        className={`w-6 h-6 rounded-full cursor-pointer border-2 ${currentTextColor === color ? 'border-blue-500' : 'border-gray-300 dark:border-gray-600'}`}
+                        style={{ backgroundColor: color }}
+                        onClick={() => {
+                            setCurrentTextColor(color);
+                            updateElement(selectedTextElement.id, { color: color });
+                        }}
+                        title={color}
+                    />
+                ))}
+            </div>
+
             {/* Text Shadow Switch */}
-            <div className="flex items-center p-2 w-full md:w-auto justify-center">
+            <div className="flex items-center p-1">
               <Switch
                 id="text-shadow"
                 checked={currentTextShadowEnabled}
@@ -1116,7 +1135,7 @@ const MobileCoverCustomizationPage = () => {
               />
               <Label htmlFor="text-shadow" className="ml-2 text-xs">Shadow</Label>
             </div>
-          </>
+          </div>
         ) : (
           <>
             {/* General Design Tools */}
