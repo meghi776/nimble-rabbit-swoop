@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription, // Import DialogDescription
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,6 +36,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useSession } from '@/contexts/SessionContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { proxyImageUrl } from '@/utils/imageProxy'; // Import the proxy utility
 
 interface Product {
   id: string;
@@ -158,7 +160,10 @@ const MobileCoverCustomizationPage = () => {
       } else if (productData) {
         setProduct({
           ...productData,
-          mockup_image_url: productData.mockups.length > 0 ? productData.mockups[0].image_url : null,
+          // Use proxyImageUrl for mockup_image_url if it's an external URL
+          mockup_image_url: productData.mockups.length > 0 && productData.mockups[0].image_url
+            ? proxyImageUrl(productData.mockups[0].image_url)
+            : null,
         });
         if (productData.mockups.length > 0 && productData.mockups[0].design_data) {
           try {
@@ -713,7 +718,7 @@ const MobileCoverCustomizationPage = () => {
     const finalCustomerName = isDemo ? 'Demo User' : customerName;
     const finalCustomerAddress = isDemo ? demoOrderAddress : customerAddress;
     const finalCustomerPhone = isDemo ? '0000000000' : customerPhone;
-    const finalPaymentMethod = isDemo ? 'Demo' : paymentMethod;
+    const finalPaymentMethod = isDemo ? 'Demo' : 'COD';
     const finalStatus = isDemo ? 'Demo' : 'Pending';
     const finalTotalPrice = isDemo ? parseFloat(demoOrderPrice) : product.price;
     const finalOrderType = isDemo ? 'demo' : 'normal';
@@ -999,7 +1004,7 @@ const MobileCoverCustomizationPage = () => {
                     </span>
                   ) : (
                     <img
-                      src={el.value}
+                      src={el.value.startsWith('blob:') ? el.value : proxyImageUrl(el.value)} // Use proxy for external images
                       alt="design element"
                       className="w-full h-full object-contain"
                     />
@@ -1089,7 +1094,7 @@ const MobileCoverCustomizationPage = () => {
 
               {product.mockup_image_url && (
                 <img
-                  src={product.mockup_image_url}
+                  src={product.mockup_image_url} // This is already proxied in useEffect
                   alt="Phone Mockup Overlay"
                   className="absolute inset-0 w-full h-full object-contain pointer-events-none"
                   style={{ zIndex: 10 }}
@@ -1184,6 +1189,7 @@ const MobileCoverCustomizationPage = () => {
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Design Preview</DialogTitle>
+            <DialogDescription>This is a preview of your customized design.</DialogDescription> {/* Added description */}
           </DialogHeader>
           <div className="flex justify-center items-center py-4">
             {previewImageUrl ? (
@@ -1206,6 +1212,7 @@ const MobileCoverCustomizationPage = () => {
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Checkout</DialogTitle>
+            <DialogDescription>Please provide your details to complete the order.</DialogDescription> {/* Added description */}
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
@@ -1278,6 +1285,7 @@ const MobileCoverCustomizationPage = () => {
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Place Demo Order</DialogTitle>
+            <DialogDescription>Enter details for your demo order. This will not be a real purchase.</DialogDescription> {/* Added description */}
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
