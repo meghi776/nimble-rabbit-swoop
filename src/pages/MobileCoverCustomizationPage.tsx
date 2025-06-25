@@ -27,6 +27,8 @@ import {
   Eye,
   Download,
   ShoppingCart,
+  XCircle, // Added for delete handle
+  RotateCw, // Added for rotate handle
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -56,6 +58,7 @@ interface DesignElement {
   color?: string;
   fontFamily?: string;
   textShadow?: boolean;
+  rotation?: number; // Added rotation property
 }
 
 interface TouchState {
@@ -83,8 +86,8 @@ const MobileCoverCustomizationPage = () => {
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   
   // States for text properties (now directly in component, not modal)
-  const [currentTextContent, setCurrentTextContent] = useState('');
-  const [currentFontSize, setCurrentFontSize] = useState<number[]>([35]); // Still needed for initial value and touch updates
+  const [currentTextContent, setCurrentTextContent] = useState(''); // Kept for initial sync, but editing happens on canvas
+  const [currentFontSize, setCurrentFontSize] = useState<number[]>([35]);
   const [currentTextColor, setCurrentTextColor] = useState('#000000');
   const [currentFontFamily, setCurrentFontFamily] = useState('Arial');
   const [currentTextShadowEnabled, setCurrentTextShadowEnabled] = useState(false);
@@ -272,6 +275,44 @@ const MobileCoverCustomizationPage = () => {
       const newWidth = Math.max(20, startWidth + (moveEvent.clientX - startX));
       const newHeight = Math.max(20, startHeight + (moveEvent.clientY - startY));
       updateElement(id, { width: newWidth, height: newHeight });
+    };
+
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  };
+
+  const handleRotateMouseDown = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    const element = designElements.find(el => el.id === id);
+    if (!element || !designAreaRef.current) return;
+
+    const elementDiv = e.currentTarget.parentElement; // The draggable div
+    if (!elementDiv) return;
+
+    const elementRect = elementDiv.getBoundingClientRect();
+    const designAreaRect = designAreaRef.current.getBoundingClientRect();
+
+    // Calculate the center of the element relative to the design area
+    const elementCenterX = element.x + elementRect.width / 2;
+    const elementCenterY = element.y + elementRect.height / 2;
+
+    // Calculate the initial angle from the element's center to the mouse click
+    const initialAngle = Math.atan2(e.clientY - (designAreaRect.top + elementCenterY), e.clientX - (designAreaRect.left + elementCenterX));
+    const initialRotation = element.rotation || 0;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const currentAngle = Math.atan2(moveEvent.clientY - (designAreaRect.top + elementCenterY), moveEvent.clientX - (designAreaRect.left + elementCenterX));
+      let newRotation = initialRotation + (currentAngle - initialAngle) * (180 / Math.PI);
+
+      // Normalize rotation to be between 0 and 360
+      newRotation = (newRotation % 360 + 360) % 360;
+
+      updateElement(id, { rotation: newRotation });
     };
 
     const onMouseUp = () => {
@@ -683,8 +724,8 @@ const MobileCoverCustomizationPage = () => {
     const defaultTextShadow = false;
 
     // Calculate center position
-    const centerX = (product.canvas_width / 2) - (defaultText.length * (defaultFontSize / 2) / 2); // Rough centering
-    const centerY = (product.canvas_height / 2) - (defaultFontSize / 2);
+    const centerX = (product.canvas_width / 2);
+    const centerY = (product.canvas_height / 2);
 
     const newElement: DesignElement = {
       id: `text-${Date.now()}`,
@@ -696,6 +737,7 @@ const MobileCoverCustomizationPage = () => {
       color: defaultColor,
       fontFamily: defaultFontFamily,
       textShadow: defaultTextShadow,
+      rotation: 0, // Default rotation
     };
     setDesignElements(prev => [...prev, newElement]);
     setSelectedElementId(newElement.id); // Select the newly added element
@@ -776,7 +818,8 @@ const MobileCoverCustomizationPage = () => {
                   style={{
                     left: el.x,
                     top: el.y,
-                    transformOrigin: 'center center',
+                    transform: `rotate(${el.rotation || 0}deg)`, // Apply rotation
+                    transformOrigin: 'center center', // Rotate around its own center
                     width: el.type === 'image' ? `${el.width}px` : 'auto',
                     height: el.type === 'image' ? `${el.height}px` : 'auto',
                     zIndex: 5,
@@ -788,17 +831,44 @@ const MobileCoverCustomizationPage = () => {
                   onTouchEnd={handleTouchEnd}
                 >
                   {el.type === 'text' ? (
-                    <span
-                      style={{
-                        fontSize: `${el.fontSize}px`,
-                        color: el.color,
-                        whiteSpace: 'nowrap',
-                        fontFamily: el.fontFamily,
-                        textShadow: el.textShadow ? '2px 2px 4px rgba(0,0,0,0.5)' : 'none',
-                      }}
-                    >
-                      {el.value}
-                    </span>
+                    selectedElementId === el.id ? (
+                      <Textarea
+                        value={el.value}
+                        onChange={(e) => updateElement(el.id, { value: e.target.value })}
+                        onBlur={() => setSelectedElementId(null)} // Deselect on blur
+                        autoFocus
+                        style={{
+                          fontSize: `${el.fontSize}px`,
+                          color: el.color,
+                          fontFamily: el.fontFamily,
+                          textShadow: el.textShadow ? '2px 2px 4px rgba(0,0,0,0.5)' : 'none',
+                          background: 'transparent',
+                          border: 'none',
+                          resize: 'none', // Disable textarea resize handle
+                          overflow: 'hidden', // Hide scrollbar
+                          width: 'auto', // Allow content to dictate width
+                          height: 'auto', // Allow content to dictate height
+                          minWidth: '20px', // Minimum size
+                          minHeight: '20px',
+                          padding: '0',
+                          margin: '0',
+                          lineHeight: '1', // Prevent extra line height
+                        }}
+                        className="outline-none" // Remove default focus outline
+                      />
+                    ) : (
+                      <span
+                        style={{
+                          fontSize: `${el.fontSize}px`,
+                          color: el.color,
+                          whiteSpace: 'nowrap',
+                          fontFamily: el.fontFamily,
+                          textShadow: el.textShadow ? '2px 2px 4px rgba(0,0,0,0.5)' : 'none',
+                        }}
+                      >
+                        {el.value}
+                      </span>
+                    )
                   ) : (
                     <img
                       src={el.value}
@@ -806,11 +876,29 @@ const MobileCoverCustomizationPage = () => {
                       className="w-full h-full object-contain"
                     />
                   )}
-                  {selectedElementId === el.id && el.type === 'image' && (
-                    <div
-                      className="absolute -bottom-2 -right-2 w-4 h-4 bg-blue-500 rounded-full cursor-nwse-resize"
-                      onMouseDown={(e) => handleResizeMouseDown(e, el.id)}
-                    />
+                  {selectedElementId === el.id && (
+                    <>
+                      {el.type === 'image' && (
+                        <div
+                          className="absolute -bottom-2 -right-2 w-4 h-4 bg-blue-500 rounded-full cursor-nwse-resize"
+                          onMouseDown={(e) => handleResizeMouseDown(e, el.id)}
+                        />
+                      )}
+                      {/* Delete handle */}
+                      <div
+                        className="absolute -top-2 -left-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center cursor-pointer"
+                        onClick={() => deleteElement(el.id)}
+                      >
+                        <XCircle className="h-4 w-4 text-white" />
+                      </div>
+                      {/* Rotation handle */}
+                      <div
+                        className="absolute -top-2 -right-2 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center cursor-grab"
+                        onMouseDown={(e) => handleRotateMouseDown(e, el.id)}
+                      >
+                        <RotateCw className="h-4 w-4 text-white" />
+                      </div>
+                    </>
                   )}
                 </div>
               ))}
@@ -850,21 +938,7 @@ const MobileCoverCustomizationPage = () => {
       <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-lg p-2 flex flex-wrap justify-around items-center border-t border-gray-200 dark:border-gray-700 z-10">
         {selectedTextElement ? (
           <>
-            {/* Text Editing Options */}
-            <div className="flex flex-col items-center p-2 w-full md:w-auto">
-              <Label htmlFor="text-content" className="sr-only">Text Content</Label>
-              <Input
-                id="text-content"
-                placeholder="Edit text"
-                value={currentTextContent}
-                onChange={(e) => {
-                  setCurrentTextContent(e.target.value);
-                  updateElement(selectedTextElement.id, { value: e.target.value });
-                }}
-                className="w-full md:w-48 mb-2"
-              />
-            </div>
-            {/* Removed Font Size Slider as requested */}
+            {/* Text Editing Options (only font, color, shadow remain here) */}
             <div className="flex flex-col items-center p-2 w-full md:w-auto">
               <Label htmlFor="font-family" className="text-xs mb-1">Font</Label>
               <Select value={currentFontFamily} onValueChange={(value) => {
@@ -908,6 +982,7 @@ const MobileCoverCustomizationPage = () => {
               />
               <Label htmlFor="text-shadow" className="ml-2 text-xs">Shadow</Label>
             </div>
+            {/* Delete button for selected element (now also available on element itself) */}
             <Button
               variant="destructive"
               className="flex flex-col h-auto p-2"
