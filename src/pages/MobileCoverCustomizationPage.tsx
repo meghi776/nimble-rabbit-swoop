@@ -88,7 +88,7 @@ const MobileCoverCustomizationPage = () => {
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   
   // States for text properties (now directly in component, not modal)
-  const [currentTextContent, setCurrentTextContent] = useState('');
+  // currentTextContent is now only used for initial setting of the contentEditable div
   const [currentFontSize, setCurrentFontSize] = useState<number[]>([35]);
   const [currentTextColor, setCurrentTextColor] = useState('#000000');
   const [currentFontFamily, setCurrentFontFamily] = useState('Arial');
@@ -186,14 +186,12 @@ const MobileCoverCustomizationPage = () => {
   // Update text editing states when a text element is selected
   useEffect(() => {
     if (selectedTextElement) {
-      setCurrentTextContent(selectedTextElement.value);
       setCurrentFontSize([selectedTextElement.fontSize || 35]);
       setCurrentTextColor(selectedTextElement.color || '#000000');
       setCurrentFontFamily(selectedTextElement.fontFamily || 'Arial');
       setCurrentTextShadowEnabled(selectedTextElement.textShadow || false);
     } else {
       // Reset text editing states when no text element is selected
-      setCurrentTextContent('');
       setCurrentFontSize([35]);
       setCurrentTextColor('#000000');
       setCurrentFontFamily('Arial');
@@ -263,96 +261,48 @@ const MobileCoverCustomizationPage = () => {
     document.addEventListener('mouseup', onMouseUp);
   };
 
-  const handleResizeStart = (e: React.MouseEvent | React.TouchEvent, id: string) => {
+  const handleTouchStart = (e: React.TouchEvent, id: string) => {
     e.stopPropagation();
-    const element = designElements.find(el => el.id === id);
-    if (!element) return;
-
-    const isTouchEvent = 'touches' in e;
-    const clientX = isTouchEvent ? e.touches[0].clientX : e.clientX;
-    const clientY = isTouchEvent ? e.touches[0].clientY : e.clientY;
-
-    const startX = clientX;
-    const startY = clientY;
-    const startWidth = element.width || 0;
-    const startHeight = element.height || 0;
-    const startFontSize = element.fontSize || 35;
-
-    const onMove = (moveEvent: MouseEvent | TouchEvent) => {
-      const currentClientX = 'touches' in moveEvent ? moveEvent.touches[0].clientX : moveEvent.clientX;
-      const currentClientY = 'touches' in moveEvent ? moveEvent.touches[0].clientY : moveEvent.clientY;
-
-      if (element.type === 'image') {
-        const newWidth = Math.max(20, startWidth + (currentClientX - startX));
-        const newHeight = Math.max(20, startHeight + (currentClientY - startY));
-        updateElement(id, { width: newWidth, height: newHeight });
-      } else if (element.type === 'text') {
-        const scaleFactor = (currentClientY - startY) / 10; // Adjust sensitivity as needed
-        const newFontSize = Math.max(10, startFontSize + scaleFactor); // Minimum font size 10
-        updateElement(id, { fontSize: newFontSize });
-      }
-    };
-
-    const onEnd = () => {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onEnd);
-      document.removeEventListener('touchmove', onMove);
-      document.removeEventListener('touchend', onEnd);
-    };
-
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onEnd);
-    document.addEventListener('touchmove', onMove, { passive: false }); // passive: false for preventDefault
-    document.addEventListener('touchend', onEnd);
-  };
-
-  const handleRotateStart = (e: React.MouseEvent | React.TouchEvent, id: string) => {
-    e.stopPropagation();
+    setSelectedElementId(id);
     const element = designElements.find(el => el.id === id);
     if (!element || !designAreaRef.current) return;
 
-    const isTouchEvent = 'touches' in e;
-    const clientX = isTouchEvent ? e.touches[0].clientX : e.clientX;
-    const clientY = isTouchEvent ? e.touches[0].clientY : e.clientY;
-
-    const elementDiv = (e.currentTarget as HTMLElement).parentElement; // The draggable div
-    if (!elementDiv) return;
-
-    const elementRect = elementDiv.getBoundingClientRect();
     const designAreaRect = designAreaRef.current.getBoundingClientRect();
 
-    // Calculate the center of the element relative to the design area
-    const elementCenterX = element.x + elementRect.width / 2;
-    const elementCenterY = element.y + elementRect.height / 2;
+    if (e.touches.length === 1) {
+      touchState.current = {
+        mode: 'dragging',
+        startX: e.touches[0].clientX,
+        startY: e.touches[0].clientY,
+        initialElementX: element.x,
+        initialElementY: element.y,
+        activeElementId: id,
+      };
+    } else if (e.touches.length === 2) {
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      const initialDistance = Math.sqrt(
+        Math.pow(touch2.clientX - touch1.clientX, 2) +
+        Math.pow(touch2.clientY - touch1.clientY, 2)
+      );
+      const initialMidX = (touch1.clientX + touch2.clientX) / 2 - designAreaRect.left;
+      const initialMidY = (touch1.clientY + touch2.clientY) / 2 - designAreaRect.top;
 
-    // Calculate the initial angle from the element's center to the mouse click
-    const initialAngle = Math.atan2(clientY - (designAreaRect.top + elementCenterY), clientX - (designAreaRect.left + elementCenterX));
-    const initialRotation = element.rotation || 0;
-
-    const onMove = (moveEvent: MouseEvent | TouchEvent) => {
-      const currentClientX = 'touches' in moveEvent ? moveEvent.touches[0].clientX : moveEvent.clientX;
-      const currentClientY = 'touches' in moveEvent ? moveEvent.touches[0].clientY : moveEvent.clientY;
-
-      const currentAngle = Math.atan2(currentClientY - (designAreaRect.top + elementCenterY), currentClientX - (designAreaRect.left + elementCenterX));
-      let newRotation = initialRotation + (currentAngle - initialAngle) * (180 / Math.PI);
-
-      // Normalize rotation to be between 0 and 360
-      newRotation = (newRotation % 360 + 360) % 360;
-
-      updateElement(id, { rotation: newRotation });
-    };
-
-    const onEnd = () => {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onEnd);
-      document.removeEventListener('touchmove', onMove);
-      document.removeEventListener('touchend', onEnd);
-    };
-
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onEnd);
-    document.addEventListener('touchmove', onMove, { passive: false });
-    document.addEventListener('touchend', onEnd);
+      touchState.current = {
+        mode: 'pinching',
+        startX: 0, // Not used for pinching
+        startY: 0, // Not used for pinching
+        initialElementX: element.x,
+        initialElementY: element.y,
+        initialDistance: initialDistance,
+        initialElementWidth: element.width,
+        initialElementHeight: element.height,
+        initialFontSize: element.fontSize,
+        initialMidX: initialMidX,
+        initialMidY: initialMidY,
+        activeElementId: id,
+      };
+    }
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -754,7 +704,7 @@ const MobileCoverCustomizationPage = () => {
     };
     setDesignElements(prev => [...prev, newElement]);
     setSelectedElementId(newElement.id); // Select the newly added element
-    setCurrentTextContent(defaultText); // Set the content for the input field immediately
+    // No need to set currentTextContent here, as it's directly editable on canvas
     toast({ title: "Success", description: "New text element added!" });
   };
 
@@ -763,6 +713,11 @@ const MobileCoverCustomizationPage = () => {
     if (e.target === canvasContentRef.current || e.target === designAreaRef.current) {
       setSelectedElementId(null);
     }
+  };
+
+  const handleTextContentInput = (e: React.FormEvent<HTMLSpanElement>, id: string) => {
+    const newText = e.currentTarget.innerText;
+    updateElement(id, { value: newText });
   };
 
   return (
@@ -846,12 +801,20 @@ const MobileCoverCustomizationPage = () => {
                 >
                   {el.type === 'text' ? (
                     <span
+                      contentEditable={selectedElementId === el.id} // Make editable when selected
+                      onInput={(e) => handleTextContentInput(e, el.id)} // Update value on input
+                      onBlur={() => {
+                        // Optional: deselect or save on blur if needed
+                        // setSelectedElementId(null); 
+                      }}
+                      suppressContentEditableWarning={true} // Suppress React warning
                       style={{
                         fontSize: `${el.fontSize}px`,
                         color: el.color,
                         whiteSpace: 'nowrap',
                         fontFamily: el.fontFamily,
                         textShadow: el.textShadow ? '2px 2px 4px rgba(0,0,0,0.5)' : 'none',
+                        outline: 'none', // Remove default outline
                       }}
                     >
                       {el.value}
@@ -981,20 +944,6 @@ const MobileCoverCustomizationPage = () => {
       <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-lg p-2 flex flex-wrap justify-around items-center border-t border-gray-200 dark:border-gray-700 z-10">
         {selectedTextElement ? (
           <>
-            {/* Text Content Input */}
-            <div className="flex flex-col items-center p-2 w-full md:w-auto">
-              <Label htmlFor="text-content" className="sr-only">Text Content</Label>
-              <Input
-                id="text-content"
-                placeholder="Edit text"
-                value={currentTextContent}
-                onChange={(e) => {
-                  setCurrentTextContent(e.target.value);
-                  updateElement(selectedTextElement.id, { value: e.target.value });
-                }}
-                className="w-full md:w-48 mb-2"
-              />
-            </div>
             {/* Font Family Select */}
             <div className="flex flex-col items-center p-2 w-full md:w-auto">
               <Label htmlFor="font-family" className="text-xs mb-1">Font</Label>
