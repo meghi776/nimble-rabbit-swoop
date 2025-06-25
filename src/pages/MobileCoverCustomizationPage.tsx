@@ -27,8 +27,7 @@ import {
   Eye,
   Download,
   ShoppingCart,
-  Check, // For save text button
-} from 'lucide-react';
+} from 'lucide-react'; // Removed Check icon as it's no longer needed for 'Apply'
 import html2canvas from 'html2canvas';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSession } from '@/contexts/SessionContext';
@@ -703,24 +702,6 @@ const MobileCoverCustomizationPage = () => {
     toast({ title: "Success", description: "New text element added!" });
   };
 
-  const handleUpdateTextProperties = () => {
-    if (!selectedTextElement) return;
-
-    if (!currentTextContent.trim()) {
-      toast({ title: "Error", description: "Text cannot be empty.", variant: "destructive" });
-      return;
-    }
-
-    updateElement(selectedTextElement.id, {
-      value: currentTextContent,
-      fontSize: currentFontSize[0],
-      color: currentTextColor,
-      fontFamily: currentFontFamily,
-      textShadow: currentTextShadowEnabled,
-    });
-    toast({ title: "Success", description: "Text properties updated!" });
-  };
-
   const handleCanvasClick = (e: React.MouseEvent) => {
     // Deselect element if clicking on the canvas background
     if (e.target === canvasContentRef.current || e.target === designAreaRef.current) {
@@ -876,7 +857,10 @@ const MobileCoverCustomizationPage = () => {
                 id="text-content"
                 placeholder="Edit text"
                 value={currentTextContent}
-                onChange={(e) => setCurrentTextContent(e.target.value)}
+                onChange={(e) => {
+                  setCurrentTextContent(e.target.value);
+                  updateElement(selectedTextElement.id, { value: e.target.value });
+                }}
                 className="w-full md:w-48 mb-2"
               />
             </div>
@@ -888,13 +872,19 @@ const MobileCoverCustomizationPage = () => {
                 max={100}
                 step={1}
                 value={currentFontSize}
-                onValueChange={setCurrentFontSize}
+                onValueChange={(value) => {
+                  setCurrentFontSize(value);
+                  updateElement(selectedTextElement.id, { fontSize: value[0] });
+                }}
                 className="w-full md:w-32"
               />
             </div>
             <div className="flex flex-col items-center p-2 w-full md:w-auto">
               <Label htmlFor="font-family" className="text-xs mb-1">Font</Label>
-              <Select value={currentFontFamily} onValueChange={setCurrentFontFamily}>
+              <Select value={currentFontFamily} onValueChange={(value) => {
+                setCurrentFontFamily(value);
+                updateElement(selectedTextElement.id, { fontFamily: value });
+              }}>
                 <SelectTrigger id="font-family" className="w-full md:w-32">
                   <SelectValue placeholder="Font" />
                 </SelectTrigger>
@@ -913,7 +903,10 @@ const MobileCoverCustomizationPage = () => {
                 id="text-color-custom"
                 type="color"
                 value={currentTextColor}
-                onChange={(e) => setCurrentTextColor(e.target.value)}
+                onChange={(e) => {
+                  setCurrentTextColor(e.target.value);
+                  updateElement(selectedTextElement.id, { color: e.target.value });
+                }}
                 className="w-10 h-10 p-0 border-none cursor-pointer"
                 title="Custom Color"
               />
@@ -922,14 +915,14 @@ const MobileCoverCustomizationPage = () => {
               <Switch
                 id="text-shadow"
                 checked={currentTextShadowEnabled}
-                onCheckedChange={setCurrentTextShadowEnabled}
+                onCheckedChange={(checked) => {
+                  setCurrentTextShadowEnabled(checked);
+                  updateElement(selectedTextElement.id, { textShadow: checked });
+                }}
               />
               <Label htmlFor="text-shadow" className="ml-2 text-xs">Shadow</Label>
             </div>
-            <Button variant="default" className="flex flex-col h-auto p-2 bg-blue-600 hover:bg-blue-700 text-white" onClick={handleUpdateTextProperties}>
-              <Check className="h-6 w-6" />
-              <span className="text-xs mt-1">Apply</span>
-            </Button>
+            {/* Removed the "Apply" button */}
             <Button
               variant="destructive"
               className="flex flex-col h-auto p-2"
