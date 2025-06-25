@@ -28,7 +28,7 @@ import {
   ShoppingCart,
   XCircle,
   RotateCw,
-  Download, // Only Download icon remains
+  Download,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -65,7 +65,7 @@ interface TouchState {
   startX: number;
   startY: number;
   initialElementX: number;
-  initialElementY: 0;
+  initialElementY: number;
   initialDistance?: number;
   initialElementWidth?: number;
   initialElementHeight?: number;
@@ -636,8 +636,6 @@ const MobileCoverCustomizationPage = () => {
     return publicUrlData.publicUrl;
   };
 
-  // Removed handleSaveDesign function
-
   const handleDownloadDesign = async () => {
     if (!canvasContentRef.current || !product) {
       toast({ title: "Error", description: "Design area not found or product not loaded.", variant: "destructive" });
@@ -650,6 +648,42 @@ const MobileCoverCustomizationPage = () => {
     const selectedElementDiv = document.querySelector(`[data-element-id="${selectedElementId}"]`);
 
     try {
+      // 1. Upload any blob: images to Supabase storage
+      const elementsToProcess = [...designElements]; // Create a copy to modify URLs
+      const uploadedBlobUrls: string[] = []; // To keep track of blob URLs to revoke
+
+      for (let i = 0; i < elementsToProcess.length; i++) {
+        const el = elementsToProcess[i];
+        if (el.type === 'image' && el.value.startsWith('blob:')) {
+          try {
+            const response = await fetch(el.value);
+            const blob = await response.blob();
+            const uploadedUrl = await handleFileUpload(blob, 'order-mockups', 'user-uploads'); // Upload to 'user-uploads' subfolder
+            if (uploadedUrl) {
+              elementsToProcess[i] = { ...el, value: uploadedUrl }; // Update the URL in the copy
+              uploadedBlobUrls.push(el.value); // Add original blob URL to revoke list
+            } else {
+              // If upload fails, keep the original blob URL but warn
+              toast({
+                title: "Upload Failed",
+                description: `Failed to upload image for element ${el.id}. It might appear broken in download.`,
+                variant: "destructive",
+              });
+            }
+          } catch (fetchError) {
+            console.error("Error fetching blob for upload during download:", fetchError);
+            toast({
+              title: "Upload Error",
+              description: `Could not process image for download: ${fetchError}. It might appear broken.`,
+              variant: "destructive",
+            });
+          }
+        }
+      }
+
+      // Temporarily update designElements state for html2canvas to use the new URLs
+      setDesignElements(elementsToProcess);
+
       // Temporarily remove border from selected element for screenshot
       if (selectedElementDiv) {
         selectedElementDiv.classList.remove('border-2', 'border-blue-500');
@@ -677,6 +711,10 @@ const MobileCoverCustomizationPage = () => {
       document.body.removeChild(link);
 
       toast({ title: "Success", description: "Design downloaded successfully!" });
+
+      // Revoke original blob URLs after successful download
+      uploadedBlobUrls.forEach(blobUrl => URL.revokeObjectURL(blobUrl));
+
     } catch (err: any) {
       console.error("Error downloading design:", err);
       toast({ title: "Download Failed", description: err.message || "An unexpected error occurred during download.", variant: "destructive" });
@@ -688,7 +726,26 @@ const MobileCoverCustomizationPage = () => {
       if (selectedElementDiv) {
         selectedElementDiv.classList.add('border-2', 'border-blue-500');
       }
+      // Revert designElements state to original (or updated with permanent URLs if needed for other operations)
+      // For now, we'll just re-fetch to ensure consistency if the page is not reloaded
+      // A more robust solution might involve managing a separate state for "display" vs "persisted" URLs
       setLoading(false);
+      // Re-fetch product and mockup to ensure designElements are consistent with what's in DB or initial load
+      // This is a simple way to reset the state after the temporary URL handling for download
+      const { data: productData, error: productError } = await supabase
+        .from('products')
+        .select('*, mockups(image_url, design_data)')
+        .eq('id', productId)
+        .single();
+
+      if (productData) {
+        const loadedElements: DesignElement[] = JSON.parse(productData.mockups[0]?.design_data as string || '[]').map((el: any) => ({
+          ...el,
+          width: el.width || (el.type === 'text' ? 200 : productData.canvas_width),
+          height: el.height || (el.type === 'text' ? 40 : productData.canvas_height),
+        }));
+        setDesignElements(loadedElements);
+      }
     }
   };
 
