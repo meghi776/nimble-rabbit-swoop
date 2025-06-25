@@ -32,7 +32,7 @@ import {
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useSession } from '@/contexts/SessionContext';
+import { useSession } '@/contexts/SessionContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 
@@ -129,9 +129,10 @@ const MobileCoverCustomizationPage = () => {
   ];
 
   const fontFamilies = [
-    'Arial', 'Verdana', 'Georgia', 'Times New Roman', 'Courier New', 'Impact',
-    'Lucida Sans Unicode', 'Tahoma', 'Trebuchet MS', 'Palatino Linotype',
-    'Comic Sans MS', 'Arial Black', 'Garamond', 'Brush Script MT', 'cursive', 'sans-serif', 'serif', 'monospace'
+    'Roboto', 'Open Sans', 'Lato', 'Montserrat', 'Oswald', 'Playfair Display',
+    'Merriweather', 'Dancing Script', 'Pacifico', 'Indie Flower', 'Bebas Neue',
+    'Lobster', 'Permanent Marker', 'Shadows Into Light', 'Satisfy', 'Great Vibes',
+    'Poppins', 'Raleway', 'Ubuntu', 'Lora'
   ];
 
   const selectedTextElement = selectedElementId ? designElements.find(el => el.id === selectedElementId && el.type === 'text') : null;
