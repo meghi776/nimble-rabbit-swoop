@@ -188,11 +188,15 @@ const MobileCoverCustomizationPage = () => {
         setError(productError.message);
         toast({ title: "Error", description: `Failed to load product: ${productError.message}`, variant: "destructive" });
       } else if (productData) {
+        console.log("Fetched productData:", productData); // Log product data
+        console.log("Mockups data from productData:", productData?.mockups); // Log mockups data
+
         const proxiedMockupUrl = productData.mockups.length > 0 && productData.mockups[0].image_url
           ? proxyImageUrl(productData.mockups[0].image_url)
           : null;
         
         setMockupOverlayImageUrl(proxiedMockupUrl); // Set the new state for mockup image
+        console.log("Mockup Overlay Image URL:", proxiedMockupUrl); // Log the final URL
 
         setProduct({
           id: productData.id,
