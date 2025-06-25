@@ -62,7 +62,7 @@ interface DesignElement {
 }
 
 interface TouchState {
-  mode: 'none' | 'dragging' | 'pinching';
+  mode: 'none' | 'dragging' | 'pinching' | 'resizing' | 'rotating';
   startX: number;
   startY: number;
   initialElementX: number;
@@ -73,6 +73,8 @@ interface TouchState {
   initialFontSize?: number;
   initialMidX?: number;
   initialMidY?: number;
+  initialAngle?: number; // Added for rotation
+  initialRotation?: number; // Added for rotation
   activeElementId: string | null;
 }
 
@@ -351,6 +353,95 @@ const MobileCoverCustomizationPage = () => {
     document.addEventListener('mouseup', onEnd);
     document.addEventListener('touchmove', onMove, { passive: false });
     document.addEventListener('touchend', onEnd);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    e.preventDefault(); // Prevent scrolling while dragging/resizing
+    const { mode, startX, startY, initialElementX, initialElementY, initialDistance, initialElementWidth, initialElementHeight, initialFontSize, initialMidX, initialMidY, initialAngle, initialRotation, activeElementId } = touchState.current;
+    if (!activeElementId || !designAreaRef.current) return;
+
+    const element = designElements.find(el => el.id === activeElementId);
+    if (!element) return;
+
+    const designAreaRect = designAreaRef.current.getBoundingClientRect();
+
+    if (mode === 'dragging' && e.touches.length === 1) {
+      const deltaX = e.touches[0].clientX - startX;
+      const deltaY = e.touches[0].clientY - startY;
+      updateElement(activeElementId, {
+        x: initialElementX + deltaX,
+        y: initialElementY + deltaY,
+      });
+    } else if (mode === 'resizing' && e.touches.length === 1) {
+      const currentClientX = e.touches[0].clientX;
+      const currentClientY = e.touches[0].clientY;
+
+      if (element.type === 'image' && initialElementWidth !== undefined && initialElementHeight !== undefined) {
+        const newWidth = Math.max(20, initialElementWidth + (currentClientX - startX));
+        const newHeight = Math.max(20, initialElementHeight + (currentClientY - startY));
+        updateElement(activeElementId, { width: newWidth, height: newHeight });
+      } else if (element.type === 'text' && initialFontSize !== undefined) {
+        const scaleFactor = (currentClientY - startY) / 10; // Adjust sensitivity as needed
+        const newFontSize = Math.max(10, initialFontSize + scaleFactor); // Minimum font size 10
+        updateElement(activeElementId, { fontSize: newFontSize });
+      }
+    } else if (mode === 'rotating' && e.touches.length === 1 && initialAngle !== undefined && initialRotation !== undefined) {
+      const elementDiv = document.querySelector(`[data-element-id="${activeElementId}"]`);
+      if (!elementDiv) return;
+      const elementRect = elementDiv.getBoundingClientRect();
+
+      const elementCenterX = element.x + elementRect.width / 2;
+      const elementCenterY = element.y + elementRect.height / 2;
+
+      const currentAngle = Math.atan2(e.touches[0].clientY - (designAreaRect.top + elementCenterY), e.touches[0].clientX - (designAreaRect.left + elementCenterX));
+      let newRotation = initialRotation + (currentAngle - initialAngle) * (180 / Math.PI);
+      newRotation = (newRotation % 360 + 360) % 360;
+      updateElement(activeElementId, { rotation: newRotation });
+    }
+    else if (mode === 'pinching' && e.touches.length === 2 && initialDistance !== undefined && initialMidX !== undefined && initialMidY !== undefined) {
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      const newDistance = Math.sqrt(
+        Math.pow(touch2.clientX - touch1.clientX, 2) +
+        Math.pow(touch2.clientY - touch1.clientY, 2)
+      );
+      const scaleFactor = newDistance / initialDistance;
+
+      const currentMidX = (touch1.clientX + touch2.clientX) / 2 - designAreaRect.left;
+      const currentMidY = (touch1.clientY + touch2.clientY) / 2 - designAreaRect.top;
+
+      const newX = currentMidX - (initialMidX - initialElementX) * scaleFactor;
+      const newY = currentMidY - (initialMidY - initialElementY) * scaleFactor;
+
+      if (element.type === 'image' && initialElementWidth !== undefined && initialElementHeight !== undefined) {
+        const newWidth = Math.max(20, initialElementWidth * scaleFactor);
+        const newHeight = Math.max(20, initialElementHeight * scaleFactor);
+        updateElement(activeElementId, {
+          width: newWidth,
+          height: newHeight,
+          x: newX,
+          y: newY,
+        });
+      } else if (element.type === 'text' && initialFontSize !== undefined) {
+        const newFontSize = Math.max(10, initialFontSize * scaleFactor);
+        updateElement(activeElementId, {
+          fontSize: newFontSize,
+          x: newX,
+          y: newY,
+        });
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    touchState.current = {
+      mode: 'none',
+      startX: 0,
+      startY: 0,
+      initialElementX: 0,
+      initialElementY: 0,
+      activeElementId: null,
+    };
   };
 
   const handleSaveDesign = async () => {
@@ -779,7 +870,19 @@ const MobileCoverCustomizationPage = () => {
                         <div
                           className="absolute -bottom-2 -right-2 w-4 h-4 bg-blue-500 rounded-full cursor-nwse-resize"
                           onMouseDown={(e) => handleResizeStart(e, el.id)}
-                          onTouchStart={(e) => handleResizeStart(e, el.id)}
+                          onTouchStart={(e) => {
+                            touchState.current = {
+                              mode: 'resizing',
+                              startX: e.touches[0].clientX,
+                              startY: e.touches[0].clientY,
+                              initialElementX: el.x,
+                              initialElementY: el.y,
+                              initialElementWidth: el.width,
+                              initialElementHeight: el.height,
+                              activeElementId: el.id,
+                            };
+                            handleResizeStart(e, el.id); // Call the existing logic
+                          }}
                         />
                       )}
                       {/* Resize handle for text */}
@@ -787,7 +890,18 @@ const MobileCoverCustomizationPage = () => {
                         <div
                           className="absolute -bottom-2 -right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center cursor-nwse-resize"
                           onMouseDown={(e) => handleResizeStart(e, el.id)}
-                          onTouchStart={(e) => handleResizeStart(e, el.id)}
+                          onTouchStart={(e) => {
+                            touchState.current = {
+                              mode: 'resizing',
+                              startX: e.touches[0].clientX,
+                              startY: e.touches[0].clientY,
+                              initialElementX: el.x,
+                              initialElementY: el.y,
+                              initialFontSize: el.fontSize,
+                              activeElementId: el.id,
+                            };
+                            handleResizeStart(e, el.id); // Call the existing logic
+                          }}
                         >
                           <PlusCircle className="h-4 w-4 text-white" />
                         </div>
@@ -803,7 +917,27 @@ const MobileCoverCustomizationPage = () => {
                       <div
                         className="absolute -top-2 -right-2 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center cursor-grab"
                         onMouseDown={(e) => handleRotateStart(e, el.id)}
-                        onTouchStart={(e) => handleRotateStart(e, el.id)}
+                        onTouchStart={(e) => {
+                          const elementDiv = (e.currentTarget as HTMLElement).parentElement;
+                          if (!elementDiv || !designAreaRef.current) return;
+                          const elementRect = elementDiv.getBoundingClientRect();
+                          const designAreaRect = designAreaRef.current.getBoundingClientRect();
+                          const elementCenterX = el.x + elementRect.width / 2;
+                          const elementCenterY = el.y + elementRect.height / 2;
+                          const initialAngle = Math.atan2(e.touches[0].clientY - (designAreaRect.top + elementCenterY), e.touches[0].clientX - (designAreaRect.left + elementCenterX));
+
+                          touchState.current = {
+                            mode: 'rotating',
+                            startX: e.touches[0].clientX,
+                            startY: e.touches[0].clientY,
+                            initialElementX: el.x,
+                            initialElementY: el.y,
+                            initialAngle: initialAngle,
+                            initialRotation: el.rotation,
+                            activeElementId: el.id,
+                          };
+                          handleRotateStart(e, el.id); // Call the existing logic
+                        }}
                       >
                         <RotateCw className="h-4 w-4 text-white" />
                       </div>
