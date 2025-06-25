@@ -650,6 +650,21 @@ const MobileCoverCustomizationPage = () => {
     const selectedElementDiv = document.querySelector(`[data-element-id="${selectedElementId}"]`);
 
     try {
+      // Pre-load mockup image to ensure it's in cache and rendered
+      if (mockupOverlayImageUrl) {
+        await new Promise((resolve) => {
+          const img = new Image();
+          img.crossOrigin = 'Anonymous'; // Important for CORS
+          img.onload = () => resolve(true);
+          img.onerror = (e) => {
+            console.error("Error loading mockup image for html2canvas:", e);
+            toast({ title: "Image Load Error", description: "Failed to load mockup image for download. It might appear broken.", variant: "destructive" });
+            resolve(false); // Resolve to continue even if image fails
+          };
+          img.src = proxyImageUrl(mockupOverlayImageUrl);
+        });
+      }
+
       // Temporarily remove border from selected element for screenshot
       if (selectedElementDiv) {
         selectedElementDiv.classList.remove('border-2', 'border-blue-500');
@@ -1132,6 +1147,7 @@ const MobileCoverCustomizationPage = () => {
                   alt="Phone Mockup Overlay"
                   className="absolute inset-0 w-full h-full object-contain pointer-events-none"
                   style={{ zIndex: 10 }}
+                  crossOrigin="anonymous" // Added for CORS compatibility with html2canvas
                 />
               )}
 
