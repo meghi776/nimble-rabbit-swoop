@@ -663,6 +663,7 @@ const MobileCoverCustomizationPage = () => {
     };
     setDesignElements(prev => [...prev, newElement]);
     setSelectedElementId(newElement.id); // Select the newly added element
+    setCurrentTextContent(defaultText); // Set the content for the input field immediately
     toast({ title: "Success", description: "New text element added!" });
   };
 
