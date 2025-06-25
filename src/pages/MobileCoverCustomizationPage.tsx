@@ -965,7 +965,7 @@ const MobileCoverCustomizationPage = () => {
                     transformOrigin: 'center center', // Rotate around its own center
                     width: el.type === 'image' ? `${el.width}px` : 'auto',
                     height: el.type === 'image' ? `${el.height}px` : 'auto',
-                    zIndex: 5,
+                    zIndex: 20, // Increased zIndex for design elements
                     touchAction: 'none',
                   }}
                   onMouseDown={(e) => handleMouseDown(e, el.id)}
@@ -1092,7 +1092,7 @@ const MobileCoverCustomizationPage = () => {
                   src={product.mockup_image_url}
                   alt="Phone Mockup Overlay"
                   className="absolute inset-0 w-full h-full object-contain pointer-events-none"
-                  style={{ zIndex: 10 }}
+                  style={{ zIndex: 1 }} {/* Lowered zIndex for mockup image */}
                 />
               )}
 
