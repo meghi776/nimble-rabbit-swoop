@@ -612,7 +612,7 @@ const MobileCoverCustomizationPage = () => {
 
       if (insertError) {
         console.error("Error inserting new mockup with design:", insertError);
-        toast({ title: "Error", description: `Failed to save design: ${insertError.message}`, variant: "destructive" });
+        toast({ title: "Error", description: `Failed to save design: ${insert:Error.message}`, variant: "destructive" });
       } else {
         toast({ title: "Success", description: "Design saved successfully!" });
       }
@@ -895,7 +895,7 @@ const MobileCoverCustomizationPage = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900" data-testid="main-customization-page">
+    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
       <header className="flex items-center justify-between py-2 px-4 bg-white dark:bg-gray-800 shadow-md">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="h-6 w-6" />
@@ -965,7 +965,7 @@ const MobileCoverCustomizationPage = () => {
                     transformOrigin: 'center center', // Rotate around its own center
                     width: el.type === 'image' ? `${el.width}px` : 'auto',
                     height: el.type === 'image' ? `${el.height}px` : 'auto',
-                    zIndex: 20, // Increased zIndex for design elements
+                    zIndex: 5,
                     touchAction: 'none',
                   }}
                   onMouseDown={(e) => handleMouseDown(e, el.id)}
@@ -1092,7 +1092,7 @@ const MobileCoverCustomizationPage = () => {
                   src={product.mockup_image_url}
                   alt="Phone Mockup Overlay"
                   className="absolute inset-0 w-full h-full object-contain pointer-events-none"
-                  style={{ zIndex: 1 }} {/* Lowered zIndex for mockup image */}
+                  style={{ zIndex: 10 }}
                 />
               )}
 
