@@ -19,10 +19,12 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   const location = useLocation();
 
   useEffect(() => {
+    console.log("SessionContext: onAuthStateChange listener setup."); // Added log
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       setSession(currentSession);
       setUser(currentSession?.user || null);
       setLoading(false);
+      console.log(`SessionContext: Auth state changed to ${event}. Loading set to false.`); // Added log
 
       if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
         if (location.pathname === '/login') {
@@ -36,10 +38,12 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     });
 
     // Initial session check
+    console.log("SessionContext: Initial getSession call."); // Added log
     supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
       setSession(initialSession);
       setUser(initialSession?.user || null);
       setLoading(false);
+      console.log("SessionContext: Initial getSession completed. Loading set to false."); // Added log
       if (!initialSession && location.pathname.startsWith('/admin')) {
         navigate('/login');
       }

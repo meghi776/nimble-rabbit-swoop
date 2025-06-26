@@ -21,15 +21,17 @@ const Index = () => {
     const fetchCategories = async () => {
       setLoading(true);
       setError(null);
+      console.log("Index.tsx: Starting fetchCategories..."); // Added log
       const { data, error } = await supabase
         .from('categories')
         .select('id, name, description')
         .order('name', { ascending: true });
 
       if (error) {
-        console.error("Error fetching categories:", error);
+        console.error("Index.tsx: Error fetching categories:", error);
         setError(error.message);
       } else {
+        console.log("Index.tsx: Categories fetched successfully:", data); // Added log
         const fetchedCategories = data || [];
         const mobileCover = fetchedCategories.find(cat => cat.name.toLowerCase() === 'mobile cover');
         const others = fetchedCategories.filter(cat => cat.name.toLowerCase() !== 'mobile cover');
@@ -39,6 +41,7 @@ const Index = () => {
         setCategories(fetchedCategories); // Keep all categories in state if needed elsewhere
       }
       setLoading(false);
+      console.log("Index.tsx: setLoading(false) called."); // Added log
     };
 
     fetchCategories();
