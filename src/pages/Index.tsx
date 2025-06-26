@@ -17,35 +17,53 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  console.log("Index.tsx: Component Rendered. Current loading state:", loading); // Log on every render
+
   useEffect(() => {
     const fetchCategories = async () => {
-      setLoading(true);
+      setLoading(true); // Set loading to true at the start of fetch
       setError(null);
-      console.log("Index.tsx: Starting fetchCategories..."); // Added log
-      const { data, error } = await supabase
-        .from('categories')
-        .select('id, name, description')
-        .order('name', { ascending: true });
+      console.log("Index.tsx: Starting fetchCategories...");
+      try {
+        const { data, error: fetchError } = await supabase
+          .from('categories')
+          .select('id, name, description')
+          .order('name', { ascending: true });
 
-      if (error) {
-        console.error("Index.tsx: Error fetching categories:", error);
-        setError(error.message);
-      } else {
-        console.log("Index.tsx: Categories fetched successfully:", data); // Added log
-        const fetchedCategories = data || [];
-        const mobileCover = fetchedCategories.find(cat => cat.name.toLowerCase() === 'mobile cover');
-        const others = fetchedCategories.filter(cat => cat.name.toLowerCase() !== 'mobile cover');
-        
-        setMobileCoverCategory(mobileCover || null);
-        setOtherCategories(others);
-        setCategories(fetchedCategories); // Keep all categories in state if needed elsewhere
+        console.log("Index.tsx: Supabase response - data:", data, "error:", fetchError); // Detailed log of Supabase response
+
+        if (fetchError) {
+          console.error("Index.tsx: Error fetching categories:", fetchError);
+          setError(fetchError.message);
+          setCategories([]); // Ensure categories is empty on error
+          setMobileCoverCategory(null);
+          setOtherCategories([]);
+        } else {
+          const fetchedCategories = data || []; // Ensure it's an array even if data is null/undefined
+          console.log("Index.tsx: Categories fetched successfully. Count:", fetchedCategories.length);
+          
+          const mobileCover = fetchedCategories.find(cat => cat.name.toLowerCase() === 'mobile cover');
+          const others = fetchedCategories.filter(cat => cat.name.toLowerCase() !== 'mobile cover');
+          
+          setMobileCoverCategory(mobileCover || null);
+          setOtherCategories(others);
+          setCategories(fetchedCategories);
+        }
+      } catch (e: any) {
+        console.error("Index.tsx: Unexpected error during fetchCategories:", e);
+        setError(e.message || "An unexpected error occurred.");
+        setCategories([]); // Ensure categories is empty on unexpected error
+        setMobileCoverCategory(null);
+        setOtherCategories([]);
+      } finally {
+        console.log("Index.tsx: Before setting loading to false. Current loading state:", loading);
+        setLoading(false); // Always set loading to false when fetch is complete (success or error)
+        console.log("Index.tsx: setLoading(false) called.");
       }
-      setLoading(false);
-      console.log("Index.tsx: setLoading(false) called."); // Added log
     };
 
     fetchCategories();
-  }, []);
+  }, []); // Empty dependency array means this runs once on mount
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-800 dark:to-gray-950">
