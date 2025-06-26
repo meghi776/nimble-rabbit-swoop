@@ -92,6 +92,8 @@ const MobileCoverCustomizationPage = () => {
   const [currentTextColor, setCurrentTextColor] = useState('#000000');
   const [currentFontFamily, setCurrentFontFamily] = useState('Arial');
   const [currentTextShadowEnabled, setCurrentTextShadowEnabled] = useState(false);
+  const [canvasBackgroundColor, setCanvasBackgroundColor] = useState<string | null>(null); // New state for canvas background color
+  const [isBackColorPaletteOpen, setIsBackColorPaletteOpen] = useState(false); // State to control palette visibility
 
   const designAreaRef = useRef<HTMLDivElement>(null);
   const canvasContentRef = useRef<HTMLDivElement>(null);
@@ -550,7 +552,7 @@ const MobileCoverCustomizationPage = () => {
       const canvas = await html2canvas(canvasContentRef.current, {
         useCORS: true,
         allowTaint: true, // Allow tainting, but it will prevent toDataURL if not truly CORS-compliant
-        backgroundColor: null,
+        backgroundColor: null, // Let CSS background color be captured
         scale: 1 / scaleFactor,
       });
       console.log("html2canvas capture successful.");
@@ -823,6 +825,7 @@ const MobileCoverCustomizationPage = () => {
   const handleCanvasClick = (e: React.MouseEvent) => {
     if (e.target === canvasContentRef.current || e.target === designAreaRef.current) {
       setSelectedElementId(null);
+      setIsBackColorPaletteOpen(false); // Close palette when clicking canvas
     }
   };
 
@@ -900,7 +903,7 @@ const MobileCoverCustomizationPage = () => {
           >
             <div
               ref={canvasContentRef}
-              className="relative bg-white shadow-lg overflow-hidden"
+              className="relative shadow-lg overflow-hidden"
               style={{
                 width: `${actualCanvasWidth}px`,
                 height: `${actualCanvasHeight}px`,
@@ -908,6 +911,7 @@ const MobileCoverCustomizationPage = () => {
                 backgroundRepeat: 'no-repeat',
                 backgroundPosition: 'center',
                 touchAction: 'none',
+                backgroundColor: canvasBackgroundColor || '#FFFFFF', // Apply background color here, default to white
               }}
               onClick={handleCanvasClick}
             >
@@ -1035,6 +1039,24 @@ const MobileCoverCustomizationPage = () => {
                 ))}
             </div>
           </div>
+        ) : isBackColorPaletteOpen ? (
+          <div className="flex flex-col w-full items-center">
+            <div className="flex items-center justify-center gap-1 p-1 w-full overflow-x-auto scrollbar-hide">
+              {predefinedColors.map((color) => (
+                <div
+                  key={color}
+                  className={`w-8 h-8 rounded-full cursor-pointer border-2 flex-shrink-0 ${canvasBackgroundColor === color ? 'border-blue-500' : 'border-gray-300 dark:border-gray-600'}`}
+                  style={{ backgroundColor: color }}
+                  onClick={() => setCanvasBackgroundColor(color)}
+                  title={color}
+                />
+              ))}
+            </div>
+            <Button variant="ghost" className="flex flex-col h-auto p-2 mt-2" onClick={() => setIsBackColorPaletteOpen(false)}>
+              <XCircle className="h-6 w-6" />
+              <span className="text-xs mt-1">Close</span>
+            </Button>
+          </div>
         ) : (
           <>
             <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={handleAddTextElement}>
@@ -1045,7 +1067,7 @@ const MobileCoverCustomizationPage = () => {
               <Image className="h-6 w-6" />
               <span className="text-xs mt-1">Your Photo</span>
             </Button>
-            <Button variant="ghost" className="flex flex-col h-auto p-2">
+            <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => { setSelectedElementId(null); setIsBackColorPaletteOpen(true); }}>
               <Palette className="h-6 w-6" />
               <span className="text-xs mt-1">Back Color</span>
             </Button>
