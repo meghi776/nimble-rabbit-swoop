@@ -28,9 +28,8 @@ import {
   XCircle,
   RotateCw,
   Download,
-  Eye, // Import Eye icon for preview
 } from 'lucide-react';
-import html2canvas from 'html2canvas';
+import html2canvas from 'html22canvas'; // Corrected import for html2canvas
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSession } from '@/contexts/SessionContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -110,10 +109,6 @@ const MobileCoverCustomizationPage = () => {
 
   // New state for the mockup overlay image URL
   const [mockupOverlayImageUrl, setMockupOverlayImageUrl] = useState<string | null>(null);
-
-  // State for preview modal
-  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
-  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
   // Responsive canvas states
   const [actualCanvasWidth, setActualCanvasWidth] = useState(0);
@@ -638,7 +633,7 @@ const MobileCoverCustomizationPage = () => {
     return publicUrlData.publicUrl;
   };
 
-  const captureDesignForPreview = async (includeMockup: boolean = true) => { // Added includeMockup parameter
+  const captureDesignForOrder = async () => { // Renamed function
     if (!canvasContentRef.current || !product) {
       console.error("Design area not found or product not loaded.");
       return null;
@@ -669,13 +664,11 @@ const MobileCoverCustomizationPage = () => {
         selectedElementDiv.classList.remove('border-2', 'border-blue-500');
       }
 
-      // Temporarily hide mockup if not needed for capture
+      // Temporarily hide mockup for capture
       if (mockupImageElement instanceof HTMLElement) {
         originalMockupPointerEvents = mockupImageElement.style.pointerEvents;
         mockupImageElement.style.pointerEvents = 'auto'; // Ensure it's capturable if needed
-        if (!includeMockup) {
-          mockupImageElement.style.display = 'none'; // Hide the mockup
-        }
+        mockupImageElement.style.display = 'none'; // Hide the mockup
       }
 
       console.log("Attempting to capture canvas with html2canvas...");
@@ -692,7 +685,7 @@ const MobileCoverCustomizationPage = () => {
       return dataUrl;
 
     } catch (err: any) {
-      console.error("Detailed Error capturing design for preview:", err);
+      console.error("Detailed Error capturing design for order:", err);
       console.error("Error name:", err.name);
       console.error("Error message:", err.message);
       if (err.stack) {
@@ -700,33 +693,21 @@ const MobileCoverCustomizationPage = () => {
       }
       // Check for specific html2canvas error messages related to tainting
       if (err.message && err.message.includes("Tainted canvases may not be exported")) {
-        console.error("Preview Failed: CORS Issue", "The design contains images from another domain that are not configured for CORS. Please ensure Supabase Storage CORS settings are correct (Allowed Origins: *, Allowed Methods: GET).");
+        console.error("Capture Failed: CORS Issue", "The design contains images from another domain that are not configured for CORS. Please ensure Supabase Storage CORS settings are correct (Allowed Origins: *, Allowed Methods: GET).");
       } else {
-        console.error("Preview Failed", err.message || "An unexpected error occurred while generating preview.");
+        console.error("Capture Failed", err.message || "An unexpected error occurred while generating image.");
       }
       return null;
     } finally {
       // Restore original styles
       if (mockupImageElement instanceof HTMLElement) {
         mockupImageElement.style.pointerEvents = originalMockupPointerEvents;
-        if (!includeMockup) {
-          mockupImageElement.style.display = ''; // Show the mockup again
-        }
+        mockupImageElement.style.display = ''; // Show the mockup again
       }
       if (selectedElementDiv) {
         selectedElementDiv.classList.add('border-2', 'border-blue-500');
       }
     }
-  };
-
-  const handlePreviewDesign = async () => {
-    setLoading(true);
-    const imageUrl = await captureDesignForPreview(); // Default to including mockup for preview
-    if (imageUrl) {
-      setPreviewImageUrl(imageUrl);
-      setIsPreviewModalOpen(true);
-    }
-    setLoading(false);
   };
 
   const handleImageFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -826,7 +807,7 @@ const MobileCoverCustomizationPage = () => {
     
     try {
       // Capture design WITHOUT the mockup for the actual order image
-      orderedDesignImageUrl = await captureDesignForPreview(false); 
+      orderedDesignImageUrl = await captureDesignForOrder(); 
       if (!orderedDesignImageUrl) {
         throw new Error("Failed to capture design for order.");
       }
@@ -973,8 +954,8 @@ const MobileCoverCustomizationPage = () => {
           {product?.name || 'Loading Product...'}
         </h1>
         <div className="flex items-center space-x-2">
-          <Button onClick={handlePreviewDesign} disabled={loading || isPlacingOrder} variant="outline">
-            <Eye className="mr-2 h-4 w-4" /> Preview
+          <Button onClick={handleBuyNowClick} disabled={loading || isPlacingOrder}>
+            <ShoppingCart className="mr-2 h-4 w-4" /> Buy Now
           </Button>
           <Button onClick={handleDemoOrderClick} disabled={loading || isPlacingOrder} className="bg-green-600 hover:bg-green-700 text-white">
             {isPlacingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -1336,26 +1317,6 @@ const MobileCoverCustomizationPage = () => {
               {isPlacingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Confirm Demo Order
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Preview Design Modal */}
-      <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Design Preview</DialogTitle>
-            <DialogDescription>This is how your design will look.</DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-center items-center py-4">
-            {previewImageUrl ? (
-              <img src={previewImageUrl} alt="Design Preview" className="max-w-full h-auto border rounded-md" />
-            ) : (
-              <p>No preview available. Please try again.</p>
-            )}
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setIsPreviewModalOpen(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
