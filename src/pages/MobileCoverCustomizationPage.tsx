@@ -627,24 +627,7 @@ const MobileCoverCustomizationPage = () => {
     }
   };
 
-  const handleBuyNowClick = () => {
-    if (!user) {
-      showError("Please log in to place an order.");
-      navigate('/login');
-      return;
-    }
-    if (!product) {
-      showError("Product not loaded. Cannot proceed with order.");
-      return;
-    }
-    if (product.inventory !== null && product.inventory <= 0) {
-      showError("This product is currently out of stock.");
-      return;
-    }
-    setIsCheckoutModalOpen(true);
-  };
-
-  const handlePlaceOrder = async (isDemo: boolean) => {
+  const handlePlaceOrder = useCallback(async (isDemo: boolean) => {
     if (!product || !user?.id) {
       showError("Product or user information missing.");
       return;
@@ -770,9 +753,26 @@ const MobileCoverCustomizationPage = () => {
       setIsPlacingOrder(false);
       dismissToast(toastId);
     }
-  };
+  }, [product, user, customerName, customerAddress, customerPhone, demoOrderPrice, demoOrderAddress, designElements, navigate]);
 
-  const handleDemoOrderClick = () => {
+  const handleBuyNowClick = useCallback(() => {
+    if (!user) {
+      showError("Please log in to place an order.");
+      navigate('/login');
+      return;
+    }
+    if (!product) {
+      showError("Product not loaded. Cannot proceed with order.");
+      return;
+    }
+    if (product.inventory !== null && product.inventory <= 0) {
+      showError("This product is currently out of stock.");
+      return;
+    }
+    setIsCheckoutModalOpen(true);
+  }, [user, product, navigate]);
+
+  const handleDemoOrderClick = useCallback(() => {
     if (!user) {
       showError("Please log in to place a demo order.");
       navigate('/login');
@@ -783,7 +783,7 @@ const MobileCoverCustomizationPage = () => {
       return;
     }
     setIsDemoOrderModalOpen(true);
-  };
+  }, [user, product, navigate]);
 
   const handleAddTextElement = () => {
     if (!product) {
