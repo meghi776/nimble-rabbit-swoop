@@ -666,7 +666,7 @@ const MobileCoverCustomizationPage = () => {
 
       // Temporarily hide mockup for capture
       if (mockupImageElement instanceof HTMLElement) {
-        originalMockupPointerEvents = mockupImageElement.style.display; // Store display property
+        originalMockupPointerEvents = mockupImageElement.style.pointerEvents;
         mockupImageElement.style.display = 'none'; // Hide the mockup
       }
 
@@ -700,7 +700,8 @@ const MobileCoverCustomizationPage = () => {
     } finally {
       // Restore original styles
       if (mockupImageElement instanceof HTMLElement) {
-        mockupImageElement.style.display = originalMockupPointerEvents; // Restore display property
+        mockupImageElement.style.pointerEvents = originalMockupPointerEvents;
+        mockupImageElement.style.display = ''; // Show the mockup again
       }
       if (selectedElementDiv) {
         selectedElementDiv.classList.add('border-2', 'border-blue-500');
@@ -977,7 +978,7 @@ const MobileCoverCustomizationPage = () => {
         <div className="flex-1 flex flex-col md:flex-row overflow-y-auto pb-24">
           <div
             ref={designAreaRef}
-            className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center relative overflow-hidden"
+            className="flex-1 flex items-center justify-center relative overflow-hidden"
             style={{
               // Use max-width and height auto to make it responsive
               maxWidth: '100%',
@@ -1106,7 +1107,7 @@ const MobileCoverCustomizationPage = () => {
                           handleRotateStart(e, el.id);
                         }}
                       >
-                        <RotateCw className="h-4 w-4 text-white" />
+                        <RotateCw className="h-4 w-4" />
                       </div>
                     </>
                   )}
