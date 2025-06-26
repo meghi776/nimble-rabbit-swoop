@@ -3,7 +3,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import ProductListingPage from "./pages/ProductListingPage";
 import BrandsPage from "./pages/BrandsPage"; // Import the new BrandsPage
-import { SessionContextProvider } from "./components/SessionContext";
+import { SessionContextProvider } from "./contexts/SessionContext"; // Corrected import path
 import { Toaster } from "react-hot-toast";
 
 function App() {
