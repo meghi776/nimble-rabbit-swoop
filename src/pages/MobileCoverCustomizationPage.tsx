@@ -89,8 +89,8 @@ const MobileCoverCustomizationPage = () => {
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   
   const [currentFontSize, setCurrentFontSize] = useState<number[]>([35]);
-  const [currentTextColor, setCurrentTextColor] = '#000000';
-  const [currentFontFamily, setCurrentFontFamily] = 'Arial';
+  const [currentTextColor, setCurrentTextColor] = useState('#000000');
+  const [currentFontFamily, setCurrentFontFamily] = useState('Arial');
   const [currentTextShadowEnabled, setCurrentTextShadowEnabled] = useState(false);
 
   const designAreaRef = useRef<HTMLDivElement>(null);
@@ -247,6 +247,8 @@ const MobileCoverCustomizationPage = () => {
   }, [designElements]);
 
   useEffect(() => {
+    console.log("useEffect for selectedTextElement triggered.");
+    console.log("Value of setCurrentTextColor:", setCurrentTextColor); // Debug log
     if (selectedTextElement) {
       setCurrentFontSize([selectedTextElement.fontSize || 35]);
       setCurrentTextColor(selectedTextElement.color || '#000000');
@@ -258,7 +260,7 @@ const MobileCoverCustomizationPage = () => {
       setCurrentFontFamily('Arial');
       setCurrentTextShadowEnabled(false);
     }
-  }, [selectedTextElement]);
+  }, [selectedTextElement, setCurrentFontSize, setCurrentTextColor, setCurrentFontFamily, setCurrentTextShadowEnabled]); // Added all setters to dependency array
 
   useEffect(() => {
     if (selectedElementId && lastCaretPosition.current) {
