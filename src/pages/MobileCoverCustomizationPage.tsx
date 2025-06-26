@@ -978,7 +978,7 @@ const MobileCoverCustomizationPage = () => {
         <div className="flex-1 flex flex-col md:flex-row overflow-y-auto pb-24">
           <div
             ref={designAreaRef}
-            className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center relative overflow-hidden p-4"
+            className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center relative overflow-hidden"
             style={{
               // Use max-width and height auto to make it responsive
               maxWidth: '100%',
