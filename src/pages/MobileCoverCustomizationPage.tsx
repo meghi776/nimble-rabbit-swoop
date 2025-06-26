@@ -29,7 +29,7 @@ import {
   RotateCw,
   Download,
 } from 'lucide-react';
-import html2canvas from 'html22canvas'; // Corrected import for html2canvas
+import html2canvas from 'html2canvas'; // Corrected import for html2canvas
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSession } from '@/contexts/SessionContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -667,7 +667,6 @@ const MobileCoverCustomizationPage = () => {
       // Temporarily hide mockup for capture
       if (mockupImageElement instanceof HTMLElement) {
         originalMockupPointerEvents = mockupImageElement.style.pointerEvents;
-        mockupImageElement.style.pointerEvents = 'auto'; // Ensure it's capturable if needed
         mockupImageElement.style.display = 'none'; // Hide the mockup
       }
 
