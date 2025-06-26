@@ -92,8 +92,7 @@ const MobileCoverCustomizationPage = () => {
   const [currentTextColor, setCurrentTextColor] = useState('#000000');
   const [currentFontFamily, setCurrentFontFamily] = useState('Arial');
   const [currentTextShadowEnabled, setCurrentTextShadowEnabled] = useState(false);
-  const [canvasBackgroundColor, setCanvasBackgroundColor] = useState<string | null>(null); // New state for canvas background color
-  const [isBackColorPaletteOpen, setIsBackColorPaletteOpen] = useState(false); // State to control palette visibility
+  const [blurredBackgroundImageUrl, setBlurredBackgroundImageUrl] = useState<string | null>(null); // New state for blurred background
 
   const designAreaRef = useRef<HTMLDivElement>(null);
   const canvasContentRef = useRef<HTMLDivElement>(null);
@@ -249,8 +248,6 @@ const MobileCoverCustomizationPage = () => {
   }, [designElements]);
 
   useEffect(() => {
-    console.log("useEffect for selectedTextElement triggered.");
-    console.log("Value of setCurrentTextColor:", setCurrentTextColor); // Debug log
     if (selectedTextElement) {
       setCurrentFontSize([selectedTextElement.fontSize || 35]);
       setCurrentTextColor(selectedTextElement.color || '#000000');
@@ -262,7 +259,7 @@ const MobileCoverCustomizationPage = () => {
       setCurrentFontFamily('Arial');
       setCurrentTextShadowEnabled(false);
     }
-  }, [selectedTextElement, setCurrentFontSize, setCurrentTextColor, setCurrentFontFamily, setCurrentTextShadowEnabled]); // Added all setters to dependency array
+  }, [selectedTextElement, setCurrentFontSize, setCurrentTextColor, setCurrentFontFamily, setCurrentTextShadowEnabled]);
 
   useEffect(() => {
     if (selectedElementId && lastCaretPosition.current) {
@@ -710,7 +707,7 @@ const MobileCoverCustomizationPage = () => {
         });
 
       if (uploadError) {
-        throw new Error(`Failed to upload order image: ${uploadError.message}`);
+        throw new Error(`Failed to upload order image: ${uploadData.path || uploadError.message}`);
       }
 
       const { data: publicUrlData } = supabase.storage
@@ -825,7 +822,6 @@ const MobileCoverCustomizationPage = () => {
   const handleCanvasClick = (e: React.MouseEvent) => {
     if (e.target === canvasContentRef.current || e.target === designAreaRef.current) {
       setSelectedElementId(null);
-      setIsBackColorPaletteOpen(false); // Close palette when clicking canvas
     }
   };
 
@@ -845,6 +841,63 @@ const MobileCoverCustomizationPage = () => {
 
     const newText = target.innerText;
     updateElement(id, { value: newText });
+  };
+
+  const handleBlurBackground = () => {
+    if (!product) {
+      showError("Product details not loaded. Cannot apply blur.");
+      return;
+    }
+
+    const firstImageElement = designElements.find(el => el.type === 'image');
+    if (!firstImageElement) {
+      showError("Please add an image to the canvas first to use as a blurred background.");
+      return;
+    }
+
+    const toastId = showLoading("Applying blur effect...");
+
+    const img = new window.Image();
+    img.crossOrigin = 'Anonymous'; // Essential for CORS
+    img.src = proxyImageUrl(firstImageElement.value);
+
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      if (!ctx) {
+        showError("Failed to get canvas context.");
+        dismissToast(toastId);
+        return;
+      }
+
+      // Set canvas dimensions to match the product's original canvas dimensions
+      canvas.width = product.canvas_width;
+      canvas.height = product.canvas_height;
+
+      // Draw the image onto the canvas
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      // Apply blur filter
+      ctx.filter = 'blur(10px)'; // You can adjust the blur radius here
+      ctx.drawImage(canvas, 0, 0); // Redraw to apply filter
+
+      const blurredDataUrl = canvas.toDataURL('image/png');
+      setBlurredBackgroundImageUrl(blurredDataUrl);
+      showSuccess("Blur effect applied!");
+      dismissToast(toastId);
+    };
+
+    img.onerror = (e) => {
+      console.error("Error loading image for blur:", e);
+      showError("Failed to load image for blur effect. Ensure image is accessible and CORS is configured.");
+      dismissToast(toastId);
+    };
+  };
+
+  const handleClearBlur = () => {
+    setBlurredBackgroundImageUrl(null);
+    showSuccess("Blurred background cleared.");
   };
 
   const isBuyNowDisabled = loading || isPlacingOrder || (product && product.inventory !== null && product.inventory <= 0);
@@ -907,11 +960,12 @@ const MobileCoverCustomizationPage = () => {
               style={{
                 width: `${actualCanvasWidth}px`,
                 height: `${actualCanvasHeight}px`,
-                backgroundSize: 'contain',
+                backgroundSize: 'cover', // Changed to cover for background image
                 backgroundRepeat: 'no-repeat',
                 backgroundPosition: 'center',
                 touchAction: 'none',
-                backgroundColor: canvasBackgroundColor || '#FFFFFF', // Apply background color here, default to white
+                backgroundColor: '#FFFFFF', // Default white background if no blur
+                backgroundImage: blurredBackgroundImageUrl ? `url(${blurredBackgroundImageUrl})` : 'none',
               }}
               onClick={handleCanvasClick}
             >
@@ -1039,24 +1093,6 @@ const MobileCoverCustomizationPage = () => {
                 ))}
             </div>
           </div>
-        ) : isBackColorPaletteOpen ? (
-          <div className="flex flex-col w-full items-center">
-            <div className="flex items-center justify-center gap-1 p-1 w-full overflow-x-auto scrollbar-hide">
-              {predefinedColors.map((color) => (
-                <div
-                  key={color}
-                  className={`w-8 h-8 rounded-full cursor-pointer border-2 flex-shrink-0 ${canvasBackgroundColor === color ? 'border-blue-500' : 'border-gray-300 dark:border-gray-600'}`}
-                  style={{ backgroundColor: color }}
-                  onClick={() => setCanvasBackgroundColor(color)}
-                  title={color}
-                />
-              ))}
-            </div>
-            <Button variant="ghost" className="flex flex-col h-auto p-2 mt-2" onClick={() => setIsBackColorPaletteOpen(false)}>
-              <XCircle className="h-6 w-6" />
-              <span className="text-xs mt-1">Close</span>
-            </Button>
-          </div>
         ) : (
           <>
             <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={handleAddTextElement}>
@@ -1067,10 +1103,16 @@ const MobileCoverCustomizationPage = () => {
               <Image className="h-6 w-6" />
               <span className="text-xs mt-1">Your Photo</span>
             </Button>
-            <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => { setSelectedElementId(null); setIsBackColorPaletteOpen(true); }}>
+            <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={handleBlurBackground}>
               <Palette className="h-6 w-6" />
-              <span className="text-xs mt-1">Back Color</span>
+              <span className="text-xs mt-1">Blur Background</span>
             </Button>
+            {blurredBackgroundImageUrl && (
+              <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={handleClearBlur}>
+                <XCircle className="h-6 w-6" />
+                <span className="text-xs mt-1">Clear Blur</span>
+              </Button>
+            )}
             <Button variant="ghost" className="flex flex-col h-auto p-2">
               <LayoutTemplate className="h-6 w-6" />
               <span className="text-xs mt-1">Readymade</span>
