@@ -19,6 +19,7 @@ import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import JSZip from 'jszip'; // Import JSZip
 import { saveAs } from 'file-saver'; // Import saveAs
+import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast'; // Import toast utilities
 
 interface Order {
   id: string;
@@ -58,14 +59,14 @@ const OrderManagementPage = () => {
   const [orderTypeFilter, setOrderTypeFilter] = useState<string>('normal');
   const [selectedUserIdFilter, setSelectedUserIdFilter] = useState<string>('all'); // New state for user filter
   const [userList, setUserList] = useState<UserListItem[]>([]); // New state for user list
-  const [selectedOrderIds, setSelectedOrderIds] = new Set<string>();
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
 
   const orderStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
 
   const fetchOrders = async () => {
     setLoading(true);
     setError(null);
-    setSelectedOrderIds(new Set());
+    setSelectedOrderIds(new Set()); // Clear selection on re-fetch
 
     const payload = {
       sortColumn,
@@ -98,15 +99,18 @@ const OrderManagementPage = () => {
             // Fallback if context.data is not JSON
           }
         }
+        showError(`Failed to load orders: ${errorMessage}`);
         setError(errorMessage);
       } else if (data && data.orders) {
         setOrders(data.orders || []);
         setUserList(data.users || []); // Set the user list for the dropdown
       } else {
+        showError("Unexpected response from server when fetching orders.");
         setError("Unexpected response from server.");
       }
     } catch (err: any) {
       console.error("Network or unexpected error:", err);
+      showError(err.message || "An unexpected error occurred while fetching orders.");
       setError(err.message || "An unexpected error occurred.");
     } finally {
       setLoading(false);
@@ -134,6 +138,7 @@ const OrderManagementPage = () => {
     if (!currentOrder || !newStatus) return;
 
     setLoading(true);
+    const toastId = showLoading("Updating order status...");
     const { error } = await supabase
       .from('orders')
       .update({ status: newStatus })
@@ -141,10 +146,13 @@ const OrderManagementPage = () => {
 
     if (error) {
       console.error("Error updating order status:", error);
+      showError(`Failed to update order status: ${error.message}`);
     } else {
+      showSuccess("Order status updated successfully!");
       setIsEditStatusModalOpen(false);
       fetchOrders();
     }
+    dismissToast(toastId);
     setLoading(false);
   };
 
@@ -157,6 +165,7 @@ const OrderManagementPage = () => {
           .remove([`orders/${fileName}`]);
         if (storageError) {
           console.error("Error deleting order image from storage:", storageError);
+          showError(`Failed to delete order image from storage: ${storageError.message}`);
           return false;
         }
       }
@@ -169,6 +178,7 @@ const OrderManagementPage = () => {
 
     if (error) {
       console.error("Error deleting order:", error);
+      showError(`Failed to delete order: ${error.message}`);
       return false;
     }
     return true;
@@ -179,10 +189,15 @@ const OrderManagementPage = () => {
       return;
     }
     setLoading(true);
+    const toastId = showLoading("Deleting order...");
     const success = await deleteSingleOrder(id, imageUrl);
     if (success) {
+      showSuccess("Order deleted successfully!");
       fetchOrders();
+    } else {
+      showError("Failed to delete order.");
     }
+    dismissToast(toastId);
     setLoading(false);
   };
 
@@ -209,7 +224,7 @@ const OrderManagementPage = () => {
 
   const handleBulkDelete = async () => {
     if (selectedOrderIds.size === 0) {
-      console.error("No orders selected. Please select at least one order to delete.");
+      showError("No orders selected. Please select at least one order to delete.");
       return;
     }
 
@@ -218,6 +233,7 @@ const OrderManagementPage = () => {
     }
 
     setLoading(true);
+    const toastId = showLoading(`Deleting ${selectedOrderIds.size} orders...`);
     let successfulDeletions = 0;
     let failedDeletions = 0;
 
@@ -234,16 +250,25 @@ const OrderManagementPage = () => {
     }
 
     fetchOrders();
+    dismissToast(toastId);
     setLoading(false);
+    if (failedDeletions === 0) {
+      showSuccess(`${successfulDeletions} orders deleted successfully!`);
+    } else if (successfulDeletions > 0) {
+      showError(`${successfulDeletions} orders deleted, but ${failedDeletions} failed.`);
+    } else {
+      showError("Failed to delete any selected orders.");
+    }
   };
 
   const handleBulkDownloadDesigns = async () => {
     if (selectedOrderIds.size === 0) {
-      console.error("No designs selected. Please select at least one order to download its design.");
+      showError("No designs selected. Please select at least one order to download its design.");
       return;
     }
 
     setLoading(true);
+    const toastId = showLoading(`Preparing ${selectedOrderIds.size} designs for download...`);
     const zip = new JSZip();
     let downloadedCount = 0;
     let failedCount = 0;
@@ -275,13 +300,16 @@ const OrderManagementPage = () => {
       zip.generateAsync({ type: "blob" })
         .then(function (content) {
           saveAs(content, "selected_designs.zip");
+          showSuccess(`${downloadedCount} designs downloaded successfully!`);
         })
         .catch(err => {
           console.error("Error generating zip file:", err);
+          showError("Error generating zip file for download.");
         });
     } else {
-      console.error("Download Failed", "No designs were successfully downloaded.");
+      showError("No designs were successfully downloaded.");
     }
+    dismissToast(toastId);
     setLoading(false);
   };
 

@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Eye, Trash2, Image as ImageIcon, ArrowLeft, ArrowDownWideNarrow, ArrowUpWideNarrow } from 'lucide-react';
 import { format } from 'date-fns';
+import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast'; // Import toast utilities
 
 interface Order {
   id: string;
@@ -50,6 +51,7 @@ const UserOrdersPage = () => {
 
   const fetchUserAndOrders = async () => {
     if (!userId) {
+      showError("User ID is missing.");
       setError("User ID is missing.");
       setLoading(false);
       return;
@@ -67,6 +69,7 @@ const UserOrdersPage = () => {
 
     if (profileError) {
       console.error("Error fetching user profile:", profileError);
+      showError("Failed to load user profile.");
       setError(profileError.message);
       setLoading(false);
       return;
@@ -95,6 +98,7 @@ const UserOrdersPage = () => {
 
     if (ordersError) {
       console.error("Error fetching orders:", ordersError);
+      showError("Failed to load orders for this user.");
       setError(ordersError.message);
     } else {
       setOrders(data || []);
@@ -123,6 +127,7 @@ const UserOrdersPage = () => {
     if (!currentOrder || !newStatus) return;
 
     setLoading(true);
+    const toastId = showLoading("Updating order status...");
     const { error } = await supabase
       .from('orders')
       .update({ status: newStatus })
@@ -130,10 +135,13 @@ const UserOrdersPage = () => {
 
     if (error) {
       console.error("Error updating order status:", error);
+      showError(`Failed to update order status: ${error.message}`);
     } else {
+      showSuccess("Order status updated successfully!");
       setIsEditStatusModalOpen(false);
       fetchUserAndOrders(); // Re-fetch orders to update the list
     }
+    dismissToast(toastId);
     setLoading(false);
   };
 
@@ -143,6 +151,7 @@ const UserOrdersPage = () => {
     }
 
     setLoading(true);
+    const toastId = showLoading("Deleting order...");
 
     // Delete image from storage if it exists and is a Supabase URL
     if (imageUrl && imageUrl.startsWith('https://smpjbedvyqensurarrym.supabase.co/storage/v1/object/public/order-mockups/')) {
@@ -153,6 +162,8 @@ const UserOrdersPage = () => {
           .remove([`orders/${fileName}`]); // Ensure correct path for removal
         if (storageError) {
           console.error("Error deleting order image from storage:", storageError);
+          showError(`Failed to delete order image from storage: ${storageError.message}`);
+          dismissToast(toastId);
           setLoading(false);
           return;
         }
@@ -166,9 +177,12 @@ const UserOrdersPage = () => {
 
     if (error) {
       console.error("Error deleting order:", error);
+      showError(`Failed to delete order: ${error.message}`);
     } else {
+      showSuccess("Order deleted successfully!");
       fetchUserAndOrders(); // Re-fetch orders to update the list
     }
+    dismissToast(toastId);
     setLoading(false);
   };
 

@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, Eye, Trash2, Image as ImageIcon, ArrowDownWideNarrow, ArrowUpWideNarrow } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
+import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast'; // Import toast utilities
 
 interface Order {
   id: string;
@@ -73,14 +74,17 @@ const DemoOrderListingPage = () => {
             // Fallback if context.data is not JSON
           }
         }
+        showError(`Failed to load demo orders: ${errorMessage}`);
         setError(errorMessage);
       } else if (data && data.orders) {
         setOrders(data.orders || []);
       } else {
+        showError("Unexpected response from server when fetching demo orders.");
         setError("Unexpected response from server.");
       }
     } catch (err: any) {
       console.error("Network or unexpected error:", err);
+      showError(err.message || "An unexpected error occurred while fetching demo orders.");
       setError(err.message || "An unexpected error occurred.");
     } finally {
       setLoading(false);
@@ -108,6 +112,7 @@ const DemoOrderListingPage = () => {
     if (!currentOrder || !newStatus) return;
 
     setLoading(true);
+    const toastId = showLoading("Updating demo order status...");
     const { error } = await supabase
       .from('orders')
       .update({ status: newStatus })
@@ -115,10 +120,13 @@ const DemoOrderListingPage = () => {
 
     if (error) {
       console.error("Error updating order status:", error);
+      showError(`Failed to update demo order status: ${error.message}`);
     } else {
+      showSuccess("Demo order status updated successfully!");
       setIsEditStatusModalOpen(false);
       fetchOrders();
     }
+    dismissToast(toastId);
     setLoading(false);
   };
 
@@ -128,6 +136,7 @@ const DemoOrderListingPage = () => {
     }
 
     setLoading(true);
+    const toastId = showLoading("Deleting demo order...");
 
     if (imageUrl && imageUrl.startsWith('https://smpjbedvyqensurarrym.supabase.co/storage/v1/object/public/order-mockups/')) {
       const fileName = imageUrl.split('/').pop();
@@ -137,6 +146,8 @@ const DemoOrderListingPage = () => {
           .remove([`orders/${fileName}`]);
         if (storageError) {
           console.error("Error deleting order image from storage:", storageError);
+          showError(`Failed to delete demo order image from storage: ${storageError.message}`);
+          dismissToast(toastId);
           setLoading(false);
           return;
         }
@@ -150,9 +161,12 @@ const DemoOrderListingPage = () => {
 
     if (error) {
       console.error("Error deleting order:", error);
+      showError(`Failed to delete demo order: ${error.message}`);
     } else {
+      showSuccess("Demo order deleted successfully!");
       fetchOrders();
     }
+    dismissToast(toastId);
     setLoading(false);
   };
 

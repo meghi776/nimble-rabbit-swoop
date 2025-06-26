@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useSession } from '@/contexts/SessionContext';
+import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast'; // Import toast utilities
 
 interface Profile {
   id: string;
@@ -51,6 +52,7 @@ const UserManagementPage = () => {
 
     if (error) {
       console.error("Error fetching profiles:", error);
+      showError("Failed to load user profiles.");
       setError(error.message);
     } else {
       setProfiles(data || []);
@@ -97,6 +99,7 @@ const UserManagementPage = () => {
       return;
     }
     setLoading(true);
+    const toastId = showLoading("Deleting user profile...");
     const { error } = await supabase
       .from('profiles')
       .delete()
@@ -104,9 +107,12 @@ const UserManagementPage = () => {
 
     if (error) {
       console.error("Error deleting profile:", error);
+      showError(`Failed to delete profile: ${error.message}`);
     } else {
+      showSuccess("User profile deleted successfully!");
       fetchProfiles(); // Re-fetch profiles to update the list
     }
+    dismissToast(toastId);
     setLoading(false);
   };
 
@@ -114,6 +120,7 @@ const UserManagementPage = () => {
     if (!currentProfile) return;
 
     setLoading(true);
+    const toastId = showLoading("Saving profile changes...");
     const { error } = await supabase
       .from('profiles')
       .update({
@@ -125,10 +132,13 @@ const UserManagementPage = () => {
 
     if (error) {
       console.error("Error updating profile:", error);
+      showError(`Failed to update profile: ${error.message}`);
     } else {
+      showSuccess("Profile updated successfully!");
       setIsEditModalOpen(false);
       fetchProfiles(); // Re-fetch profiles to update the list
     }
+    dismissToast(toastId);
     setLoading(false);
   };
 
@@ -142,17 +152,18 @@ const UserManagementPage = () => {
 
   const handleSubmitAddUser = async () => {
     if (!newEmail.trim() || !newPassword.trim()) {
-      console.error("Email and password cannot be empty.");
+      showError("Email and password cannot be empty.");
       return;
     }
 
     if (!session || !session.access_token) {
-      console.error("You must be logged in to create users. Please log in again.");
+      showError("You must be logged in to create users. Please log in again.");
       setLoading(false);
       return;
     }
 
     setLoading(true);
+    const toastId = showLoading("Creating new user...");
     try {
       const requestBody = {
         email: newEmail,
@@ -208,17 +219,22 @@ const UserManagementPage = () => {
         }
 
         setError(errorMessage);
+        showError(errorMessage);
       } else if (data && (data as any).error) { // This handles cases where function returns 200 but with an error payload
         console.error("Edge Function returned error in data payload (status 200):", (data as any).error);
         setError(`Failed to create user: ${(data as any).error}`);
+        showError(`Failed to create user: ${(data as any).error}`);
       } else {
+        showSuccess("User created successfully!");
         setIsAddUserModalOpen(false);
         fetchProfiles(); // Re-fetch profiles to show the new user
       }
     } catch (err) {
       console.error("Network or unexpected error invoking Edge Function:", err);
+      showError("An unexpected error occurred while creating the user.");
       setError("An unexpected error occurred while creating the user.");
     } finally {
+      dismissToast(toastId);
       setLoading(false);
     }
   };

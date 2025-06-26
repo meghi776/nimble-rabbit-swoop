@@ -20,6 +20,7 @@ import { useSession } from '@/contexts/SessionContext';
 import Papa from 'papaparse';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch'; // Import Switch component
+import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast'; // Import toast utilities
 
 interface Product {
   id: string;
@@ -82,6 +83,7 @@ const ProductManagementByBrandPage = () => {
       .single();
     if (categoryError) {
       console.error("Error fetching category:", categoryError);
+      showError("Failed to load category details.");
       setError(categoryError.message);
       setLoading(false);
       return;
@@ -96,6 +98,7 @@ const ProductManagementByBrandPage = () => {
       .single();
     if (brandError) {
       console.error("Error fetching brand:", brandError);
+      showError("Failed to load brand details.");
       setError(brandError.message);
       setLoading(false);
       return;
@@ -131,6 +134,7 @@ const ProductManagementByBrandPage = () => {
 
     if (productsError) {
       console.error("Error fetching products:", productsError);
+      showError("Failed to load products.");
       setError(productsError.message);
     } else {
       setProducts(data.map(p => ({
@@ -200,6 +204,7 @@ const ProductManagementByBrandPage = () => {
           .remove([`mockups/${fileName}`]); // Assuming mockups are stored in 'mockups/' subfolder
         if (storageError) {
           console.error("Error deleting mockup image from storage:", storageError);
+          showError(`Failed to delete mockup image: ${storageError.message}`);
           return false;
         }
       }
@@ -213,6 +218,7 @@ const ProductManagementByBrandPage = () => {
         .eq('id', mockupId);
       if (deleteMockupError) {
         console.error("Error deleting mockup entry:", deleteMockupError);
+        showError(`Failed to delete mockup entry: ${deleteMockupError.message}`);
         return false;
       }
     }
@@ -225,6 +231,7 @@ const ProductManagementByBrandPage = () => {
 
     if (error) {
       console.error("Error deleting product:", error);
+      showError(`Failed to delete product: ${error.message}`);
       return false;
     }
     return true;
@@ -235,10 +242,15 @@ const ProductManagementByBrandPage = () => {
       return;
     }
     setLoading(true);
+    const toastId = showLoading("Deleting product...");
     const success = await deleteSingleProduct(id, mockupId, mockupImageUrl);
     if (success) {
+      showSuccess("Product deleted successfully!");
       fetchProducts();
+    } else {
+      showError("Failed to delete product.");
     }
+    dismissToast(toastId);
     setLoading(false);
   };
 
@@ -253,6 +265,7 @@ const ProductManagementByBrandPage = () => {
 
     if (error) {
       console.error(`Error uploading image to ${bucketName}/${subfolder}:`, error);
+      showError(`Error uploading image: ${error.message}`);
       return null;
     }
 
@@ -265,34 +278,37 @@ const ProductManagementByBrandPage = () => {
 
   const handleSubmit = async () => {
     if (!productName.trim() || !productPrice.trim()) {
-      console.error("Product name and price cannot be empty.");
+      showError("Product name and price cannot be empty.");
       return;
     }
 
     if (!categoryId || !brandId) {
-      console.error("Category ID or Brand ID is missing.");
+      showError("Category ID or Brand ID is missing.");
       return;
     }
 
     if (!user?.id) {
-      console.error("User not authenticated. Please log in.");
+      showError("User not authenticated. Please log in.");
       setLoading(false);
       return;
     }
 
     setLoading(true);
+    const toastId = showLoading(currentProduct ? "Saving product changes..." : "Adding new product...");
     let finalMockupImageUrl = currentMockupImageUrl;
 
     // 1. Handle Mockup Image Upload
     if (mockupImageFile) {
       finalMockupImageUrl = await handleFileUpload(mockupImageFile, 'order-mockups', 'mockups'); // Use 'order-mockups' bucket, 'mockups' subfolder
       if (!finalMockupImageUrl) {
+        dismissToast(toastId);
         setLoading(false);
-        return; // Image upload failed
+        return; // Image upload failed (error already shown by handleFileUpload)
       }
     } else if (!currentMockupImageUrl && !currentProduct) {
       // If adding a new product and no mockup image is provided
-      console.error("Please upload a mockup image for the new product.");
+      showError("Please upload a mockup image for the new product.");
+      dismissToast(toastId);
       setLoading(false);
       return;
     }
@@ -320,6 +336,8 @@ const ProductManagementByBrandPage = () => {
 
       if (error) {
         console.error("Error updating product:", error);
+        showError(`Failed to update product: ${error.message}`);
+        dismissToast(toastId);
         setLoading(false);
         return;
       }
@@ -345,6 +363,8 @@ const ProductManagementByBrandPage = () => {
 
       if (error) {
         console.error("Error adding product:", error);
+        showError(`Failed to add product: ${error.message}`);
+        dismissToast(toastId);
         setLoading(false);
         return;
       }
@@ -366,6 +386,8 @@ const ProductManagementByBrandPage = () => {
 
         if (mockupUpdateError) {
           console.error("Error updating mockup:", mockupUpdateError);
+          showError(`Failed to update mockup: ${mockupUpdateError.message}`);
+          dismissToast(toastId);
           setLoading(false);
           return;
         }
@@ -383,19 +405,24 @@ const ProductManagementByBrandPage = () => {
 
         if (mockupInsertError) {
           console.error("Error inserting mockup:", mockupInsertError);
+          showError(`Failed to insert mockup: ${mockupInsertError.message}`);
+          dismissToast(toastId);
           setLoading(false);
           return;
         }
       }
     }
 
+    showSuccess(currentProduct ? "Product updated successfully!" : "Product added successfully!");
     setIsDialogOpen(false);
     fetchProducts();
+    dismissToast(toastId);
     setLoading(false);
   };
 
   const handleToggleDisable = async (productId: string, currentStatus: boolean) => {
     setLoading(true);
+    const toastId = showLoading(currentStatus ? "Disabling product..." : "Enabling product...");
     const { error } = await supabase
       .from('products')
       .update({ is_disabled: !currentStatus })
@@ -403,9 +430,12 @@ const ProductManagementByBrandPage = () => {
 
     if (error) {
       console.error("Error toggling product status:", error);
+      showError(`Failed to change product status: ${error.message}`);
     } else {
+      showSuccess(`Product ${currentStatus ? 'disabled' : 'enabled'} successfully!`);
       fetchProducts(); // Re-fetch to update the UI
     }
+    dismissToast(toastId);
     setLoading(false);
   };
 
@@ -434,27 +464,31 @@ const ProductManagementByBrandPage = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    showSuccess("Products exported successfully!");
   };
 
   const handleImportProducts = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) {
-      console.error("No file selected. Please select a CSV file to import.");
+      showError("No file selected. Please select a CSV file to import.");
       return;
     }
 
     if (file.type !== 'text/csv') {
-      console.error("Invalid file type. Please upload a CSV file.");
+      showError("Invalid file type. Please upload a CSV file.");
       return;
     }
 
     setLoading(true);
+    const toastId = showLoading("Importing products...");
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
       complete: async (results) => {
         if (results.errors.length > 0) {
           console.error("CSV Parsing Errors:", results.errors);
+          showError("CSV parsing failed. Check console for details.");
+          dismissToast(toastId);
           setLoading(false);
           return;
         }
@@ -505,13 +539,17 @@ const ProductManagementByBrandPage = () => {
         }
 
         fetchProducts(); // Re-fetch products to update the list
+        dismissToast(toastId);
         setLoading(false);
         if (importFileInputRef.current) {
           importFileInputRef.current.value = ''; // Clear the file input
         }
+        showSuccess(`Import complete: ${successfulImports} successful, ${failedImports} failed.`);
       },
       error: (err) => {
         console.error("CSV Parsing Error:", err);
+        showError(`CSV parsing failed: ${err.message}`);
+        dismissToast(toastId);
         setLoading(false);
       }
     });
@@ -540,7 +578,7 @@ const ProductManagementByBrandPage = () => {
 
   const handleBulkDelete = async () => {
     if (selectedProductIds.size === 0) {
-      console.error("No products selected. Please select at least one product to delete.");
+      showError("No products selected. Please select at least one product to delete.");
       return;
     }
 
@@ -549,6 +587,7 @@ const ProductManagementByBrandPage = () => {
     }
 
     setLoading(true);
+    const toastId = showLoading(`Deleting ${selectedProductIds.size} products...`);
     let successfulDeletions = 0;
     let failedDeletions = 0;
 
@@ -565,7 +604,15 @@ const ProductManagementByBrandPage = () => {
     }
 
     fetchProducts(); // Re-fetch products to update the list
+    dismissToast(toastId);
     setLoading(false);
+    if (failedDeletions === 0) {
+      showSuccess(`${successfulDeletions} products deleted successfully!`);
+    } else if (successfulDeletions > 0) {
+      showError(`${successfulDeletions} products deleted, but ${failedDeletions} failed.`);
+    } else {
+      showError("Failed to delete any selected products.");
+    }
   };
 
   const isAllSelected = products.length > 0 && selectedProductIds.size === products.length;

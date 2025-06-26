@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
+import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast'; // Import toast utilities
 
 interface Category {
   id: string;
@@ -41,6 +42,7 @@ const CategoryManagementPage = () => {
 
     if (error) {
       console.error("Error fetching categories:", error);
+      showError("Failed to load categories.");
       setError(error.message);
     } else {
       setCategories(data || []);
@@ -70,6 +72,7 @@ const CategoryManagementPage = () => {
     if (!window.confirm("Are you sure you want to delete this category?")) {
       return;
     }
+    const toastId = showLoading("Deleting category...");
     const { error } = await supabase
       .from('categories')
       .delete()
@@ -77,17 +80,21 @@ const CategoryManagementPage = () => {
 
     if (error) {
       console.error("Error deleting category:", error);
+      showError(`Failed to delete category: ${error.message}`);
     } else {
+      showSuccess("Category deleted successfully!");
       fetchCategories();
     }
+    dismissToast(toastId);
   };
 
   const handleSubmit = async () => {
     if (!categoryName.trim()) {
-      console.error("Category name cannot be empty.");
+      showError("Category name cannot be empty.");
       return;
     }
 
+    const toastId = showLoading(currentCategory ? "Saving category changes..." : "Adding new category...");
     if (currentCategory) {
       // Update existing category
       const { error } = await supabase
@@ -97,7 +104,9 @@ const CategoryManagementPage = () => {
 
       if (error) {
         console.error("Error updating category:", error);
+        showError(`Failed to update category: ${error.message}`);
       } else {
+        showSuccess("Category updated successfully!");
         setIsDialogOpen(false);
         fetchCategories();
       }
@@ -109,11 +118,14 @@ const CategoryManagementPage = () => {
 
       if (error) {
         console.error("Error adding category:", error);
+        showError(`Failed to add category: ${error.message}`);
       } else {
+        showSuccess("Category added successfully!");
         setIsDialogOpen(false);
         fetchCategories();
       }
     }
+    dismissToast(toastId);
   };
 
   return (

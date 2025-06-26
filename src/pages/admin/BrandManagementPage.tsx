@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { PlusCircle, Edit, Trash2, ArrowLeft } from 'lucide-react';
+import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast'; // Import toast utilities
 
 interface Brand {
   id: string;
@@ -49,6 +50,7 @@ const BrandManagementPage = () => {
 
       if (categoryError) {
         console.error("Error fetching category:", categoryError);
+        showError("Failed to load category details.");
         setError(categoryError.message);
         setLoading(false);
         return;
@@ -64,6 +66,7 @@ const BrandManagementPage = () => {
 
       if (brandsError) {
         console.error("Error fetching brands:", brandsError);
+        showError("Failed to load brands.");
         setError(brandsError.message);
       } else {
         setBrands(brandsData || []);
@@ -94,6 +97,7 @@ const BrandManagementPage = () => {
     if (!window.confirm("Are you sure you want to delete this brand?")) {
       return;
     }
+    const toastId = showLoading("Deleting brand...");
     const { error } = await supabase
       .from('brands')
       .delete()
@@ -101,7 +105,9 @@ const BrandManagementPage = () => {
 
     if (error) {
       console.error("Error deleting brand:", error);
+      showError(`Failed to delete brand: ${error.message}`);
     } else {
+      showSuccess("Brand deleted successfully!");
       // Re-fetch brands after deletion
       const { data: brandsData, error: fetchError } = await supabase
         .from('brands')
@@ -111,23 +117,26 @@ const BrandManagementPage = () => {
 
       if (fetchError) {
         console.error("Error re-fetching brands:", fetchError);
+        showError("Failed to refresh brands list.");
       } else {
         setBrands(brandsData || []);
       }
     }
+    dismissToast(toastId);
   };
 
   const handleSubmit = async () => {
     if (!brandName.trim()) {
-      console.error("Brand name cannot be empty.");
+      showError("Brand name cannot be empty.");
       return;
     }
 
     if (!categoryId) {
-      console.error("Category ID is missing.");
+      showError("Category ID is missing.");
       return;
     }
 
+    const toastId = showLoading(currentBrand ? "Saving brand changes..." : "Adding new brand...");
     if (currentBrand) {
       // Update existing brand
       const { error } = await supabase
@@ -137,7 +146,9 @@ const BrandManagementPage = () => {
 
       if (error) {
         console.error("Error updating brand:", error);
+        showError(`Failed to update brand: ${error.message}`);
       } else {
+        showSuccess("Brand updated successfully!");
         setIsDialogOpen(false);
         // Re-fetch brands after update
         const { data: brandsData, error: fetchError } = await supabase
@@ -148,6 +159,7 @@ const BrandManagementPage = () => {
 
         if (fetchError) {
           console.error("Error re-fetching brands:", fetchError);
+          showError("Failed to refresh brands list.");
         } else {
           setBrands(brandsData || []);
         }
@@ -160,7 +172,9 @@ const BrandManagementPage = () => {
 
       if (error) {
         console.error("Error adding brand:", error);
+        showError(`Failed to add brand: ${error.message}`);
       } else {
+        showSuccess("Brand added successfully!");
         setIsDialogOpen(false);
         // Re-fetch brands after addition
         const { data: brandsData, error: fetchError } = await supabase
@@ -171,11 +185,13 @@ const BrandManagementPage = () => {
 
         if (fetchError) {
           console.error("Error re-fetching brands:", fetchError);
+          showError("Failed to refresh brands list.");
         } else {
           setBrands(brandsData || []);
         }
       }
     }
+    dismissToast(toastId);
   };
 
   return (

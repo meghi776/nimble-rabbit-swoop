@@ -35,6 +35,7 @@ import { useSession } from '@/contexts/SessionContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { proxyImageUrl } from '@/utils/imageProxy';
+import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast'; // Import toast utilities
 
 interface Product {
   id: string;
@@ -185,6 +186,7 @@ const MobileCoverCustomizationPage = () => {
 
       if (productError) {
         console.error("Error fetching product:", productError);
+        showError("Failed to load product details.");
         setError(productError.message);
       } else if (productData) {
         console.log("Fetched productData:", productData); // Log product data
@@ -218,6 +220,7 @@ const MobileCoverCustomizationPage = () => {
             setDesignElements(loadedElements);
           } catch (parseError) {
             console.error("Error parsing design data:", parseError);
+            showError("Failed to load existing design data.");
           }
         }
         setDemoOrderPrice(productData.price?.toFixed(2) || '0.00');
@@ -285,7 +288,7 @@ const MobileCoverCustomizationPage = () => {
 
   const addImageElement = (imageUrl: string, id: string) => {
     if (!product) {
-      console.error("Product details not loaded. Cannot add image.");
+      showError("Product details not loaded. Cannot add image.");
       return;
     }
     // Define a reasonable initial size for the image element (e.g., 99% of the smaller canvas dimension)
@@ -493,6 +496,7 @@ const MobileCoverCustomizationPage = () => {
 
     if (error) {
       console.error(`Error uploading image to ${bucketName}/${subfolder}:`, error);
+      showError(`Error uploading image: ${error.message}`);
       return null;
     }
 
@@ -505,7 +509,7 @@ const MobileCoverCustomizationPage = () => {
 
   const captureDesignForOrder = async () => { // Renamed function
     if (!canvasContentRef.current || !product) {
-      console.error("Design area not found or product not loaded.");
+      showError("Design area not found or product not loaded.");
       return null;
     }
 
@@ -562,9 +566,9 @@ const MobileCoverCustomizationPage = () => {
       }
       // Check for specific html2canvas error messages related to tainting
       if (err.message && err.message.includes("Tainted canvases may not be exported")) {
-        console.error("Capture Failed: CORS Issue", "The design contains images from another domain that are not configured for CORS. Please ensure Supabase Storage CORS settings are correct (Allowed Origins: *, Allowed Methods: GET).");
+        showError("Capture Failed: The design contains images from another domain that are not configured for CORS. Please ensure Supabase Storage CORS settings are correct (Allowed Origins: *, Allowed Methods: GET).");
       } else {
-        console.error("Capture Failed", err.message || "An unexpected error occurred while generating image.");
+        showError(`Capture Failed: ${err.message || "An unexpected error occurred while generating image."}`);
       }
       return null;
     } finally {
@@ -588,11 +592,11 @@ const MobileCoverCustomizationPage = () => {
 
     // 2. Add the element to state with the temporary URL
     if (!product) {
-      console.error("Product details not loaded. Cannot add image.");
+      showError("Product details not loaded. Cannot add image.");
       return;
     }
     addImageElement(tempImageUrl, newElementId); // Use the new addImageElement function
-    console.log("Image Added", "Your image is being uploaded in the background.");
+    showLoading("Your image is being uploaded...");
 
     // Clear the file input immediately
     if (fileInputRef.current) {
@@ -608,33 +612,33 @@ const MobileCoverCustomizationPage = () => {
           prev.map(el => (el.id === newElementId ? { ...el, value: uploadedUrl } : el))
         );
         URL.revokeObjectURL(tempImageUrl); // Revoke the temporary URL
-        console.log("Upload Complete", "Your image has been saved to the server.");
+        showSuccess("Image uploaded successfully!");
       } else {
         // If upload fails, remove the element or show a persistent error
         setDesignElements(prev => prev.filter(el => el.id !== newElementId));
         URL.revokeObjectURL(tempImageUrl);
-        console.error("Upload Failed", "Could not upload image to server. Please try again.");
+        showError("Could not upload image to server. Please try again.");
       }
     } catch (err: any) {
       console.error("Error during image upload:", err);
       setDesignElements(prev => prev.filter(el => el.id !== newElementId));
       URL.revokeObjectURL(tempImageUrl);
-      console.error("Upload Error", `An error occurred during upload: ${err.message}`);
+      showError(`An error occurred during upload: ${err.message}`);
     }
   };
 
   const handleBuyNowClick = () => {
     if (!user) {
-      console.error("Authentication Required", "Please log in to place an order.");
+      showError("Please log in to place an order.");
       navigate('/login');
       return;
     }
     if (!product) {
-      console.error("Error", "Product not loaded. Cannot proceed with order.");
+      showError("Product not loaded. Cannot proceed with order.");
       return;
     }
     if (product.inventory !== null && product.inventory <= 0) {
-      console.error("Out of Stock", "This product is currently out of stock.");
+      showError("This product is currently out of stock.");
       return;
     }
     setIsCheckoutModalOpen(true);
@@ -642,7 +646,7 @@ const MobileCoverCustomizationPage = () => {
 
   const handlePlaceOrder = async (isDemo: boolean) => {
     if (!product || !user?.id) {
-      console.error("Error", "Product or user information missing.");
+      showError("Product or user information missing.");
       return;
     }
 
@@ -655,15 +659,16 @@ const MobileCoverCustomizationPage = () => {
     const finalOrderType = isDemo ? 'demo' : 'normal';
 
     if (!isDemo && (!finalCustomerName.trim() || !finalCustomerAddress.trim() || !finalCustomerPhone.trim())) {
-      console.error("Validation Error", "Please fill in all customer details.");
+      showError("Please fill in all customer details.");
       return;
     }
     if (isDemo && (!finalCustomerAddress.trim() || isNaN(finalTotalPrice))) {
-      console.error("Validation Error", "Please provide a valid price and address for the demo order.");
+      showError("Please provide a valid price and address for the demo order.");
       return;
     }
 
     setIsPlacingOrder(true);
+    const toastId = showLoading(isDemo ? "Placing demo order..." : "Placing your order...");
     let orderedDesignImageUrl: string | null = null;
     
     try {
@@ -748,7 +753,7 @@ const MobileCoverCustomizationPage = () => {
         throw new Error(`Failed to place order: ${orderInsertError.message}`);
       }
 
-      console.log("Order placed successfully!");
+      showSuccess(isDemo ? "Demo order placed successfully!" : "Order placed successfully!");
       setIsCheckoutModalOpen(false);
       setIsDemoOrderModalOpen(false);
       
@@ -760,20 +765,21 @@ const MobileCoverCustomizationPage = () => {
 
     } catch (err: any) {
       console.error("Error placing order:", err);
-      console.error("Order Failed", err.message || "An unexpected error occurred while placing your order.");
+      showError(err.message || "An unexpected error occurred while placing your order.");
     } finally {
       setIsPlacingOrder(false);
+      dismissToast(toastId);
     }
   };
 
   const handleDemoOrderClick = () => {
     if (!user) {
-      console.error("Authentication Required", "Please log in to place a demo order.");
+      showError("Please log in to place a demo order.");
       navigate('/login');
       return;
     }
     if (!product) {
-      console.error("Error", "Product not loaded. Cannot place demo order.");
+      showError("Product not loaded. Cannot place demo order.");
       return;
     }
     setIsDemoOrderModalOpen(true);
@@ -781,7 +787,7 @@ const MobileCoverCustomizationPage = () => {
 
   const handleAddTextElement = () => {
     if (!product) {
-      console.error("Product details not loaded. Cannot add text.");
+      showError("Product details not loaded. Cannot add text.");
       return;
     }
     const defaultText = "New Text";
@@ -809,7 +815,7 @@ const MobileCoverCustomizationPage = () => {
     };
     setDesignElements(prev => [...prev, newElement]);
     setSelectedElementId(newElement.id);
-    console.log("Success", "New text element added!");
+    showSuccess("New text element added!");
   };
 
   const handleCanvasClick = (e: React.MouseEvent) => {
