@@ -284,8 +284,8 @@ const MobileCoverCustomizationPage = () => {
       console.error("Product details not loaded. Cannot add image.");
       return;
     }
-    // Define a reasonable initial size for the image element (e.g., 50% of the smaller canvas dimension)
-    const initialSize = Math.min(product.canvas_width, product.canvas_height) * 0.5;
+    // Define a reasonable initial size for the image element (e.g., 99% of the smaller canvas dimension)
+    const initialSize = Math.min(product.canvas_width, product.canvas_height) * 0.99;
     const newWidth = initialSize;
     const newHeight = initialSize;
 
