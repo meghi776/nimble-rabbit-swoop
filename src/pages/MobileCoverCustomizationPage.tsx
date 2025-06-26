@@ -284,15 +284,23 @@ const MobileCoverCustomizationPage = () => {
       console.error("Product details not loaded. Cannot add image.");
       return;
     }
-    // Set default width and height to 100% of canvas, and position at (0,0)
+    // Define a reasonable initial size for the image element (e.g., 50% of the smaller canvas dimension)
+    const initialSize = Math.min(product.canvas_width, product.canvas_height) * 0.5;
+    const newWidth = initialSize;
+    const newHeight = initialSize;
+
+    // Center the image initially
+    const newX = (product.canvas_width - newWidth) / 2;
+    const newY = (product.canvas_height - newHeight) / 2;
+
     const newElement: DesignElement = {
       id: id,
       type: 'image',
       value: imageUrl,
-      x: 0, // Position at 0
-      y: 0, // Position at 0
-      width: product.canvas_width, // 100% width
-      height: product.canvas_height, // 100% height
+      x: newX,
+      y: newY,
+      width: newWidth,
+      height: newHeight,
       rotation: 0,
     };
     setDesignElements(prev => [...prev, newElement]);
@@ -666,7 +674,7 @@ const MobileCoverCustomizationPage = () => {
 
       // Temporarily hide mockup for capture
       if (mockupImageElement instanceof HTMLElement) {
-        originalMockupPointerEvents = mockupImageElement.style.pointerEvents;
+        originalMockupPointerEvents = mockupImageElement.style.display; // Store display property
         mockupImageElement.style.display = 'none'; // Hide the mockup
       }
 
@@ -700,8 +708,7 @@ const MobileCoverCustomizationPage = () => {
     } finally {
       // Restore original styles
       if (mockupImageElement instanceof HTMLElement) {
-        mockupImageElement.style.pointerEvents = originalMockupPointerEvents;
-        mockupImageElement.style.display = ''; // Show the mockup again
+        mockupImageElement.style.display = originalMockupPointerEvents; // Restore display property
       }
       if (selectedElementDiv) {
         selectedElementDiv.classList.add('border-2', 'border-blue-500');
@@ -722,18 +729,7 @@ const MobileCoverCustomizationPage = () => {
       console.error("Product details not loaded. Cannot add image.");
       return;
     }
-    const newElement: DesignElement = {
-      id: newElementId,
-      type: 'image',
-      value: tempImageUrl, // Use temporary URL
-      x: 0,
-      y: 0,
-      width: product.canvas_width,
-      height: product.canvas_height,
-      rotation: 0,
-    };
-    setDesignElements(prev => [...prev, newElement]);
-    setSelectedElementId(newElement.id);
+    addImageElement(tempImageUrl, newElementId); // Use the new addImageElement function
     console.log("Image Added", "Your image is being uploaded in the background.");
 
     // Clear the file input immediately
@@ -1055,24 +1051,12 @@ const MobileCoverCustomizationPage = () => {
                       crossOrigin="anonymous" // Added for CORS compatibility with html2canvas
                     />
                   )}
-                  {selectedElementId === el.id && el.type === 'text' && ( // Render handles ONLY for text elements
+                  {selectedElementId === el.id && ( // Render handles for ALL selected elements
                     <>
                       <div
                         className="absolute -bottom-2 -right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center cursor-nwse-resize"
                         onMouseDown={(e) => handleResizeStart(e, el.id)}
-                        onTouchStart={(e) => {
-                          touchState.current = {
-                            mode: 'resizing',
-                            startX: e.touches[0].clientX,
-                            startY: e.touches[0].clientY,
-                            initialElementX: el.x,
-                            initialElementY: el.y,
-                            initialElementWidth: el.width,
-                            initialElementHeight: el.height,
-                            activeElementId: el.id,
-                          };
-                          handleResizeStart(e, el.id);
-                        }}
+                        onTouchStart={(e) => handleResizeStart(e, el.id)} // Corrected
                       >
                         <PlusCircle className="h-4 w-4 text-white" />
                       </div>
@@ -1085,29 +1069,9 @@ const MobileCoverCustomizationPage = () => {
                       <div
                         className="absolute -top-2 -right-2 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center cursor-grab"
                         onMouseDown={(e) => handleRotateStart(e, el.id)}
-                        onTouchStart={(e) => {
-                          const elementDiv = (e.currentTarget as HTMLElement).parentElement;
-                          if (!elementDiv || !designAreaRef.current) return;
-                          const designAreaRect = designAreaRef.current.getBoundingClientRect();
-                          const elementCenterX = el.x + el.width / 2;
-                          const elementCenterY = el.y + el.height / 2;
-                          const { x: unscaledClientX, y: unscaledClientY } = getUnscaledCoords(e.touches[0].clientX, e.touches[0].clientY);
-                          const initialAngle = Math.atan2(unscaledClientY - elementCenterY, unscaledClientX - elementCenterX);
-
-                          touchState.current = {
-                            mode: 'rotating',
-                            startX: e.touches[0].clientX,
-                            startY: e.touches[0].clientY,
-                            initialElementX: el.x,
-                            initialElementY: el.y,
-                            initialAngle: initialAngle,
-                            initialRotation: el.rotation,
-                            activeElementId: el.id,
-                          };
-                          handleRotateStart(e, el.id);
-                        }}
+                        onTouchStart={(e) => handleRotateStart(e, el.id)} // Corrected
                       >
-                        <RotateCw className="h-4 w-4" />
+                        <RotateCw className="h-4 w-4 text-white" />
                       </div>
                     </>
                   )}
