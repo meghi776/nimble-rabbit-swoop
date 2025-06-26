@@ -21,6 +21,7 @@ interface Category {
   id: string;
   name: string;
   description: string | null;
+  sort_order: number | null; // Added sort_order
 }
 
 const CategoryManagementPage = () => {
@@ -31,14 +32,16 @@ const CategoryManagementPage = () => {
   const [currentCategory, setCurrentCategory] = useState<Category | null>(null);
   const [categoryName, setCategoryName] = useState('');
   const [categoryDescription, setCategoryDescription] = useState('');
+  const [categorySortOrder, setCategorySortOrder] = useState<string>('0'); // New state for sort order
 
   const fetchCategories = async () => {
     setLoading(true);
     setError(null);
     const { data, error } = await supabase
       .from('categories')
-      .select('id, name, description')
-      .order('name', { ascending: true });
+      .select('id, name, description, sort_order') // Select sort_order
+      .order('sort_order', { ascending: true }) // Order by sort_order
+      .order('name', { ascending: true }); // Secondary order by name
 
     if (error) {
       console.error("Error fetching categories:", error);
@@ -58,6 +61,7 @@ const CategoryManagementPage = () => {
     setCurrentCategory(null);
     setCategoryName('');
     setCategoryDescription('');
+    setCategorySortOrder('0'); // Default sort order for new category
     setIsDialogOpen(true);
   };
 
@@ -65,6 +69,7 @@ const CategoryManagementPage = () => {
     setCurrentCategory(category);
     setCategoryName(category.name);
     setCategoryDescription(category.description || '');
+    setCategorySortOrder(category.sort_order?.toString() || '0'); // Set current sort order
     setIsDialogOpen(true);
   };
 
@@ -94,12 +99,18 @@ const CategoryManagementPage = () => {
       return;
     }
 
+    const parsedSortOrder = parseInt(categorySortOrder);
+    if (isNaN(parsedSortOrder)) {
+      showError("Sort order must be a valid number.");
+      return;
+    }
+
     const toastId = showLoading(currentCategory ? "Saving category changes..." : "Adding new category...");
     if (currentCategory) {
       // Update existing category
       const { error } = await supabase
         .from('categories')
-        .update({ name: categoryName, description: categoryDescription })
+        .update({ name: categoryName, description: categoryDescription, sort_order: parsedSortOrder }) // Update sort_order
         .eq('id', currentCategory.id);
 
       if (error) {
@@ -114,7 +125,7 @@ const CategoryManagementPage = () => {
       // Add new category
       const { error } = await supabase
         .from('categories')
-        .insert({ name: categoryName, description: categoryDescription });
+        .insert({ name: categoryName, description: categoryDescription, sort_order: parsedSortOrder }); // Insert sort_order
 
       if (error) {
         console.error("Error adding category:", error);
@@ -159,6 +170,7 @@ const CategoryManagementPage = () => {
                       <TableRow>
                         <TableHead>Name</TableHead>
                         <TableHead>Description</TableHead>
+                        <TableHead>Sort Order</TableHead> {/* New TableHead for Sort Order */}
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -167,6 +179,7 @@ const CategoryManagementPage = () => {
                         <TableRow key={category.id}>
                           <TableCell className="font-medium">{category.name}</TableCell>
                           <TableCell>{category.description || 'N/A'}</TableCell>
+                          <TableCell>{category.sort_order ?? 'N/A'}</TableCell> {/* Display sort_order */}
                           <TableCell className="text-right">
                             <Button
                               variant="outline"
@@ -220,6 +233,18 @@ const CategoryManagementPage = () => {
                 id="description"
                 value={categoryDescription}
                 onChange={(e) => setCategoryDescription(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="sort-order" className="text-right">
+                Sort Order
+              </Label>
+              <Input
+                id="sort-order"
+                type="number"
+                value={categorySortOrder}
+                onChange={(e) => setCategorySortOrder(e.target.value)}
                 className="col-span-3"
               />
             </div>

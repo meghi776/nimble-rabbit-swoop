@@ -8,6 +8,7 @@ interface Category {
   id: string;
   name: string;
   description: string | null;
+  sort_order: number | null; // Added sort_order
 }
 
 const Index = () => {
@@ -27,8 +28,9 @@ const Index = () => {
       try {
         const { data, error: fetchError } = await supabase
           .from('categories')
-          .select('id, name, description')
-          .order('name', { ascending: true });
+          .select('id, name, description, sort_order') // Select sort_order
+          .order('sort_order', { ascending: true }) // Order by sort_order first
+          .order('name', { ascending: true }); // Then by name
 
         console.log("Index.tsx: Supabase response - data:", data, "error:", fetchError); // Detailed log of Supabase response
 
@@ -42,12 +44,14 @@ const Index = () => {
           const fetchedCategories = data || []; // Ensure it's an array even if data is null/undefined
           console.log("Index.tsx: Categories fetched successfully. Count:", fetchedCategories.length);
           
+          // The specific logic for "Mobile Cover" is now less critical if sort_order is used,
+          // but keeping it for explicit placement if its sort_order is set to be first.
           const mobileCover = fetchedCategories.find(cat => cat.name.toLowerCase() === 'mobile cover');
           const others = fetchedCategories.filter(cat => cat.name.toLowerCase() !== 'mobile cover');
           
           setMobileCoverCategory(mobileCover || null);
           setOtherCategories(others);
-          setCategories(fetchedCategories);
+          setCategories(fetchedCategories); // Keep all categories for rendering
         }
       } catch (e: any) {
         console.error("Index.tsx: Unexpected error during fetchCategories:", e);
@@ -81,39 +85,42 @@ const Index = () => {
             <p className="text-gray-600 dark:text-gray-300">No categories found. Please add some from the admin panel.</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-4xl mx-auto">
-              {mobileCoverCategory && (
-                <Link
-                  key={mobileCoverCategory.id}
-                  to={`/categories/${mobileCoverCategory.id}/brands`}
-                  className="block"
-                >
-                  <Card className="h-full flex flex-col justify-between p-6 bg-white dark:bg-gray-800 shadow-xl rounded-xl border-2 border-blue-500 hover:border-blue-700 transition-all duration-300 transform hover:scale-105 cursor-pointer">
-                    <CardHeader className="pb-4 flex flex-col items-center text-center">
-                      <Smartphone className="h-12 w-12 text-blue-600 dark:text-blue-400 mb-3" />
-                      <CardTitle className="text-2xl font-bold text-gray-900 dark:text-gray-50">{mobileCoverCategory.name}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="text-center">
-                      <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">{mobileCoverCategory.description || 'Design and personalize your mobile covers.'}</p>
-                      <span className="inline-block bg-blue-500 text-white text-sm font-semibold px-4 py-2 rounded-full shadow-md">
-                        Start Designing
-                      </span>
-                    </CardContent>
-                  </Card>
-                </Link>
-              )}
-              {otherCategories.map((category) => (
-                <Card key={category.id} className="h-full flex flex-col justify-between p-6 bg-gray-200 dark:bg-gray-700 shadow-md rounded-xl border-2 border-gray-300 dark:border-gray-600 opacity-80 cursor-not-allowed">
-                  <CardHeader className="pb-4 flex flex-col items-center text-center">
-                    <Package className="h-12 w-12 text-gray-500 dark:text-gray-400 mb-3" />
-                    <CardTitle className="text-2xl font-bold text-gray-700 dark:text-gray-200">{category.name}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-center">
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{category.description || 'Exciting products coming soon!'}</p>
-                    <span className="inline-block bg-yellow-500 text-white text-sm font-semibold px-4 py-2 rounded-full shadow-md">
-                      Coming Soon!
-                    </span>
-                  </CardContent>
-                </Card>
+              {/* Render categories based on the fetched and sorted 'categories' state */}
+              {categories.map((category) => (
+                <React.Fragment key={category.id}>
+                  {category.name.toLowerCase() === 'mobile cover' ? (
+                    <Link
+                      to={`/categories/${category.id}/brands`}
+                      className="block"
+                    >
+                      <Card className="h-full flex flex-col justify-between p-6 bg-white dark:bg-gray-800 shadow-xl rounded-xl border-2 border-blue-500 hover:border-blue-700 transition-all duration-300 transform hover:scale-105 cursor-pointer">
+                        <CardHeader className="pb-4 flex flex-col items-center text-center">
+                          <Smartphone className="h-12 w-12 text-blue-600 dark:text-blue-400 mb-3" />
+                          <CardTitle className="text-2xl font-bold text-gray-900 dark:text-gray-50">{category.name}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="text-center">
+                          <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">{category.description || 'Design and personalize your mobile covers.'}</p>
+                          <span className="inline-block bg-blue-500 text-white text-sm font-semibold px-4 py-2 rounded-full shadow-md">
+                            Start Designing
+                          </span>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  ) : (
+                    <Card className="h-full flex flex-col justify-between p-6 bg-gray-200 dark:bg-gray-700 shadow-md rounded-xl border-2 border-gray-300 dark:border-gray-600 opacity-80 cursor-not-allowed">
+                      <CardHeader className="pb-4 flex flex-col items-center text-center">
+                        <Package className="h-12 w-12 text-gray-500 dark:text-gray-400 mb-3" />
+                        <CardTitle className="text-2xl font-bold text-gray-700 dark:text-gray-200">{category.name}</CardTitle>
+                      </CardHeader>
+                      <CardContent className="text-center">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{category.description || 'Exciting products coming soon!'}</p>
+                        <span className="inline-block bg-yellow-500 text-white text-sm font-semibold px-4 py-2 rounded-full shadow-md">
+                          Coming Soon!
+                        </span>
+                      </CardContent>
+                    </Card>
+                  )}
+                </React.Fragment>
               ))}
             </div>
           )}
