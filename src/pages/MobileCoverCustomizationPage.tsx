@@ -666,7 +666,7 @@ const MobileCoverCustomizationPage = () => {
 
       // Temporarily hide mockup for capture
       if (mockupImageElement instanceof HTMLElement) {
-        originalMockupPointerEvents = mockupImageElement.style.pointerEvents;
+        originalMockupPointerEvents = mockupImageElement.style.display; // Store display property
         mockupImageElement.style.display = 'none'; // Hide the mockup
       }
 
@@ -700,8 +700,7 @@ const MobileCoverCustomizationPage = () => {
     } finally {
       // Restore original styles
       if (mockupImageElement instanceof HTMLElement) {
-        mockupImageElement.style.pointerEvents = originalMockupPointerEvents;
-        mockupImageElement.style.display = ''; // Show the mockup again
+        mockupImageElement.style.display = originalMockupPointerEvents; // Restore display property
       }
       if (selectedElementDiv) {
         selectedElementDiv.classList.add('border-2', 'border-blue-500');
@@ -1127,7 +1126,7 @@ const MobileCoverCustomizationPage = () => {
 
               {!designElements.length && (
                 <div
-                  className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 cursor-pointer border-2 border-dashed border-gray-400 rounded-lg m-4"
+                  className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 cursor-pointer"
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <PlusCircle className="h-12 w-12 mb-2" />
