@@ -86,8 +86,8 @@ const MobileCoverCustomizationPage = () => {
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   
   const [currentFontSize, setCurrentFontSize] = useState<number[]>([35]);
-  const [currentTextColor, setCurrentTextColor] = useState('#000000');
-  const [currentFontFamily, setCurrentFontFamily] = useState('Arial');
+  const [currentTextColor, setCurrentTextColor] = '#000000';
+  const [currentFontFamily, setCurrentFontFamily] = 'Arial';
   const [currentTextShadowEnabled, setCurrentTextShadowEnabled] = useState(false);
 
   const designAreaRef = useRef<HTMLDivElement>(null);
@@ -354,8 +354,8 @@ const MobileCoverCustomizationPage = () => {
     };
 
     const onMouseUp = () => {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onEnd);
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
     };
 
     document.addEventListener('mousemove', onMouseMove);
