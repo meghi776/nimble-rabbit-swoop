@@ -1051,30 +1051,7 @@ const MobileCoverCustomizationPage = () => {
                       crossOrigin="anonymous" // Added for CORS compatibility with html2canvas
                     />
                   )}
-                  {selectedElementId === el.id && ( // Render handles for ALL selected elements
-                    <>
-                      <div
-                        className="absolute -bottom-2 -right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center cursor-nwse-resize"
-                        onMouseDown={(e) => handleResizeStart(e, el.id)}
-                        onTouchStart={(e) => handleResizeStart(e, el.id)} // Corrected
-                      >
-                        <PlusCircle className="h-4 w-4 text-white" />
-                      </div>
-                      <div
-                        className="absolute -top-2 -left-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center cursor-pointer"
-                        onClick={() => deleteElement(el.id)}
-                      >
-                        <XCircle className="h-4 w-4" />
-                      </div>
-                      <div
-                        className="absolute -top-2 -right-2 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center cursor-grab"
-                        onMouseDown={(e) => handleRotateStart(e, el.id)}
-                        onTouchStart={(e) => handleRotateStart(e, el.id)} // Corrected
-                      >
-                        <RotateCw className="h-4 w-4 text-white" />
-                      </div>
-                    </>
-                  )}
+                  {/* Removed resize, delete, and rotate handles */}
                 </div>
               ))}
 
