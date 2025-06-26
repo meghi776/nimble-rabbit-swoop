@@ -13,6 +13,7 @@ interface Product {
   price: number | null;
   canvas_width: number | null;
   canvas_height: number | null;
+  is_disabled: boolean; // Added is_disabled
 }
 
 const ProductListingPage = () => {
@@ -29,7 +30,7 @@ const ProductListingPage = () => {
       setLoading(true);
       setError(null);
 
-      let query = supabase.from('products').select('id, name, description, image_url, price, canvas_width, canvas_height');
+      let query = supabase.from('products').select('id, name, description, image_url, price, canvas_width, canvas_height, is_disabled');
       let breadcrumbTitle = '';
       let backLink = '/';
 
@@ -84,6 +85,9 @@ const ProductListingPage = () => {
         setLoading(false);
         return;
       }
+
+      // Filter out disabled products for public view
+      query = query.eq('is_disabled', false);
 
       // Apply search filter if searchQuery is not empty
       if (searchQuery) {

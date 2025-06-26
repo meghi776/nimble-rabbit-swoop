@@ -18,7 +18,8 @@ import { Label } from "@/components/ui/label";
 import { PlusCircle, Edit, Trash2, ArrowLeft, Upload, Download, XCircle, Search } from 'lucide-react';
 import { useSession } from '@/contexts/SessionContext';
 import Papa from 'papaparse';
-import { Checkbox } from '@/components/ui/checkbox'; // Import Checkbox
+import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch'; // Import Switch component
 
 interface Product {
   id: string;
@@ -31,6 +32,7 @@ interface Product {
   canvas_height: number | null;
   mockup_id: string | null; // ID of the associated mockup
   mockup_image_url: string | null; // URL of the associated mockup image
+  is_disabled: boolean; // Added is_disabled
 }
 
 const ProductManagementByBrandPage = () => {
@@ -51,9 +53,10 @@ const ProductManagementByBrandPage = () => {
   const [canvasHeight, setCanvasHeight] = useState<string>('600');
   const [searchQuery, setSearchQuery] = useState<string>(''); // New state for search query
   const debounceTimeoutRef = useRef<number | null>(null); // Ref for debounce timeout
-  const [selectedProductIds, setSelectedProductIds] = new Set<string>(); // New state for bulk selection
+  const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set()); // New state for bulk selection
   const { user } = useSession();
   const importFileInputRef = useRef<HTMLInputElement>(null);
+  const [isProductDisabled, setIsProductDisabled] = useState(false); // New state for product disabled status
 
   // Helper to check if a URL is from Supabase storage
   const isSupabaseStorageUrl = (url: string | null, bucketName: string) => {
@@ -107,6 +110,7 @@ const ProductManagementByBrandPage = () => {
         price,
         canvas_width,
         canvas_height,
+        is_disabled,
         mockups(id, image_url)
       `)
       .eq('category_id', categoryId)
@@ -159,6 +163,7 @@ const ProductManagementByBrandPage = () => {
     setCurrentMockupImageUrl(null);
     setCanvasWidth('300');
     setCanvasHeight('600');
+    setIsProductDisabled(false); // Default to enabled for new products
     setIsDialogOpen(true);
   };
 
@@ -169,9 +174,9 @@ const ProductManagementByBrandPage = () => {
     setProductPrice(product.price?.toString() || '');
     setMockupImageFile(null); // Clear file input for edit
     setCurrentMockupImageUrl(product.mockup_image_url);
-
     setCanvasWidth(product.canvas_width?.toString() || '300');
     setCanvasHeight(product.canvas_height?.toString() || '600');
+    setIsProductDisabled(product.is_disabled); // Set current disabled status
     setIsDialogOpen(true);
   };
 
@@ -295,6 +300,7 @@ const ProductManagementByBrandPage = () => {
           price: parseFloat(productPrice),
           canvas_width: parseInt(canvasWidth),
           canvas_height: parseInt(canvasHeight),
+          is_disabled: isProductDisabled, // Update disabled status
         })
         .eq('id', currentProduct.id)
         .select()
@@ -318,6 +324,7 @@ const ProductManagementByBrandPage = () => {
           price: parseFloat(productPrice),
           canvas_width: parseInt(canvasWidth),
           canvas_height: parseInt(canvasHeight),
+          is_disabled: isProductDisabled, // Set disabled status for new product
         })
         .select()
         .single();
@@ -373,6 +380,21 @@ const ProductManagementByBrandPage = () => {
     setLoading(false);
   };
 
+  const handleToggleDisable = async (productId: string, currentStatus: boolean) => {
+    setLoading(true);
+    const { error } = await supabase
+      .from('products')
+      .update({ is_disabled: !currentStatus })
+      .eq('id', productId);
+
+    if (error) {
+      console.error("Error toggling product status:", error);
+    } else {
+      fetchProducts(); // Re-fetch to update the UI
+    }
+    setLoading(false);
+  };
+
   const handleExportProducts = () => {
     const dataToExport = products.map(product => ({
       id: product.id,
@@ -383,6 +405,7 @@ const ProductManagementByBrandPage = () => {
       price: product.price || 0,
       canvas_width: product.canvas_width || 0,
       canvas_height: product.canvas_height || 0,
+      is_disabled: product.is_disabled, // Include disabled status
       mockup_id: product.mockup_id || '',
       mockup_image_url: product.mockup_image_url || '',
     }));
@@ -435,6 +458,7 @@ const ProductManagementByBrandPage = () => {
               price: row.price ? parseFloat(row.price) : null,
               canvas_width: row.canvas_width ? parseInt(row.canvas_width) : 300,
               canvas_height: row.canvas_height ? parseInt(row.canvas_height) : 600,
+              is_disabled: row.is_disabled === 'TRUE' || row.is_disabled === 'true' || row.is_disabled === '1', // Parse boolean
               // mockup_id and mockup_image_url are not directly imported via CSV for simplicity
               // They would need separate logic for image uploads and mockup table management
             };
@@ -614,6 +638,7 @@ const ProductManagementByBrandPage = () => {
                         <TableHead>Description</TableHead>
                         <TableHead>Price</TableHead>
                         <TableHead>Canvas (WxH)</TableHead>
+                        <TableHead>Status</TableHead> {/* New TableHead for Status */}
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -638,6 +663,18 @@ const ProductManagementByBrandPage = () => {
                           <TableCell>{product.description || 'N/A'}</TableCell>
                           <TableCell>${product.price?.toFixed(2) || '0.00'}</TableCell>
                           <TableCell>{product.canvas_width || 'N/A'}x{product.canvas_height || 'N/A'}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center space-x-2">
+                              <Switch
+                                id={`product-status-${product.id}`}
+                                checked={!product.is_disabled} // Checked means ENABLED
+                                onCheckedChange={() => handleToggleDisable(product.id, product.is_disabled)}
+                              />
+                              <Label htmlFor={`product-status-${product.id}`}>
+                                {product.is_disabled ? 'Disabled' : 'Enabled'}
+                              </Label>
+                            </div>
+                          </TableCell>
                           <TableCell className="text-right">
                             <Button
                               variant="outline"
@@ -758,6 +795,21 @@ const ProductManagementByBrandPage = () => {
                     </Button>
                   </div>
                 )}
+              </div>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="product-status" className="text-right">
+                Status
+              </Label>
+              <div className="col-span-3 flex items-center space-x-2">
+                <Switch
+                  id="product-status"
+                  checked={!isProductDisabled} // Checked means ENABLED
+                  onCheckedChange={(checked) => setIsProductDisabled(!checked)}
+                />
+                <Label htmlFor="product-status">
+                  {isProductDisabled ? 'Disabled' : 'Enabled'}
+                </Label>
               </div>
             </div>
           </div>
