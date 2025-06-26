@@ -354,140 +354,22 @@ const MobileCoverCustomizationPage = () => {
     };
 
     const onMouseUp = () => {
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onEnd);
     };
 
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
   };
 
-  const handleResizeStart = (e: React.MouseEvent | React.TouchEvent, id: string) => {
-    e.stopPropagation();
-    const element = designElements.find(el => el.id === id);
-    if (!element || !product) return;
-
-    const isTouchEvent = 'touches' in e;
-    const clientX = isTouchEvent ? e.touches[0].clientX : e.clientX;
-    const clientY = isTouchEvent ? e.touches[0].clientY : e.clientY;
-
-    const { x: unscaledStartX, y: unscaledStartY } = getUnscaledCoords(clientX, clientY);
-    const startWidth = element.width;
-    const startHeight = element.height;
-
-    if (isTouchEvent) {
-      touchState.current = {
-        mode: 'resizing',
-        startX: clientX,
-        startY: clientY,
-        initialElementX: element.x,
-        initialElementY: element.y,
-        initialElementWidth: element.width,
-        initialElementHeight: element.height,
-        activeElementId: id,
-      };
-    }
-
-    const onMove = (moveEvent: MouseEvent | TouchEvent) => {
-      const currentClientX = 'touches' in moveEvent ? moveEvent.touches[0].clientX : moveEvent.clientX;
-      const currentClientY = 'touches' in moveEvent ? moveEvent.touches[0].clientY : moveEvent.clientY;
-
-      const { x: currentUnscaledX, y: currentUnscaledY } = getUnscaledCoords(currentClientX, currentClientY);
-
-      let newWidth = Math.max(20, startWidth + (currentUnscaledX - unscaledStartX));
-      let newHeight = Math.max(20, startHeight + (currentUnscaledY - unscaledStartY));
-
-      updateElement(id, { width: newWidth, height: newHeight });
-    };
-
-    const onEnd = () => {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onEnd);
-      document.removeEventListener('touchmove', onMove);
-      document.removeEventListener('touchend', onEnd);
-      if (isTouchEvent) {
-        touchState.current.mode = 'none';
-      }
-    };
-
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onEnd);
-    document.addEventListener('touchmove', onMove, { passive: false });
-    document.addEventListener('touchend', onEnd);
-  };
-
-  const handleRotateStart = (e: React.MouseEvent | React.TouchEvent, id: string) => {
-    e.stopPropagation();
-    const element = designElements.find(el => el.id === id);
-    if (!element || !designAreaRef.current) return;
-
-    const isTouchEvent = 'touches' in e;
-    const clientX = isTouchEvent ? e.touches[0].clientX : e.clientX;
-    const clientY = isTouchEvent ? e.touches[0].clientY : e.clientY;
-
-    const elementDiv = (e.currentTarget as HTMLElement).parentElement;
-    if (!elementDiv) return;
-
-    const designAreaRect = designAreaRef.current.getBoundingClientRect();
-
-    // Calculate center of the element in unscaled coordinates
-    const elementCenterX = element.x + element.width / 2;
-    const elementCenterY = element.y + element.height / 2;
-
-    // Calculate initial angle based on unscaled client coordinates relative to unscaled element center
-    const { x: unscaledClientX, y: unscaledClientY } = getUnscaledCoords(clientX, clientY);
-    const initialAngle = Math.atan2(unscaledClientY - elementCenterY, unscaledClientX - elementCenterX);
-    const initialRotation = element.rotation || 0;
-
-    if (isTouchEvent) {
-      touchState.current = {
-        mode: 'rotating',
-        startX: clientX,
-        startY: clientY,
-        initialElementX: element.x,
-        initialElementY: element.y,
-        initialAngle: initialAngle,
-        initialRotation: initialRotation,
-        activeElementId: id,
-      };
-    }
-
-    const onMove = (moveEvent: MouseEvent | TouchEvent) => {
-      const currentClientX = 'touches' in moveEvent ? moveEvent.touches[0].clientX : moveEvent.clientX;
-      const currentClientY = 'touches' in moveEvent ? moveEvent.touches[0].clientY : moveEvent.clientY;
-
-      const { x: currentUnscaledX, y: currentUnscaledY } = getUnscaledCoords(currentClientX, currentClientY);
-      const currentAngle = Math.atan2(currentUnscaledY - elementCenterY, currentUnscaledX - elementCenterX);
-      let newRotation = initialRotation + (currentAngle - initialAngle) * (180 / Math.PI);
-
-      newRotation = (newRotation % 360 + 360) % 360;
-
-      updateElement(id, { rotation: newRotation });
-    };
-
-    const onEnd = () => {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onEnd);
-      document.removeEventListener('touchmove', onMove);
-      document.removeEventListener('touchend', onEnd);
-      if (isTouchEvent) {
-        touchState.current.mode = 'none';
-      }
-    };
-
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onEnd);
-    document.addEventListener('touchmove', onMove, { passive: false });
-    document.addEventListener('touchend', onEnd);
-  };
+  // Removed handleResizeStart and handleRotateStart as they are not needed for touch-only pinch/drag
 
   const handleTouchStart = (e: React.TouchEvent, id: string) => {
+    if (!isMobile) return; // Only for mobile
     e.stopPropagation();
     setSelectedElementId(id);
     const element = designElements.find(el => el.id === id);
     if (!element || !designAreaRef.current || !product) return;
-
-    const designAreaRect = designAreaRef.current.getBoundingClientRect();
 
     if (e.touches.length === 1) {
       touchState.current = {
@@ -498,7 +380,7 @@ const MobileCoverCustomizationPage = () => {
         initialElementY: element.y,
         activeElementId: id,
       };
-    } else if (e.touches.length === 2) { // Allow pinching for both text and image
+    } else if (e.touches.length === 2 && element.type === 'image') { // Only allow pinching for image elements
       const touch1 = e.touches[0];
       const touch2 = e.touches[1];
 
@@ -519,25 +401,27 @@ const MobileCoverCustomizationPage = () => {
         initialElementX: element.x,
         initialElementY: element.y,
         initialDistance: initialDistance,
-        initialElementWidth: initialElementWidth,
-        initialElementHeight: initialElementHeight,
-        initialFontSize: element.fontSize,
+        initialElementWidth: element.width, // Correctly reference element's current width
+        initialElementHeight: element.height, // Correctly reference element's current height
+        initialFontSize: element.fontSize, // Keep for text, though not used for image pinch
         initialMidX: initialMidX,
         initialMidY: initialMidY,
         activeElementId: id,
       };
+    } else {
+      // If two touches but not an image, or more than two touches, reset mode
+      touchState.current.mode = 'none';
     }
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isMobile) return; // Only for mobile
     e.preventDefault();
-    const { mode, startX, startY, initialElementX, initialElementY, initialDistance, initialElementWidth, initialElementHeight, initialFontSize, initialMidX, initialMidY, initialAngle, initialRotation, activeElementId } = touchState.current;
+    const { mode, startX, startY, initialElementX, initialElementY, initialDistance, initialElementWidth, initialElementHeight, activeElementId, initialMidX, initialMidY } = touchState.current;
     if (!activeElementId || !designAreaRef.current || !product) return;
 
     const element = designElements.find(el => el.id === activeElementId);
     if (!element) return;
-
-    const designAreaRect = designAreaRef.current.getBoundingClientRect();
 
     if (mode === 'dragging' && e.touches.length === 1) {
       const { x: currentUnscaledX, y: currentUnscaledY } = getUnscaledCoords(e.touches[0].clientX, e.touches[0].clientY);
@@ -550,31 +434,7 @@ const MobileCoverCustomizationPage = () => {
         x: newX,
         y: newY,
       });
-    } else if (mode === 'resizing' && e.touches.length === 1) { // Allow resize for both text and image
-      const { x: currentUnscaledX, y: currentUnscaledY } = getUnscaledCoords(e.touches[0].clientX, e.touches[0].clientY);
-      const { x: initialUnscaledX, y: initialUnscaledY } = getUnscaledCoords(startX, startY);
-
-      if (initialElementWidth !== undefined && initialElementHeight !== undefined) {
-        let newWidth = Math.max(20, initialElementWidth + (currentUnscaledX - initialUnscaledX));
-        let newHeight = Math.max(20, initialElementHeight + (currentUnscaledY - initialUnscaledY));
-
-        updateElement(activeElementId, { width: newWidth, height: newHeight });
-      }
-    } else if (mode === 'rotating' && e.touches.length === 1 && initialAngle !== undefined && initialRotation !== undefined) { // Allow rotate for both text and image
-      const elementDiv = document.querySelector(`[data-element-id="${activeElementId}"]`);
-      if (!elementDiv) return;
-      
-      // Calculate center of the element in unscaled coordinates
-      const elementCenterX = element.x + element.width / 2;
-      const elementCenterY = element.y + element.height / 2;
-
-      const { x: currentUnscaledX, y: currentUnscaledY } = getUnscaledCoords(e.touches[0].clientX, e.touches[0].clientY);
-      const currentAngle = Math.atan2(currentUnscaledY - elementCenterY, currentUnscaledX - elementCenterX);
-      let newRotation = initialRotation + (currentAngle - initialAngle) * (180 / Math.PI);
-      newRotation = (newRotation % 360 + 360) % 360;
-      updateElement(activeElementId, { rotation: newRotation });
-    }
-    else if (mode === 'pinching' && e.touches.length === 2 && initialDistance !== undefined && initialMidX !== undefined && initialMidY !== undefined) { // Allow pinching for both text and image
+    } else if (mode === 'pinching' && e.touches.length === 2 && element.type === 'image' && initialDistance !== undefined && initialMidX !== undefined && initialMidY !== undefined) {
       const touch1 = e.touches[0];
       const touch2 = e.touches[1];
 
@@ -601,12 +461,12 @@ const MobileCoverCustomizationPage = () => {
         height: newHeight,
         x: newX,
         y: newY,
-        fontSize: element.type === 'text' && initialFontSize !== undefined ? Math.max(10, initialFontSize * scaleFactorChange) : element.fontSize,
       });
     }
   };
 
   const handleTouchEnd = () => {
+    if (!isMobile) return; // Only for mobile
     touchState.current = {
       mode: 'none',
       startX: 0,
