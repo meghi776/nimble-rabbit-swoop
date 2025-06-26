@@ -15,6 +15,7 @@ interface Product {
   canvas_height: number | null;
   is_disabled: boolean; // Added is_disabled
   inventory: number | null; // Added inventory
+  sku: string | null; // Added SKU
 }
 
 const ProductListingPage = () => {
@@ -31,7 +32,7 @@ const ProductListingPage = () => {
       setLoading(true);
       setError(null);
 
-      let query = supabase.from('products').select('id, name, description, image_url, price, canvas_width, canvas_height, is_disabled, inventory');
+      let query = supabase.from('products').select('id, name, description, image_url, price, canvas_width, canvas_height, is_disabled, inventory, sku');
       let breadcrumbTitle = '';
       let backLink = '/';
 
@@ -172,6 +173,7 @@ const ProductListingPage = () => {
                       }}
                     >
                       <span>{product.name}</span>
+                      {product.sku && <span className="text-sm text-gray-400 ml-2">({product.sku})</span>} {/* Display SKU */}
                       {product.inventory !== null && product.inventory <= 0 && (
                         <span className="text-red-500 text-sm ml-2">Out of Stock</span>
                       )}

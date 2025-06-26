@@ -34,6 +34,7 @@ interface Product {
   mockup_image_url: string | null; // URL of the associated mockup image
   is_disabled: boolean; // Added is_disabled
   inventory: number | null; // Added inventory
+  sku: string | null; // Added SKU
 }
 
 const ProductManagementByBrandPage = () => {
@@ -59,6 +60,7 @@ const ProductManagementByBrandPage = () => {
   const importFileInputRef = useRef<HTMLInputElement>(null);
   const [isProductDisabled, setIsProductDisabled] = useState(false); // New state for product disabled status
   const [productInventory, setProductInventory] = useState<string>('0'); // New state for product inventory
+  const [productSku, setProductSku] = useState(''); // New state for product SKU
 
   // Helper to check if a URL is from Supabase storage
   const isSupabaseStorageUrl = (url: string | null, bucketName: string) => {
@@ -114,6 +116,7 @@ const ProductManagementByBrandPage = () => {
         canvas_height,
         is_disabled,
         inventory,
+        sku,
         mockups(id, image_url)
       `)
       .eq('category_id', categoryId)
@@ -168,6 +171,7 @@ const ProductManagementByBrandPage = () => {
     setCanvasHeight('600');
     setIsProductDisabled(false); // Default to enabled for new products
     setProductInventory('0'); // Default inventory for new products
+    setProductSku(''); // Default SKU for new products
     setIsDialogOpen(true);
   };
 
@@ -182,6 +186,7 @@ const ProductManagementByBrandPage = () => {
     setCanvasHeight(product.canvas_height?.toString() || '600');
     setIsProductDisabled(product.is_disabled); // Set current disabled status
     setProductInventory(product.inventory?.toString() || '0'); // Set current inventory
+    setProductSku(product.sku || ''); // Set current SKU
     setIsDialogOpen(true);
   };
 
@@ -307,6 +312,7 @@ const ProductManagementByBrandPage = () => {
           canvas_height: parseInt(canvasHeight),
           is_disabled: isProductDisabled, // Update disabled status
           inventory: parseInt(productInventory), // Update inventory
+          sku: productSku.trim() === '' ? null : productSku.trim(), // Update SKU
         })
         .eq('id', currentProduct.id)
         .select()
@@ -332,6 +338,7 @@ const ProductManagementByBrandPage = () => {
           canvas_height: parseInt(canvasHeight),
           is_disabled: isProductDisabled, // Set disabled status for new product
           inventory: parseInt(productInventory), // Set inventory for new product
+          sku: productSku.trim() === '' ? null : productSku.trim(), // Set SKU for new product
         })
         .select()
         .single();
@@ -414,6 +421,7 @@ const ProductManagementByBrandPage = () => {
       canvas_height: product.canvas_height || 0,
       is_disabled: product.is_disabled, // Include disabled status
       inventory: product.inventory || 0, // Include inventory
+      sku: product.sku || '', // Include SKU
       mockup_id: product.mockup_id || '',
       mockup_image_url: product.mockup_image_url || '',
     }));
@@ -468,6 +476,7 @@ const ProductManagementByBrandPage = () => {
               canvas_height: row.canvas_height ? parseInt(row.canvas_height) : 600,
               is_disabled: row.is_disabled === 'TRUE' || row.is_disabled === 'true' || row.is_disabled === '1', // Parse boolean
               inventory: row.inventory ? parseInt(row.inventory) : 0, // Parse inventory
+              sku: row.sku || null, // Parse SKU
               // mockup_id and mockup_image_url are not directly imported via CSV for simplicity
               // They would need separate logic for image uploads and mockup table management
             };
@@ -644,10 +653,11 @@ const ProductManagementByBrandPage = () => {
                         </TableHead>
                         <TableHead>Mockup Image</TableHead>
                         <TableHead>Name</TableHead>
+                        <TableHead>SKU</TableHead> {/* New TableHead for SKU */}
                         <TableHead>Description</TableHead>
                         <TableHead>Price</TableHead>
                         <TableHead>Canvas (WxH)</TableHead>
-                        <TableHead>Inventory</TableHead> {/* New TableHead for Inventory */}
+                        <TableHead>Inventory</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
@@ -670,10 +680,11 @@ const ProductManagementByBrandPage = () => {
                             )}
                           </TableCell>
                           <TableCell className="font-medium">{product.name}</TableCell>
+                          <TableCell>{product.sku || 'N/A'}</TableCell> {/* Display SKU */}
                           <TableCell>{product.description || 'N/A'}</TableCell>
                           <TableCell>${product.price?.toFixed(2) || '0.00'}</TableCell>
                           <TableCell>{product.canvas_width || 'N/A'}x{product.canvas_height || 'N/A'}</TableCell>
-                          <TableCell>{product.inventory ?? 'N/A'}</TableCell> {/* Display inventory */}
+                          <TableCell>{product.inventory ?? 'N/A'}</TableCell>
                           <TableCell>
                             <div className="flex items-center space-x-2">
                               <Switch
@@ -728,6 +739,17 @@ const ProductManagementByBrandPage = () => {
                 id="name"
                 value={productName}
                 onChange={(e) => setProductName(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="sku" className="text-right">
+                SKU
+              </Label>
+              <Input
+                id="sku"
+                value={productSku}
+                onChange={(e) => setProductSku(e.target.value)}
                 className="col-span-3"
               />
             </div>

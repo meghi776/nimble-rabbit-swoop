@@ -43,6 +43,7 @@ interface Product {
   canvas_height: number;
   price: number;
   inventory: number | null; // Added inventory
+  sku: string | null; // Added SKU
 }
 
 interface DesignElement {
@@ -203,6 +204,7 @@ const MobileCoverCustomizationPage = () => {
           canvas_height: productData.canvas_height,
           price: productData.price,
           inventory: productData.inventory, // Set inventory
+          sku: productData.sku, // Set SKU
         });
 
         if (productData.mockups.length > 0 && productData.mockups[0].design_data) {
@@ -844,6 +846,7 @@ const MobileCoverCustomizationPage = () => {
         </Button>
         <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
           {product?.name || 'Loading Product...'}
+          {product?.sku && <span className="text-sm text-gray-400 ml-2">({product.sku})</span>} {/* Display SKU */}
           {product?.inventory !== null && product.inventory <= 0 && (
             <span className="text-red-500 text-sm ml-2">(Out of Stock)</span>
           )}
