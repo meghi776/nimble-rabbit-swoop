@@ -493,58 +493,49 @@ const ProductManagementByBrandPage = () => {
           return;
         }
 
-        const importedProducts = results.data as any[];
-        let successfulImports = 0;
-        let failedImports = 0;
+        const productsToUpsert = results.data.map((row: any) => ({
+          id: row.id || undefined, // Use undefined for new inserts, existing ID for updates
+          category_id: categoryId,
+          brand_id: brandId,
+          name: row.name,
+          description: row.description || null,
+          price: row.price ? parseFloat(row.price) : null,
+          canvas_width: row.canvas_width ? parseInt(row.canvas_width) : 300,
+          canvas_height: row.canvas_height ? parseInt(row.canvas_height) : 600,
+          is_disabled: row.is_disabled === 'TRUE' || row.is_disabled === 'true' || row.is_disabled === '1', // Parse boolean
+          inventory: row.inventory ? parseInt(row.inventory) : 0, // Parse inventory
+          sku: row.sku || null, // Parse SKU
+        })).filter((product: any) => product.name); // Filter out rows with missing names
 
-        for (const row of importedProducts) {
-          try {
-            const productData = {
-              id: row.id || undefined, // Use undefined for new inserts, existing ID for updates
-              category_id: categoryId,
-              brand_id: brandId,
-              name: row.name,
-              description: row.description || null,
-              price: row.price ? parseFloat(row.price) : null,
-              canvas_width: row.canvas_width ? parseInt(row.canvas_width) : 300,
-              canvas_height: row.canvas_height ? parseInt(row.canvas_height) : 600,
-              is_disabled: row.is_disabled === 'TRUE' || row.is_disabled === 'true' || row.is_disabled === '1', // Parse boolean
-              inventory: row.inventory ? parseInt(row.inventory) : 0, // Parse inventory
-              sku: row.sku || null, // Parse SKU
-              // mockup_id and mockup_image_url are not directly imported via CSV for simplicity
-              // They would need separate logic for image uploads and mockup table management
-            };
+        if (productsToUpsert.length === 0) {
+          showError("No valid products found in the CSV to import.");
+          dismissToast(toastId);
+          setLoading(false);
+          return;
+        }
 
-            // Validate required fields for import
-            if (!productData.name) {
-              console.warn(`Skipping row due to missing name: ${JSON.stringify(row)}`);
-              failedImports++;
-              continue;
-            }
+        try {
+          const { error: upsertError } = await supabase
+            .from('products')
+            .upsert(productsToUpsert, { onConflict: 'id' }); // Perform batch upsert
 
-            const { error: upsertError } = await supabase
-              .from('products')
-              .upsert(productData, { onConflict: 'id' }); // Use onConflict to handle updates
-
-            if (upsertError) {
-              console.error("Error upserting product:", upsertError);
-              failedImports++;
-            } else {
-              successfulImports++;
-            }
-          } catch (e) {
-            console.error("Error processing imported row:", row, e);
-            failedImports++;
+          if (upsertError) {
+            console.error("Error during batch upsert:", upsertError);
+            showError(`Failed to import products: ${upsertError.message}`);
+          } else {
+            showSuccess(`Successfully imported ${productsToUpsert.length} products!`);
+          }
+        } catch (e: any) {
+          console.error("Unexpected error during batch upsert:", e);
+          showError(`An unexpected error occurred during import: ${e.message}`);
+        } finally {
+          fetchProducts(); // Re-fetch products to update the list
+          dismissToast(toastId);
+          setLoading(false);
+          if (importFileInputRef.current) {
+            importFileInputRef.current.value = ''; // Clear the file input
           }
         }
-
-        fetchProducts(); // Re-fetch products to update the list
-        dismissToast(toastId);
-        setLoading(false);
-        if (importFileInputRef.current) {
-          importFileInputRef.current.value = ''; // Clear the file input
-        }
-        showSuccess(`Import complete: ${successfulImports} successful, ${failedImports} failed.`);
       },
       error: (err) => {
         console.error("CSV Parsing Error:", err);
