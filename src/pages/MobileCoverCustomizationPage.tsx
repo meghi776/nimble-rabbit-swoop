@@ -145,7 +145,7 @@ const MobileCoverCustomizationPage = () => {
   const selectedTextElement = selectedElementId ? designElements.find(el => el.id === selectedElementId && el.type === 'text') : null;
 
   const textElementRefs = useRef<Map<string, HTMLDivElement>>(new Map()); // Changed to HTMLDivElement
-  const lastCaretPosition = useRef<{ node: Node | null; offset: number } | null>(lastCaretPosition);
+  const lastCaretPosition = useRef<{ node: Node | null; offset: number } | null>(null); // Fixed initialization
 
   // Effect to calculate scale factor based on container size
   useEffect(() => {
