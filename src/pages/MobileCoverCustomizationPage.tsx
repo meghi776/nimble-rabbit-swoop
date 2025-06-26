@@ -93,6 +93,8 @@ const MobileCoverCustomizationPage = () => {
   const [currentFontFamily, setCurrentFontFamily] = useState('Arial');
   const [currentTextShadowEnabled, setCurrentTextShadowEnabled] = useState(false);
   const [blurredBackgroundImageUrl, setBlurredBackgroundImageUrl] = useState<string | null>(null); // New state for blurred background
+  const [isBackColorPaletteOpen, setIsBackColorPaletteOpen] = useState(false); // State to control palette visibility
+  const [selectedCanvasColor, setSelectedCanvasColor] = useState<string | null>(null); // State for solid canvas background color
 
   const designAreaRef = useRef<HTMLDivElement>(null);
   const canvasContentRef = useRef<HTMLDivElement>(null);
@@ -143,7 +145,7 @@ const MobileCoverCustomizationPage = () => {
   const selectedTextElement = selectedElementId ? designElements.find(el => el.id === selectedElementId && el.type === 'text') : null;
 
   const textElementRefs = useRef<Map<string, HTMLDivElement>>(new Map()); // Changed to HTMLDivElement
-  const lastCaretPosition = useRef<{ node: Node | null; offset: number } | null>(null);
+  const lastCaretPosition = useRef<{ node: Node | null; offset: number } | null>(lastCaretPosition);
 
   // Effect to calculate scale factor based on container size
   useEffect(() => {
@@ -822,6 +824,7 @@ const MobileCoverCustomizationPage = () => {
   const handleCanvasClick = (e: React.MouseEvent) => {
     if (e.target === canvasContentRef.current || e.target === designAreaRef.current) {
       setSelectedElementId(null);
+      setIsBackColorPaletteOpen(false); // Close palette when clicking canvas
     }
   };
 
@@ -884,6 +887,7 @@ const MobileCoverCustomizationPage = () => {
 
       const blurredDataUrl = canvas.toDataURL('image/png');
       setBlurredBackgroundImageUrl(blurredDataUrl);
+      setSelectedCanvasColor(null); // Clear solid color when blur is applied
       showSuccess("Blur effect applied!");
       dismissToast(toastId);
     };
@@ -898,6 +902,12 @@ const MobileCoverCustomizationPage = () => {
   const handleClearBlur = () => {
     setBlurredBackgroundImageUrl(null);
     showSuccess("Blurred background cleared.");
+  };
+
+  const handleSelectCanvasColor = (color: string) => {
+    setSelectedCanvasColor(color);
+    setBlurredBackgroundImageUrl(null); // Clear blurred background when solid color is selected
+    showSuccess(`Canvas background set to ${color}.`);
   };
 
   const isBuyNowDisabled = loading || isPlacingOrder || (product && product.inventory !== null && product.inventory <= 0);
@@ -964,8 +974,8 @@ const MobileCoverCustomizationPage = () => {
                 backgroundRepeat: 'no-repeat',
                 backgroundPosition: 'center',
                 touchAction: 'none',
-                backgroundColor: '#FFFFFF', // Default white background if no blur
-                backgroundImage: blurredBackgroundImageUrl ? `url(${blurredBackgroundImageUrl})` : 'none',
+                backgroundColor: selectedCanvasColor || '#FFFFFF', // Apply selected solid color, default to white
+                backgroundImage: blurredBackgroundImageUrl ? `url(${blurredBackgroundImageUrl})` : 'none', // Apply blurred image
               }}
               onClick={handleCanvasClick}
             >
@@ -1093,6 +1103,36 @@ const MobileCoverCustomizationPage = () => {
                 ))}
             </div>
           </div>
+        ) : isBackColorPaletteOpen ? (
+          <div className="flex flex-col w-full items-center">
+            <div className="flex items-center justify-center gap-1 p-1 w-full overflow-x-auto scrollbar-hide">
+              {predefinedColors.map((color) => (
+                <div
+                  key={color}
+                  className={`w-8 h-8 rounded-full cursor-pointer border-2 flex-shrink-0 ${selectedCanvasColor === color ? 'border-blue-500' : 'border-gray-300 dark:border-gray-600'}`}
+                  style={{ backgroundColor: color }}
+                  onClick={() => handleSelectCanvasColor(color)}
+                  title={color}
+                />
+              ))}
+            </div>
+            <div className="flex items-center justify-center w-full py-1 px-4">
+              <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={handleBlurBackground}>
+                <Palette className="h-6 w-6" />
+                <span className="text-xs mt-1">Blur Background</span>
+              </Button>
+              {blurredBackgroundImageUrl && (
+                <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={handleClearBlur}>
+                  <XCircle className="h-6 w-6" />
+                  <span className="text-xs mt-1">Clear Blur</span>
+                </Button>
+              )}
+            </div>
+            <Button variant="ghost" className="flex flex-col h-auto p-2 mt-2" onClick={() => setIsBackColorPaletteOpen(false)}>
+              <XCircle className="h-6 w-6" />
+              <span className="text-xs mt-1">Close</span>
+            </Button>
+          </div>
         ) : (
           <>
             <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={handleAddTextElement}>
@@ -1103,16 +1143,10 @@ const MobileCoverCustomizationPage = () => {
               <Image className="h-6 w-6" />
               <span className="text-xs mt-1">Your Photo</span>
             </Button>
-            <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={handleBlurBackground}>
+            <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => { setSelectedElementId(null); setIsBackColorPaletteOpen(true); }}>
               <Palette className="h-6 w-6" />
-              <span className="text-xs mt-1">Blur Background</span>
+              <span className="text-xs mt-1">Back Color</span>
             </Button>
-            {blurredBackgroundImageUrl && (
-              <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={handleClearBlur}>
-                <XCircle className="h-6 w-6" />
-                <span className="text-xs mt-1">Clear Blur</span>
-              </Button>
-            )}
             <Button variant="ghost" className="flex flex-col h-auto p-2">
               <LayoutTemplate className="h-6 w-6" />
               <span className="text-xs mt-1">Readymade</span>
