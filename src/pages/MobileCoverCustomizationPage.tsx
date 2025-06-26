@@ -842,7 +842,7 @@ const MobileCoverCustomizationPage = () => {
     updateElement(id, { value: newText });
   };
 
-  const isBuyNowDisabled = loading || isPlacingOrder || (product?.inventory !== null && product?.inventory <= 0);
+  const isBuyNowDisabled = loading || isPlacingOrder || (product && product.inventory !== null && product.inventory <= 0);
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -853,7 +853,7 @@ const MobileCoverCustomizationPage = () => {
         <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
           {product?.name || 'Loading Product...'}
           {product?.sku && <span className="text-sm text-gray-400 ml-2">({product.sku})</span>} {/* Display SKU */}
-          {product?.inventory !== null && product.inventory <= 0 && (
+          {product && product.inventory !== null && product.inventory <= 0 && (
             <span className="text-red-500 text-sm ml-2">(Out of Stock)</span>
           )}
         </h1>
