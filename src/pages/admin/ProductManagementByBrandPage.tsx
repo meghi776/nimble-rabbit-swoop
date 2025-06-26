@@ -33,6 +33,7 @@ interface Product {
   mockup_id: string | null; // ID of the associated mockup
   mockup_image_url: string | null; // URL of the associated mockup image
   is_disabled: boolean; // Added is_disabled
+  inventory: number | null; // Added inventory
 }
 
 const ProductManagementByBrandPage = () => {
@@ -57,6 +58,7 @@ const ProductManagementByBrandPage = () => {
   const { user } = useSession();
   const importFileInputRef = useRef<HTMLInputElement>(null);
   const [isProductDisabled, setIsProductDisabled] = useState(false); // New state for product disabled status
+  const [productInventory, setProductInventory] = useState<string>('0'); // New state for product inventory
 
   // Helper to check if a URL is from Supabase storage
   const isSupabaseStorageUrl = (url: string | null, bucketName: string) => {
@@ -111,6 +113,7 @@ const ProductManagementByBrandPage = () => {
         canvas_width,
         canvas_height,
         is_disabled,
+        inventory,
         mockups(id, image_url)
       `)
       .eq('category_id', categoryId)
@@ -164,6 +167,7 @@ const ProductManagementByBrandPage = () => {
     setCanvasWidth('300');
     setCanvasHeight('600');
     setIsProductDisabled(false); // Default to enabled for new products
+    setProductInventory('0'); // Default inventory for new products
     setIsDialogOpen(true);
   };
 
@@ -177,6 +181,7 @@ const ProductManagementByBrandPage = () => {
     setCanvasWidth(product.canvas_width?.toString() || '300');
     setCanvasHeight(product.canvas_height?.toString() || '600');
     setIsProductDisabled(product.is_disabled); // Set current disabled status
+    setProductInventory(product.inventory?.toString() || '0'); // Set current inventory
     setIsDialogOpen(true);
   };
 
@@ -232,8 +237,8 @@ const ProductManagementByBrandPage = () => {
     setLoading(false);
   };
 
-  const handleFileUpload = async (file: File, bucketName: string, subfolder: string = '') => {
-    const fileExt = file.name.split('.').pop();
+  const handleFileUpload = async (file: File | Blob, bucketName: string, subfolder: string = '') => {
+    const fileExt = file instanceof File ? file.name.split('.').pop() : 'png'; // Get extension for File, default to png for Blob
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
     const filePath = subfolder ? `${subfolder}/${fileName}` : fileName;
 
@@ -301,6 +306,7 @@ const ProductManagementByBrandPage = () => {
           canvas_width: parseInt(canvasWidth),
           canvas_height: parseInt(canvasHeight),
           is_disabled: isProductDisabled, // Update disabled status
+          inventory: parseInt(productInventory), // Update inventory
         })
         .eq('id', currentProduct.id)
         .select()
@@ -325,6 +331,7 @@ const ProductManagementByBrandPage = () => {
           canvas_width: parseInt(canvasWidth),
           canvas_height: parseInt(canvasHeight),
           is_disabled: isProductDisabled, // Set disabled status for new product
+          inventory: parseInt(productInventory), // Set inventory for new product
         })
         .select()
         .single();
@@ -406,6 +413,7 @@ const ProductManagementByBrandPage = () => {
       canvas_width: product.canvas_width || 0,
       canvas_height: product.canvas_height || 0,
       is_disabled: product.is_disabled, // Include disabled status
+      inventory: product.inventory || 0, // Include inventory
       mockup_id: product.mockup_id || '',
       mockup_image_url: product.mockup_image_url || '',
     }));
@@ -459,6 +467,7 @@ const ProductManagementByBrandPage = () => {
               canvas_width: row.canvas_width ? parseInt(row.canvas_width) : 300,
               canvas_height: row.canvas_height ? parseInt(row.canvas_height) : 600,
               is_disabled: row.is_disabled === 'TRUE' || row.is_disabled === 'true' || row.is_disabled === '1', // Parse boolean
+              inventory: row.inventory ? parseInt(row.inventory) : 0, // Parse inventory
               // mockup_id and mockup_image_url are not directly imported via CSV for simplicity
               // They would need separate logic for image uploads and mockup table management
             };
@@ -638,7 +647,8 @@ const ProductManagementByBrandPage = () => {
                         <TableHead>Description</TableHead>
                         <TableHead>Price</TableHead>
                         <TableHead>Canvas (WxH)</TableHead>
-                        <TableHead>Status</TableHead> {/* New TableHead for Status */}
+                        <TableHead>Inventory</TableHead> {/* New TableHead for Inventory */}
+                        <TableHead>Status</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -663,6 +673,7 @@ const ProductManagementByBrandPage = () => {
                           <TableCell>{product.description || 'N/A'}</TableCell>
                           <TableCell>${product.price?.toFixed(2) || '0.00'}</TableCell>
                           <TableCell>{product.canvas_width || 'N/A'}x{product.canvas_height || 'N/A'}</TableCell>
+                          <TableCell>{product.inventory ?? 'N/A'}</TableCell> {/* Display inventory */}
                           <TableCell>
                             <div className="flex items-center space-x-2">
                               <Switch
@@ -764,6 +775,18 @@ const ProductManagementByBrandPage = () => {
                 type="number"
                 value={canvasHeight}
                 onChange={(e) => setCanvasHeight(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="inventory" className="text-right">
+                Inventory
+              </Label>
+              <Input
+                id="inventory"
+                type="number"
+                value={productInventory}
+                onChange={(e) => setProductInventory(e.target.value)}
                 className="col-span-3"
               />
             </div>

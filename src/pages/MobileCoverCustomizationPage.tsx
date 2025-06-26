@@ -42,6 +42,7 @@ interface Product {
   canvas_width: number;
   canvas_height: number;
   price: number;
+  inventory: number | null; // Added inventory
 }
 
 interface DesignElement {
@@ -201,6 +202,7 @@ const MobileCoverCustomizationPage = () => {
           canvas_width: productData.canvas_width,
           canvas_height: productData.canvas_height,
           price: productData.price,
+          inventory: productData.inventory, // Set inventory
         });
 
         if (productData.mockups.length > 0 && productData.mockups[0].design_data) {
@@ -361,8 +363,6 @@ const MobileCoverCustomizationPage = () => {
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
   };
-
-  // Removed handleResizeStart and handleRotateStart as they are not needed for touch-only pinch/drag
 
   const handleTouchStart = (e: React.TouchEvent, id: string) => {
     if (!isMobile) return; // Only for mobile
@@ -631,6 +631,10 @@ const MobileCoverCustomizationPage = () => {
       console.error("Error", "Product not loaded. Cannot proceed with order.");
       return;
     }
+    if (product.inventory !== null && product.inventory <= 0) {
+      console.error("Out of Stock", "This product is currently out of stock.");
+      return;
+    }
     setIsCheckoutModalOpen(true);
   };
 
@@ -661,6 +665,37 @@ const MobileCoverCustomizationPage = () => {
     let orderedDesignImageUrl: string | null = null;
     
     try {
+      // Check and decrement inventory for normal orders
+      if (!isDemo) {
+        if (product.inventory !== null && product.inventory <= 0) {
+          throw new Error("Product is out of stock.");
+        }
+        const { data: decrementData, error: decrementError } = await supabase.functions.invoke('decrement-product-inventory', {
+          body: JSON.stringify({ productId: product.id, quantity: 1 }),
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        if (decrementError) {
+          console.error("Edge Function Invoke Error (decrement-product-inventory):", decrementError);
+          let errorMessage = decrementError.message;
+          if (decrementError.context?.data) {
+            try {
+              const parsedError = JSON.parse(decrementError.context.data);
+              if (parsedError.error) {
+                errorMessage = parsedError.error;
+              }
+            } catch (e) {
+              // Fallback if context.data is not JSON
+            }
+          }
+          throw new Error(`Failed to update inventory: ${errorMessage}`);
+        } else if (decrementData && (decrementData as any).error) {
+          throw new Error(`Failed to update inventory: ${(decrementData as any).error}`);
+        }
+        // Update local product state with new inventory
+        setProduct(prev => prev ? { ...prev, inventory: (prev.inventory || 0) - 1 } : null);
+      }
+
       // Capture design WITHOUT the mockup for the actual order image
       orderedDesignImageUrl = await captureDesignForOrder(); 
       if (!orderedDesignImageUrl) {
@@ -799,6 +834,8 @@ const MobileCoverCustomizationPage = () => {
     updateElement(id, { value: newText });
   };
 
+  const isBuyNowDisabled = loading || isPlacingOrder || (product?.inventory !== null && product?.inventory <= 0);
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
       <header className="flex items-center justify-between py-2 px-4 bg-white dark:bg-gray-800 shadow-md">
@@ -807,9 +844,12 @@ const MobileCoverCustomizationPage = () => {
         </Button>
         <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
           {product?.name || 'Loading Product...'}
+          {product?.inventory !== null && product.inventory <= 0 && (
+            <span className="text-red-500 text-sm ml-2">(Out of Stock)</span>
+          )}
         </h1>
         <div className="flex items-center space-x-2">
-          <Button onClick={handleBuyNowClick} disabled={loading || isPlacingOrder}>
+          <Button onClick={handleBuyNowClick} disabled={isBuyNowDisabled}>
             <ShoppingCart className="mr-2 h-4 w-4" /> Buy Now
           </Button>
           <Button onClick={handleDemoOrderClick} disabled={loading || isPlacingOrder} className="bg-green-600 hover:bg-green-700 text-white">

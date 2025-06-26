@@ -14,6 +14,7 @@ interface Product {
   canvas_width: number | null;
   canvas_height: number | null;
   is_disabled: boolean; // Added is_disabled
+  inventory: number | null; // Added inventory
 }
 
 const ProductListingPage = () => {
@@ -30,7 +31,7 @@ const ProductListingPage = () => {
       setLoading(true);
       setError(null);
 
-      let query = supabase.from('products').select('id, name, description, image_url, price, canvas_width, canvas_height, is_disabled');
+      let query = supabase.from('products').select('id, name, description, image_url, price, canvas_width, canvas_height, is_disabled, inventory');
       let breadcrumbTitle = '';
       let backLink = '/';
 
@@ -156,14 +157,26 @@ const ProductListingPage = () => {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {products.map((product) => (
-                  <Link key={product.id} to={`/customize-cover/${product.id}`} className="w-full">
-                    <Button 
-                      variant="outline" 
-                      className="w-full h-auto py-2 px-4 text-base font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
+                  <div key={product.id} className="w-full">
+                    <Link 
+                      to={`/customize-cover/${product.id}`} 
+                      className={`w-full h-auto py-2 px-4 text-base font-semibold transition-colors duration-200 flex items-center justify-between ${
+                        product.is_disabled || (product.inventory !== null && product.inventory <= 0)
+                          ? 'bg-gray-200 text-gray-500 cursor-not-allowed opacity-70'
+                          : 'bg-white text-gray-800 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700'
+                      } rounded-md border border-input shadow-sm`}
+                      onClick={(e) => {
+                        if (product.is_disabled || (product.inventory !== null && product.inventory <= 0)) {
+                          e.preventDefault(); // Prevent navigation if disabled or out of stock
+                        }
+                      }}
                     >
-                      {product.name}
-                    </Button>
-                  </Link>
+                      <span>{product.name}</span>
+                      {product.inventory !== null && product.inventory <= 0 && (
+                        <span className="text-red-500 text-sm ml-2">Out of Stock</span>
+                      )}
+                    </Link>
+                  </div>
                 ))}
               </div>
             )}
