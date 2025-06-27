@@ -933,9 +933,7 @@ const MobileCoverCustomizationPage = () => {
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-6 w-6" />
           </Button>
-          <Button onClick={handleBuyNowClick} disabled={isBuyNowDisabled}>
-            <ShoppingCart className="mr-2 h-4 w-4" /> Buy Now
-          </Button>
+          {/* Removed Buy Now Button */}
         </div>
         <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
           {product?.name || 'Loading Product...'}
@@ -945,10 +943,7 @@ const MobileCoverCustomizationPage = () => {
           )}
         </h1>
         <div className="flex items-center space-x-2">
-          <Button onClick={handleDemoOrderClick} disabled={loading || isPlacingOrder} className="bg-green-600 hover:bg-green-700 text-white">
-            {isPlacingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Demo Order
-          </Button>
+          {/* Removed Demo Order Button */}
         </div>
       </header>
 
