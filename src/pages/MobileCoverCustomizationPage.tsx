@@ -1053,7 +1053,7 @@ const MobileCoverCustomizationPage = () => {
                   key={mockupOverlayImageUrl}
                   src={mockupOverlayImageUrl}
                   alt="Phone Mockup Overlay"
-                  className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+                  className="absolute inset-0 w-full h-full object-cover pointer-events-none"
                   style={{ zIndex: 10 }}
                   crossOrigin="anonymous" // Added for CORS compatibility with html2canvas
                 />
