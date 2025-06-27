@@ -929,9 +929,14 @@ const MobileCoverCustomizationPage = () => {
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
       <header className="flex items-center justify-between py-2 px-4 bg-white dark:bg-gray-800 shadow-md">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-          <ArrowLeft className="h-6 w-6" />
-        </Button>
+        <div className="flex items-center space-x-2"> {/* Group left-aligned items */}
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-6 w-6" />
+          </Button>
+          <Button onClick={handleBuyNowClick} disabled={isBuyNowDisabled}>
+            <ShoppingCart className="mr-2 h-4 w-4" /> Buy Now
+          </Button>
+        </div>
         <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
           {product?.name || 'Loading Product...'}
           {product?.sku && <span className="text-sm text-gray-400 ml-2">({product.sku})</span>} {/* Display SKU */}
@@ -940,9 +945,6 @@ const MobileCoverCustomizationPage = () => {
           )}
         </h1>
         <div className="flex items-center space-x-2">
-          <Button onClick={handleBuyNowClick} disabled={isBuyNowDisabled}>
-            <ShoppingCart className="mr-2 h-4 w-4" /> Buy Now
-          </Button>
           <Button onClick={handleDemoOrderClick} disabled={loading || isPlacingOrder} className="bg-green-600 hover:bg-green-700 text-white">
             {isPlacingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Demo Order
