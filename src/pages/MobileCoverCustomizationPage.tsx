@@ -928,24 +928,7 @@ const MobileCoverCustomizationPage = () => {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
-      <header className="flex items-center justify-between py-2 px-4 bg-white dark:bg-gray-800 shadow-md">
-        <div className="flex items-center space-x-2"> {/* Group left-aligned items */}
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-6 w-6" />
-          </Button>
-          {/* Removed Buy Now Button */}
-        </div>
-        <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
-          {product?.name || 'Loading Product...'}
-          {product?.sku && <span className="text-sm text-gray-400 ml-2">({product.sku})</span>} {/* Display SKU */}
-          {product && product.inventory !== null && product.inventory <= 0 && (
-            <span className="text-red-500 text-sm ml-2">(Out of Stock)</span>
-          )}
-        </h1>
-        <div className="flex items-center space-x-2">
-          {/* Removed Demo Order Button */}
-        </div>
-      </header>
+      {/* Removed header section */}
 
       {loading && (
         <div className="flex-1 flex items-center justify-center">
