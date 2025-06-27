@@ -145,7 +145,7 @@ const MobileCoverCustomizationPage = () => {
   const selectedTextElement = selectedElementId ? designElements.find(el => el.id === selectedElementId && el.type === 'text') : null;
 
   const textElementRefs = useRef<Map<string, HTMLDivElement>>(new Map()); // Changed to HTMLDivElement
-  const lastCaretPosition = useRef<{ node: Node | null; offset: number } | null>(null); // Fixed initialization
+  const lastCaretPosition = useRef<{ node: Node | null; offset: number } | null>(null);
 
   // Effect to calculate scale factor based on container size
   useEffect(() => {
@@ -552,7 +552,15 @@ const MobileCoverCustomizationPage = () => {
         useCORS: true,
         allowTaint: true, // Allow tainting, but it will prevent toDataURL if not truly CORS-compliant
         backgroundColor: null, // Let CSS background color be captured
-        scale: 1 / scaleFactor,
+        // Set a high fixed scale for better quality
+        scale: 3, // Capture at 3x resolution
+        // Explicitly set the target width and height to the product's original dimensions
+        width: product.canvas_width,
+        height: product.canvas_height,
+        // The x and y coordinates of the area to render.
+        // Since canvasContentRef is already the target area, these should be 0.
+        x: 0,
+        y: 0,
       });
       console.log("html2canvas capture successful.");
 
@@ -910,6 +918,12 @@ const MobileCoverCustomizationPage = () => {
     showSuccess(`Canvas background set to ${color}.`);
   };
 
+  const handleClearBackground = () => {
+    setSelectedCanvasColor(null);
+    setBlurredBackgroundImageUrl(null);
+    showSuccess("Canvas background cleared.");
+  };
+
   const isBuyNowDisabled = loading || isPlacingOrder || (product && product.inventory !== null && product.inventory <= 0);
 
   return (
@@ -1127,6 +1141,10 @@ const MobileCoverCustomizationPage = () => {
                   <span className="text-xs mt-1">Clear Blur</span>
                 </Button>
               )}
+              <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={handleClearBackground}>
+                <XCircle className="h-6 w-6" />
+                <span className="text-xs mt-1">Clear Background</span>
+              </Button>
             </div>
             <Button variant="ghost" className="flex flex-col h-auto p-2 mt-2" onClick={() => setIsBackColorPaletteOpen(false)}>
               <XCircle className="h-6 w-6" />
