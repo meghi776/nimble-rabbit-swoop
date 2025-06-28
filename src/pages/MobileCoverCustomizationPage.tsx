@@ -45,6 +45,12 @@ interface Product {
   price: number;
   inventory: number | null; // Added inventory
   sku: string | null; // Added SKU
+  // New properties for mockup image position and size
+  mockup_x: number | null;
+  mockup_y: number | null;
+  mockup_width: number | null;
+  mockup_height: number | null;
+  mockup_rotation: number | null;
 }
 
 interface DesignElement {
@@ -113,8 +119,13 @@ const MobileCoverCustomizationPage = () => {
   const [demoOrderPrice, setDemoOrderPrice] = useState<string>('');
   const [demoOrderAddress, setDemoOrderAddress] = useState<string>('');
 
-  // New state for the mockup overlay image URL
+  // New state for the mockup overlay image URL and its properties
   const [mockupOverlayImageUrl, setMockupOverlayImageUrl] = useState<string | null>(null);
+  const [mockupOverlayX, setMockupOverlayX] = useState(0);
+  const [mockupOverlayY, setMockupOverlayY] = useState(0);
+  const [mockupOverlayWidth, setMockupOverlayWidth] = useState(100); // Stored as percentage
+  const [mockupOverlayHeight, setMockupOverlayHeight] = useState(100); // Stored as percentage
+  const [mockupOverlayRotation, setMockupOverlayRotation] = useState(0);
 
   // Responsive canvas states
   const [actualCanvasWidth, setActualCanvasWidth] = useState(0);
@@ -183,7 +194,7 @@ const MobileCoverCustomizationPage = () => {
       setLoading(true);
       const { data: productData, error: productError } = await supabase
         .from('products')
-        .select('*, mockups(image_url, design_data)')
+        .select('*, mockups(image_url, design_data, mockup_x, mockup_y, mockup_width, mockup_height, mockup_rotation)')
         .eq('id', productId)
         .single();
 
@@ -200,6 +211,12 @@ const MobileCoverCustomizationPage = () => {
           : null;
         
         setMockupOverlayImageUrl(proxiedMockupUrl); // Set the new state for mockup image
+        setMockupOverlayX(productData.mockups?.[0]?.mockup_x || 0);
+        setMockupOverlayY(productData.mockups?.[0]?.mockup_y || 0);
+        setMockupOverlayWidth(productData.mockups?.[0]?.mockup_width || 100);
+        setMockupOverlayHeight(productData.mockups?.[0]?.mockup_height || 100);
+        setMockupOverlayRotation(productData.mockups?.[0]?.mockup_rotation || 0);
+
         console.log("Mockup Overlay Image URL:", proxiedMockupUrl); // Log the final URL
 
         setProduct({
@@ -210,6 +227,11 @@ const MobileCoverCustomizationPage = () => {
           price: productData.price,
           inventory: productData.inventory, // Set inventory
           sku: productData.sku, // Set SKU
+          mockup_x: productData.mockups?.[0]?.mockup_x || 0,
+          mockup_y: productData.mockups?.[0]?.mockup_y || 0,
+          mockup_width: productData.mockups?.[0]?.mockup_width || 100,
+          mockup_height: productData.mockups?.[0]?.mockup_height || 100,
+          mockup_rotation: productData.mockups?.[0]?.mockup_rotation || 0,
         });
 
         if (productData.mockups.length > 0 && productData.mockups[0].design_data) {
@@ -516,7 +538,7 @@ const MobileCoverCustomizationPage = () => {
       return null;
     }
 
-    let originalMockupPointerEvents = '';
+    let originalMockupDisplay = ''; // Changed from pointerEvents to display
     const mockupImageElement = canvasContentRef.current.querySelector('img[alt="Phone Mockup Overlay"]');
     const selectedElementDiv = document.querySelector(`[data-element-id="${selectedElementId}"]`);
 
@@ -543,7 +565,7 @@ const MobileCoverCustomizationPage = () => {
 
       // Temporarily hide mockup for capture
       if (mockupImageElement instanceof HTMLElement) {
-        originalMockupPointerEvents = mockupImageElement.style.display; // Store display property
+        originalMockupDisplay = mockupImageElement.style.display; // Store display property
         mockupImageElement.style.display = 'none'; // Hide the mockup
       }
 
@@ -585,7 +607,7 @@ const MobileCoverCustomizationPage = () => {
     } finally {
       // Restore original styles
       if (mockupImageElement instanceof HTMLElement) {
-        mockupImageElement.style.display = originalMockupPointerEvents; // Restore display property
+        mockupImageElement.style.display = originalMockupDisplay; // Restore display property
       }
       if (selectedElementDiv) {
         selectedElementDiv.classList.add('border-2', 'border-blue-500');
@@ -1033,8 +1055,16 @@ const MobileCoverCustomizationPage = () => {
                   key={mockupOverlayImageUrl}
                   src={mockupOverlayImageUrl}
                   alt="Phone Mockup Overlay"
-                  className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-                  style={{ zIndex: 10 }}
+                  className="absolute object-contain pointer-events-none" // Changed to object-contain
+                  style={{
+                    left: `${mockupOverlayX * scaleFactor}px`,
+                    top: `${mockupOverlayY * scaleFactor}px`,
+                    width: `${(product.canvas_width * (mockupOverlayWidth / 100)) * scaleFactor}px`,
+                    height: `${(product.canvas_height * (mockupOverlayHeight / 100)) * scaleFactor}px`,
+                    transform: `rotate(${mockupOverlayRotation}deg)`,
+                    transformOrigin: 'center center',
+                    zIndex: 10,
+                  }}
                   crossOrigin="anonymous" // Added for CORS compatibility with html2canvas
                 />
               )}
