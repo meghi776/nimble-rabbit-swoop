@@ -62,7 +62,7 @@ const ProductManagementByBrandPage = () => {
   const [canvasHeight, setCanvasHeight] = useState<string>('600');
   const [searchQuery, setSearchQuery] = useState<string>(''); // New state for search query
   const debounceTimeoutRef = useRef<number | null>(null); // Ref for debounce timeout
-  const [selectedProductIds, setSelectedProductIds] = new Set<string>(); // New state for bulk selection
+  const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set()); // Corrected useState declaration
   const { user } = useSession();
   const importFileInputRef = useRef<HTMLInputElement>(null);
   const [isProductDisabled, setIsProductDisabled] = useState(false); // New state for product disabled status

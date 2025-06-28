@@ -59,7 +59,7 @@ const OrderManagementPage = () => {
   const [orderTypeFilter, setOrderTypeFilter] = useState<string>('all'); // Changed default to 'all'
   const [selectedUserIdFilter, setSelectedUserIdFilter] = useState<string>('all'); // New state for user filter
   const [userList, setUserList] = useState<UserListItem[]>([]); // New state for user list
-  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set()); // Corrected useState declaration
 
   const orderStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
 
