@@ -36,6 +36,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { proxyImageUrl } from '@/utils/imageProxy';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast'; // Import toast utilities
+import { useDemoOrderModal } from '@/contexts/DemoOrderModalContext'; // Import useDemoOrderModal
 
 interface Product {
   id: string;
@@ -111,6 +112,7 @@ const MobileCoverCustomizationPage = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isMobile = useIsMobile();
   const { user } = useSession();
+  const { isDemoOrderModalOpen, setIsDemoOrderModalOpen, demoOrderPrice, setDemoOrderDetails, demoOrderAddress } = useDemoOrderModal(); // Use context
 
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
   const [customerName, setCustomerName] = useState('');
@@ -118,10 +120,6 @@ const MobileCoverCustomizationPage = () => {
   const [customerPhone, setCustomerPhone] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('COD');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
-
-  const [isDemoOrderModalOpen, setIsDemoOrderModalOpen] = useState(false);
-  const [demoOrderPrice, setDemoOrderPrice] = useState<string>('');
-  const [demoOrderAddress, setDemoOrderAddress] = useState<string>('');
 
   // New state for the mockup overlay image URL and its properties
   const [mockupOverlayData, setMockupOverlayData] = useState<MockupData | null>(null);
@@ -255,8 +253,8 @@ const MobileCoverCustomizationPage = () => {
             showError("Failed to load existing design data.");
           }
         }
-        setDemoOrderPrice(productData.price?.toFixed(2) || '0.00');
-        setDemoOrderAddress('Demo Address, Demo City, Demo State, 00000');
+        // Set demo order details in context when product loads
+        setDemoOrderDetails(productData.price?.toFixed(2) || '0.00', 'Demo Address, Demo City, Demo State, 00000');
       }
       setLoading(false);
     };
@@ -264,7 +262,7 @@ const MobileCoverCustomizationPage = () => {
     if (productId) {
       fetchProductAndMockup();
     }
-  }, [productId]);
+  }, [productId, setDemoOrderDetails]); // Add setDemoOrderDetails to dependencies
 
   useEffect(() => {
     // This cleanup is still relevant for any blob URLs that might exist from previous interactions
@@ -787,7 +785,7 @@ const MobileCoverCustomizationPage = () => {
       setIsPlacingOrder(false);
       dismissToast(toastId);
     }
-  }, [product, user, customerName, customerAddress, customerPhone, demoOrderPrice, demoOrderAddress, designElements, navigate]);
+  }, [product, user, customerName, customerAddress, customerPhone, demoOrderPrice, demoOrderAddress, designElements, navigate, setIsDemoOrderModalOpen]);
 
   const handleBuyNowClick = useCallback(() => {
     if (!user) {
@@ -806,18 +804,7 @@ const MobileCoverCustomizationPage = () => {
     setIsCheckoutModalOpen(true);
   }, [user, product, navigate]);
 
-  const handleDemoOrderClick = useCallback(() => {
-    if (!user) {
-      showError("Please log in to place a demo order.");
-      navigate('/login');
-      return;
-    }
-    if (!product) {
-      showError("Product not loaded. Cannot place demo order.");
-      return;
-    }
-    setIsDemoOrderModalOpen(true);
-  }, [user, product, navigate]);
+  // Removed handleDemoOrderClick as it's now triggered from the header
 
   const handleAddTextElement = () => {
     if (!product) return; // Ensure product is loaded
@@ -1268,7 +1255,7 @@ const MobileCoverCustomizationPage = () => {
                 id="demo-price"
                 type="number"
                 value={demoOrderPrice}
-                onChange={(e) => setDemoOrderPrice(e.target.value)}
+                onChange={(e) => setDemoOrderDetails(e.target.value, demoOrderAddress)}
                 className="col-span-3"
                 placeholder="e.g., 19.99"
               />
@@ -1280,7 +1267,7 @@ const MobileCoverCustomizationPage = () => {
               <Textarea
                 id="demo-address"
                 value={demoOrderAddress}
-                onChange={(e) => setDemoOrderAddress(e.target.value)}
+                onChange={(e) => setDemoOrderDetails(demoOrderPrice, e.target.value)}
                 className="col-span-3"
                 placeholder="e.g., 123 Demo St, Demo City"
               />
