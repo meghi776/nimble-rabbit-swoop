@@ -158,19 +158,15 @@ const MobileCoverCustomizationPage = () => {
   const textElementRefs = useRef<Map<string, HTMLDivElement>>(new Map()); // Changed to HTMLDivElement
   const lastCaretPosition = useRef<{ node: Node | null; offset: number } | null>(null);
 
-  // Fixed canvas dimensions
-  const FIXED_CANVAS_WIDTH = 1250;
-  const FIXED_CANVAS_HEIGHT = 2200;
-
-  // Effect to calculate scale factor based on container size
+  // Effect to calculate scale factor based on container size and product dimensions
   useEffect(() => {
     const updateCanvasDimensions = () => {
-      if (designAreaRef.current) {
+      if (designAreaRef.current && product) {
         const containerWidth = designAreaRef.current.offsetWidth;
-        // Calculate scale factor based on the fixed width
-        const newScaleFactor = containerWidth / FIXED_CANVAS_WIDTH;
-        const newActualCanvasWidth = FIXED_CANVAS_WIDTH * newScaleFactor;
-        const newActualCanvasHeight = FIXED_CANVAS_HEIGHT * newScaleFactor;
+        // Calculate scale factor based on the product's canvas width
+        const newScaleFactor = containerWidth / product.canvas_width;
+        const newActualCanvasWidth = product.canvas_width * newScaleFactor;
+        const newActualCanvasHeight = product.canvas_height * newScaleFactor;
 
         setActualCanvasWidth(newActualCanvasWidth);
         setActualCanvasHeight(newActualCanvasHeight);
@@ -192,7 +188,7 @@ const MobileCoverCustomizationPage = () => {
         observer.unobserve(designAreaRef.current);
       }
     };
-  }, []); // No dependency on 'product' as dimensions are fixed
+  }, [product]); // Depend on product to re-calculate when product data is loaded/changes
 
   useEffect(() => {
     const fetchProductAndMockup = async () => {
@@ -227,8 +223,8 @@ const MobileCoverCustomizationPage = () => {
         setProduct({
           id: productData.id,
           name: productData.name,
-          canvas_width: FIXED_CANVAS_WIDTH, // Use fixed width
-          canvas_height: FIXED_CANVAS_HEIGHT, // Use fixed height
+          canvas_width: productData.canvas_width || 300, // Use product's canvas width
+          canvas_height: productData.canvas_height || 600, // Use product's canvas height
           price: productData.price,
           inventory: productData.inventory, // Set inventory
           sku: productData.sku, // Set SKU
@@ -244,8 +240,8 @@ const MobileCoverCustomizationPage = () => {
             // Ensure loaded design elements conform to the new interface (add default width/height if missing)
             const loadedElements: DesignElement[] = JSON.parse(productData.mockups[0].design_data as string).map((el: any) => ({
               ...el,
-              width: el.width || (el.type === 'text' ? 200 : FIXED_CANVAS_WIDTH), // Default width for text/image
-              height: el.height || (el.type === 'text' ? 40 : FIXED_CANVAS_HEIGHT), // Default height for text/image
+              width: el.width || (el.type === 'text' ? 200 : productData.canvas_width || 300), // Default width for text/image
+              height: el.height || (el.type === 'text' ? 40 : productData.canvas_height || 600), // Default height for text/image
             }));
             setDesignElements(loadedElements);
           } catch (parseError) {
@@ -317,14 +313,16 @@ const MobileCoverCustomizationPage = () => {
   }, [designElements, selectedElementId]);
 
   const addImageElement = (imageUrl: string, id: string) => {
+    if (!product) return; // Ensure product is loaded
+
     // Define a reasonable initial size for the image element (e.g., 99% of the smaller canvas dimension)
-    const initialSize = Math.min(FIXED_CANVAS_WIDTH, FIXED_CANVAS_HEIGHT) * 0.99;
+    const initialSize = Math.min(product.canvas_width, product.canvas_height) * 0.99;
     const newWidth = initialSize;
     const newHeight = initialSize;
 
     // Center the image initially
-    const newX = (FIXED_CANVAS_WIDTH - newWidth) / 2;
-    const newY = (FIXED_CANVAS_HEIGHT - newHeight) / 2;
+    const newX = (product.canvas_width - newWidth) / 2;
+    const newY = (product.canvas_height - newHeight) / 2;
 
     const newElement: DesignElement = {
       id: id,
@@ -372,7 +370,7 @@ const MobileCoverCustomizationPage = () => {
     e.stopPropagation();
     setSelectedElementId(id);
     const element = designElements.find(el => el.id === id);
-    if (!element || !designAreaRef.current) return; // Removed product dependency
+    if (!element || !designAreaRef.current) return;
 
     const { x: unscaledClientX, y: unscaledClientY } = getUnscaledCoords(e.clientX, e.clientY);
     const offsetX = unscaledClientX - element.x;
@@ -400,7 +398,7 @@ const MobileCoverCustomizationPage = () => {
     e.stopPropagation();
     setSelectedElementId(id);
     const element = designElements.find(el => el.id === id);
-    if (!element || !designAreaRef.current) return; // Removed product dependency
+    if (!element || !designAreaRef.current) return;
 
     if (e.touches.length === 1) {
       touchState.current = {
@@ -449,7 +447,7 @@ const MobileCoverCustomizationPage = () => {
     if (!isMobile) return; // Only for mobile
     e.preventDefault();
     const { mode, startX, startY, initialElementX, initialElementY, initialDistance, initialElementWidth, initialElementHeight, activeElementId, initialMidX, initialMidY } = touchState.current;
-    if (!activeElementId || !designAreaRef.current) return; // Removed product dependency
+    if (!activeElementId || !designAreaRef.current) return;
 
     const element = designElements.find(el => el.id === activeElementId);
     if (!element) return;
@@ -534,8 +532,8 @@ const MobileCoverCustomizationPage = () => {
   };
 
   const captureDesignForOrder = async () => { // Renamed function
-    if (!canvasContentRef.current) { // Removed product dependency
-      showError("Design area not found.");
+    if (!canvasContentRef.current || !product) {
+      showError("Design area or product data not found.");
       return null;
     }
 
@@ -578,8 +576,8 @@ const MobileCoverCustomizationPage = () => {
         // Set a high fixed scale for better quality
         scale: 3, // Capture at 3x resolution
         // Explicitly set the target width and height to the product's original dimensions
-        width: FIXED_CANVAS_WIDTH, // Use fixed width
-        height: FIXED_CANVAS_HEIGHT, // Use fixed height
+        width: product.canvas_width, // Use product's canvas width
+        height: product.canvas_height, // Use product's canvas height
         // The x and y coordinates of the area to render.
         // Since canvasContentRef is already the target area, these should be 0.
         x: 0,
@@ -816,14 +814,16 @@ const MobileCoverCustomizationPage = () => {
   }, [user, product, navigate]);
 
   const handleAddTextElement = () => {
+    if (!product) return; // Ensure product is loaded
+
     const defaultText = "New Text";
     const defaultFontSize = 35;
     const defaultColor = '#000000';
     const defaultFontFamily = 'Arial';
     const defaultTextShadow = false;
 
-    const centerX = (FIXED_CANVAS_WIDTH / 2);
-    const centerY = (FIXED_CANVAS_HEIGHT / 2);
+    const centerX = (product.canvas_width / 2);
+    const centerY = (product.canvas_height / 2);
 
     const newElement: DesignElement = {
       id: `text-${Date.now()}`,
@@ -875,6 +875,10 @@ const MobileCoverCustomizationPage = () => {
       showError("Please add an image to the canvas first to use as a blurred background.");
       return;
     }
+    if (!product) {
+      showError("Product data not loaded. Cannot apply blur.");
+      return;
+    }
 
     const toastId = showLoading("Applying blur effect...");
 
@@ -893,8 +897,8 @@ const MobileCoverCustomizationPage = () => {
       }
 
       // Set canvas dimensions to match the product's original canvas dimensions
-      canvas.width = FIXED_CANVAS_WIDTH; // Use fixed width
-      canvas.height = FIXED_CANVAS_HEIGHT; // Use fixed height
+      canvas.width = product.canvas_width;
+      canvas.height = product.canvas_height;
 
       // Draw the image onto the canvas
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
@@ -960,7 +964,7 @@ const MobileCoverCustomizationPage = () => {
               // Use max-width and height auto to make it responsive
               maxWidth: '100%',
               height: 'auto',
-              aspectRatio: `${FIXED_CANVAS_WIDTH} / ${FIXED_CANVAS_HEIGHT}`, // Use fixed aspect ratio
+              aspectRatio: `${product.canvas_width} / ${product.canvas_height}`, // Use product's aspect ratio
               backgroundSize: 'contain',
               backgroundRepeat: 'no-repeat',
               backgroundPosition: 'center',
@@ -1047,8 +1051,8 @@ const MobileCoverCustomizationPage = () => {
                   style={{
                     left: `${mockupOverlayX * scaleFactor}px`,
                     top: `${mockupOverlayY * scaleFactor}px`,
-                    width: `${(FIXED_CANVAS_WIDTH * (mockupOverlayWidth / 100)) * scaleFactor}px`, // Use fixed width
-                    height: `${(FIXED_CANVAS_HEIGHT * (mockupOverlayHeight / 100)) * scaleFactor}px`, // Use fixed height
+                    width: `${(product.canvas_width * (mockupOverlayWidth / 100)) * scaleFactor}px`, // Use product's canvas width
+                    height: `${(product.canvas_height * (mockupOverlayHeight / 100)) * scaleFactor}px`, // Use product's canvas height
                     transform: `rotate(${mockupOverlayRotation}deg)`,
                     transformOrigin: 'center center',
                     zIndex: 10,
