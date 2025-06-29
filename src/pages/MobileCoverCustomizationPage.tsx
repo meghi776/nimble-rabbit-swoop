@@ -630,7 +630,7 @@ const MobileCoverCustomizationPage = () => {
 
     // Clear the file input immediately
     if (fileInputRef.current) {
-      fileInput.current.value = '';
+      fileInputRef.current.value = ''; // Corrected line
     }
 
     // 3. Start the actual upload in the background
