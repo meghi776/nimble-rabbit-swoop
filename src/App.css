@@ -1,7 +1,7 @@
 #root {
   /* max-width: 1280px; */ /* Removed this line */
   margin: 0 auto;
-  /* Removed padding: 2rem; */
+  padding: 65px; /* Set padding to 65px */
   text-align: center;
 }
 
