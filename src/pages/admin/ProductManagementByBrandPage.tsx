@@ -36,12 +36,7 @@ interface Product {
   is_disabled: boolean; // Added is_disabled
   inventory: number | null; // Added inventory
   sku: string | null; // Added SKU
-  // New properties for mockup image position and size
-  mockup_x: number | null;
-  mockup_y: number | null;
-  mockup_width: number | null;
-  mockup_height: number | null;
-  mockup_rotation: number | null;
+  // Removed mockup_x, mockup_y, mockup_width, mockup_height, mockup_rotation
 }
 
 const ProductManagementByBrandPage = () => {
@@ -62,19 +57,14 @@ const ProductManagementByBrandPage = () => {
   const [canvasHeight, setCanvasHeight] = useState<string>('600');
   const [searchQuery, setSearchQuery] = useState<string>(''); // New state for search query
   const debounceTimeoutRef = useRef<number | null>(null); // Ref for debounce timeout
-  const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set()); // Corrected useState declaration
+  const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
   const { user } = useSession();
   const importFileInputRef = useRef<HTMLInputElement>(null);
   const [isProductDisabled, setIsProductDisabled] = useState(false); // New state for product disabled status
   const [productInventory, setProductInventory] = useState<string>('0'); // New state for product inventory
   const [productSku, setProductSku] = useState(''); // New state for product SKU
 
-  // New states for mockup image properties
-  const [mockupX, setMockupX] = useState<string>('0');
-  const [mockupY, setMockupY] = useState<string>('0');
-  const [mockupWidth, setMockupWidth] = useState<string>('100'); // Default to 100% of canvas
-  const [mockupHeight, setMockupHeight] = useState<string>('100'); // Default to 100% of canvas
-  const [mockupRotation, setMockupRotation] = useState<string>('0');
+  // Removed states for mockup image properties: mockupX, mockupY, mockupWidth, mockupHeight, mockupRotation
 
   // Helper to check if a URL is from Supabase storage
   const isSupabaseStorageUrl = (url: string | null, bucketName: string) => {
@@ -133,7 +123,7 @@ const ProductManagementByBrandPage = () => {
         is_disabled,
         inventory,
         sku,
-        mockups(id, image_url, mockup_x, mockup_y, mockup_width, mockup_height, mockup_rotation)
+        mockups(id, image_url)
       `)
       .eq('category_id', categoryId)
       .eq('brand_id', brandId);
@@ -154,11 +144,7 @@ const ProductManagementByBrandPage = () => {
         ...p,
         mockup_id: p.mockups?.[0]?.id || null,
         mockup_image_url: p.mockups?.[0]?.image_url || null,
-        mockup_x: p.mockups?.[0]?.mockup_x || 0, // Default to 0 if null
-        mockup_y: p.mockups?.[0]?.mockup_y || 0, // Default to 0 if null
-        mockup_width: p.mockups?.[0]?.mockup_width || 100, // Default to 100 if null
-        mockup_height: p.mockups?.[0]?.mockup_height || 100, // Default to 100 if null
-        mockup_rotation: p.mockups?.[0]?.mockup_rotation || 0, // Default to 0 if null
+        // Removed mockup_x, mockup_y, mockup_width, mockup_height, mockup_rotation from mapping
       })) || []);
     }
     setLoading(false);
@@ -194,12 +180,7 @@ const ProductManagementByBrandPage = () => {
     setIsProductDisabled(false); // Default to enabled for new products
     setProductInventory('0'); // Default inventory for new products
     setProductSku(''); // Default SKU for new products
-    // Set default mockup properties for new product
-    setMockupX('0');
-    setMockupY('0');
-    setMockupWidth('100'); // Default to 100%
-    setMockupHeight('100'); // Default to 100%
-    setMockupRotation('0');
+    // Removed setting default mockup properties for new product
     setIsDialogOpen(true);
   };
 
@@ -215,12 +196,7 @@ const ProductManagementByBrandPage = () => {
     setIsProductDisabled(product.is_disabled); // Set current disabled status
     setProductInventory(product.inventory?.toString() || '0'); // Set current inventory
     setProductSku(product.sku || ''); // Set current SKU
-    // Set current mockup properties
-    setMockupX(product.mockup_x?.toString() || '0');
-    setMockupY(product.mockup_y?.toString() || '0');
-    setMockupWidth(product.mockup_width?.toString() || '100');
-    setMockupHeight(product.mockup_height?.toString() || '100');
-    setMockupRotation(product.mockup_rotation?.toString() || '0');
+    // Removed setting current mockup properties
     setIsDialogOpen(true);
   };
 
@@ -410,11 +386,7 @@ const ProductManagementByBrandPage = () => {
         designer: 'Admin',
         user_id: user.id,
         product_id: productIdToUse,
-        mockup_x: parseFloat(mockupX),
-        mockup_y: parseFloat(mockupY),
-        mockup_width: parseFloat(mockupWidth),
-        mockup_height: parseFloat(mockupHeight),
-        mockup_rotation: parseFloat(mockupRotation),
+        // Removed mockup_x, mockup_y, mockup_width, mockup_height, mockup_rotation from mockupData
       };
 
       if (mockupIdToUse) {
@@ -491,11 +463,7 @@ const ProductManagementByBrandPage = () => {
       sku: product.sku || '', // Include SKU
       mockup_id: product.mockup_id || '',
       mockup_image_url: product.mockup_image_url || '',
-      mockup_x: product.mockup_x || 0,
-      mockup_y: product.mockup_y || 0,
-      mockup_width: product.mockup_width || 0,
-      mockup_height: product.mockup_height || 0,
-      mockup_rotation: product.mockup_rotation || 0,
+      // Removed mockup_x, mockup_y, mockup_width, mockup_height, mockup_rotation from export
     }));
 
     const csv = Papa.unparse(dataToExport);
@@ -922,72 +890,7 @@ const ProductManagementByBrandPage = () => {
                 )}
               </div>
             </div>
-            {/* New fields for Mockup Image Position and Size */}
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="mockupX" className="text-right">
-                Mockup X (%)
-              </Label>
-              <Input
-                id="mockupX"
-                type="number"
-                value={mockupX}
-                onChange={(e) => setMockupX(e.target.value)}
-                className="col-span-3"
-                placeholder="0"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="mockupY" className="text-right">
-                Mockup Y (%)
-              </Label>
-              <Input
-                id="mockupY"
-                type="number"
-                value={mockupY}
-                onChange={(e) => setMockupY(e.target.value)}
-                className="col-span-3"
-                placeholder="0"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="mockupWidth" className="text-right">
-                Mockup Width (%)
-              </Label>
-              <Input
-                id="mockupWidth"
-                type="number"
-                value={mockupWidth}
-                onChange={(e) => setMockupWidth(e.target.value)}
-                className="col-span-3"
-                placeholder="100"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="mockupHeight" className="text-right">
-                Mockup Height (%)
-              </Label>
-              <Input
-                id="mockupHeight"
-                type="number"
-                value={mockupHeight}
-                onChange={(e) => setMockupHeight(e.target.value)}
-                className="col-span-3"
-                placeholder="100"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="mockupRotation" className="text-right">
-                Mockup Rotation (deg)
-              </Label>
-              <Input
-                id="mockupRotation"
-                type="number"
-                value={mockupRotation}
-                onChange={(e) => setMockupRotation(e.target.value)}
-                className="col-span-3"
-                placeholder="0"
-              />
-            </div>
+            {/* Removed mockup X, Y, Width, Height, Rotation inputs */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="product-status" className="text-right">
                 Status
