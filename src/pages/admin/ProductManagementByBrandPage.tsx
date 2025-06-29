@@ -36,7 +36,11 @@ interface Product {
   is_disabled: boolean; // Added is_disabled
   inventory: number | null; // Added inventory
   sku: string | null; // Added SKU
-  // Removed mockup_x, mockup_y, mockup_width, mockup_height, mockup_rotation
+  mockup_x: number | null; // Added mockup_x
+  mockup_y: number | null; // Added mockup_y
+  mockup_width: number | null; // Added mockup_width
+  mockup_height: number | null; // Added mockup_height
+  mockup_rotation: number | null; // Added mockup_rotation
 }
 
 const ProductManagementByBrandPage = () => {
@@ -63,8 +67,12 @@ const ProductManagementByBrandPage = () => {
   const [isProductDisabled, setIsProductDisabled] = useState(false); // New state for product disabled status
   const [productInventory, setProductInventory] = useState<string>('0'); // New state for product inventory
   const [productSku, setProductSku] = useState(''); // New state for product SKU
-
-  // Removed states for mockup image properties: mockupX, mockupY, mockupWidth, mockupHeight, mockupRotation
+  // States for mockup image properties
+  const [mockupX, setMockupX] = useState<string>('0');
+  const [mockupY, setMockupY] = useState<string>('0');
+  const [mockupWidth, setMockupWidth] = useState<string>(''); // Empty string for nullable
+  const [mockupHeight, setMockupHeight] = useState<string>(''); // Empty string for nullable
+  const [mockupRotation, setMockupRotation] = useState<string>('0');
 
   // Helper to check if a URL is from Supabase storage
   const isSupabaseStorageUrl = (url: string | null, bucketName: string) => {
@@ -123,7 +131,7 @@ const ProductManagementByBrandPage = () => {
         is_disabled,
         inventory,
         sku,
-        mockups(id, image_url)
+        mockups(id, image_url, mockup_x, mockup_y, mockup_width, mockup_height, mockup_rotation)
       `)
       .eq('category_id', categoryId)
       .eq('brand_id', brandId);
@@ -144,7 +152,11 @@ const ProductManagementByBrandPage = () => {
         ...p,
         mockup_id: p.mockups?.[0]?.id || null,
         mockup_image_url: p.mockups?.[0]?.image_url || null,
-        // Removed mockup_x, mockup_y, mockup_width, mockup_height, mockup_rotation from mapping
+        mockup_x: p.mockups?.[0]?.mockup_x ?? null,
+        mockup_y: p.mockups?.[0]?.mockup_y ?? null,
+        mockup_width: p.mockups?.[0]?.mockup_width ?? null,
+        mockup_height: p.mockups?.[0]?.mockup_height ?? null,
+        mockup_rotation: p.mockups?.[0]?.mockup_rotation ?? null,
       })) || []);
     }
     setLoading(false);
@@ -180,7 +192,12 @@ const ProductManagementByBrandPage = () => {
     setIsProductDisabled(false); // Default to enabled for new products
     setProductInventory('0'); // Default inventory for new products
     setProductSku(''); // Default SKU for new products
-    // Removed setting default mockup properties for new product
+    // Set default mockup properties for new product
+    setMockupX('0');
+    setMockupY('0');
+    setMockupWidth(''); // Keep empty for nullable
+    setMockupHeight(''); // Keep empty for nullable
+    setMockupRotation('0');
     setIsDialogOpen(true);
   };
 
@@ -196,7 +213,12 @@ const ProductManagementByBrandPage = () => {
     setIsProductDisabled(product.is_disabled); // Set current disabled status
     setProductInventory(product.inventory?.toString() || '0'); // Set current inventory
     setProductSku(product.sku || ''); // Set current SKU
-    // Removed setting current mockup properties
+    // Set current mockup properties
+    setMockupX(product.mockup_x?.toString() || '0');
+    setMockupY(product.mockup_y?.toString() || '0');
+    setMockupWidth(product.mockup_width?.toString() || '');
+    setMockupHeight(product.mockup_height?.toString() || '');
+    setMockupRotation(product.mockup_rotation?.toString() || '0');
     setIsDialogOpen(true);
   };
 
@@ -386,7 +408,11 @@ const ProductManagementByBrandPage = () => {
         designer: 'Admin',
         user_id: user.id,
         product_id: productIdToUse,
-        // Removed mockup_x, mockup_y, mockup_width, mockup_height, mockup_rotation from mockupData
+        mockup_x: parseFloat(mockupX),
+        mockup_y: parseFloat(mockupY),
+        mockup_width: mockupWidth ? parseFloat(mockupWidth) : null,
+        mockup_height: mockupHeight ? parseFloat(mockupHeight) : null,
+        mockup_rotation: parseFloat(mockupRotation),
       };
 
       if (mockupIdToUse) {
@@ -463,7 +489,11 @@ const ProductManagementByBrandPage = () => {
       sku: product.sku || '', // Include SKU
       mockup_id: product.mockup_id || '',
       mockup_image_url: product.mockup_image_url || '',
-      // Removed mockup_x, mockup_y, mockup_width, mockup_height, mockup_rotation from export
+      mockup_x: product.mockup_x || 0,
+      mockup_y: product.mockup_y || 0,
+      mockup_width: product.mockup_width || '', // Export as empty string if null
+      mockup_height: product.mockup_height || '', // Export as empty string if null
+      mockup_rotation: product.mockup_rotation || 0,
     }));
 
     const csv = Papa.unparse(dataToExport);
@@ -515,6 +545,12 @@ const ProductManagementByBrandPage = () => {
           is_disabled: row.is_disabled === 'TRUE' || row.is_disabled === 'true' || row.is_disabled === '1', // Parse boolean
           inventory: row.inventory ? parseInt(row.inventory) : 0, // Parse inventory
           sku: row.sku || null, // Parse SKU
+          // Mockup properties from CSV
+          mockup_x: row.mockup_x ? parseFloat(row.mockup_x) : 0,
+          mockup_y: row.mockup_y ? parseFloat(row.mockup_y) : 0,
+          mockup_width: row.mockup_width ? parseFloat(row.mockup_width) : null,
+          mockup_height: row.mockup_height ? parseFloat(row.mockup_height) : null,
+          mockup_rotation: row.mockup_rotation ? parseFloat(row.mockup_rotation) : 0,
         })).filter((product: any) => product.name); // Filter out rows with missing names
 
         if (productsToUpsert.length === 0) {
@@ -890,7 +926,69 @@ const ProductManagementByBrandPage = () => {
                 )}
               </div>
             </div>
-            {/* Removed mockup X, Y, Width, Height, Rotation inputs */}
+            {/* Mockup positioning and sizing inputs */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="mockupX" className="text-right">
+                Mockup X
+              </Label>
+              <Input
+                id="mockupX"
+                type="number"
+                value={mockupX}
+                onChange={(e) => setMockupX(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="mockupY" className="text-right">
+                Mockup Y
+              </Label>
+              <Input
+                id="mockupY"
+                type="number"
+                value={mockupY}
+                onChange={(e) => setMockupY(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="mockupWidth" className="text-right">
+                Mockup Width (Optional)
+              </Label>
+              <Input
+                id="mockupWidth"
+                type="number"
+                value={mockupWidth}
+                onChange={(e) => setMockupWidth(e.target.value)}
+                className="col-span-3"
+                placeholder="Leave empty for auto"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="mockupHeight" className="text-right">
+                Mockup Height (Optional)
+              </Label>
+              <Input
+                id="mockupHeight"
+                type="number"
+                value={mockupHeight}
+                onChange={(e) => setMockupHeight(e.target.value)}
+                className="col-span-3"
+                placeholder="Leave empty for auto"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="mockupRotation" className="text-right">
+                Mockup Rotation
+              </Label>
+              <Input
+                id="mockupRotation"
+                type="number"
+                value={mockupRotation}
+                onChange={(e) => setMockupRotation(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="product-status" className="text-right">
                 Status

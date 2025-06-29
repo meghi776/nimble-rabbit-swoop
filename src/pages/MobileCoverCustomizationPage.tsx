@@ -45,7 +45,16 @@ interface Product {
   price: number;
   inventory: number | null; // Added inventory
   sku: string | null; // Added SKU
-  // Removed mockup_x, mockup_y, mockup_width, mockup_height, mockup_rotation as they are no longer used for rendering
+}
+
+interface MockupData {
+  image_url: string | null;
+  mockup_x: number | null;
+  mockup_y: number | null;
+  mockup_width: number | null;
+  mockup_height: number | null;
+  mockup_rotation: number | null;
+  design_data: any; // Assuming design_data can be any JSON
 }
 
 interface DesignElement {
@@ -114,8 +123,8 @@ const MobileCoverCustomizationPage = () => {
   const [demoOrderPrice, setDemoOrderPrice] = useState<string>('');
   const [demoOrderAddress, setDemoOrderAddress] = useState<string>('');
 
-  // New state for the mockup overlay image URL
-  const [mockupOverlayImageUrl, setMockupOverlayImageUrl] = useState<string | null>(null);
+  // New state for the mockup overlay image URL and its properties
+  const [mockupOverlayData, setMockupOverlayData] = useState<MockupData | null>(null);
 
   // Responsive canvas states
   const [actualCanvasWidth, setActualCanvasWidth] = useState(0);
@@ -183,10 +192,12 @@ const MobileCoverCustomizationPage = () => {
   useEffect(() => {
     const fetchProductAndMockup = async () => {
       setLoading(true);
-      // Only select image_url from mockups, as other properties are no longer used for rendering
       const { data: productData, error: productError } = await supabase
         .from('products')
-        .select('*, mockups(image_url)')
+        .select(`
+          *,
+          mockups(image_url, mockup_x, mockup_y, mockup_width, mockup_height, mockup_rotation, design_data)
+        `)
         .eq('id', productId)
         .single();
 
@@ -198,13 +209,27 @@ const MobileCoverCustomizationPage = () => {
         console.log("Fetched productData:", productData); // Log product data
         console.log("Mockups data from productData:", productData?.mockups); // Log mockups data
 
-        const proxiedMockupUrl = productData.mockups.length > 0 && productData.mockups[0].image_url
-          ? proxyImageUrl(productData.mockups[0].image_url)
-          : null;
+        const mockup = productData.mockups.length > 0 ? productData.mockups[0] : null;
+        const proxiedMockupUrl = mockup?.image_url ? proxyImageUrl(mockup.image_url) : null;
         
-        setMockupOverlayImageUrl(proxiedMockupUrl); // Set the new state for mockup image
+        setMockupOverlayData({
+          image_url: proxiedMockupUrl,
+          mockup_x: mockup?.mockup_x ?? 0, // Default to 0 if null
+          mockup_y: mockup?.mockup_y ?? 0, // Default to 0 if null
+          mockup_width: mockup?.mockup_width ?? productData.canvas_width, // Default to canvas width if null
+          mockup_height: mockup?.mockup_height ?? productData.canvas_height, // Default to canvas height if null
+          mockup_rotation: mockup?.mockup_rotation ?? 0, // Default to 0 if null
+          design_data: mockup?.design_data || null,
+        });
 
-        console.log("Mockup Overlay Image URL:", proxiedMockupUrl); // Log the final URL
+        console.log("Mockup Overlay Data:", {
+          image_url: proxiedMockupUrl,
+          mockup_x: mockup?.mockup_x ?? 0,
+          mockup_y: mockup?.mockup_y ?? 0,
+          mockup_width: mockup?.mockup_width ?? productData.canvas_width,
+          mockup_height: mockup?.mockup_height ?? productData.canvas_height,
+          mockup_rotation: mockup?.mockup_rotation ?? 0,
+        });
 
         setProduct({
           id: productData.id,
@@ -216,10 +241,10 @@ const MobileCoverCustomizationPage = () => {
           sku: productData.sku, // Set SKU
         });
 
-        if (productData.mockups.length > 0 && productData.mockups[0].design_data) {
+        if (mockup?.design_data) {
           try {
             // Ensure loaded design elements conform to the new interface (add default width/height if missing)
-            const loadedElements: DesignElement[] = JSON.parse(productData.mockups[0].design_data as string).map((el: any) => ({
+            const loadedElements: DesignElement[] = JSON.parse(mockup.design_data as string).map((el: any) => ({
               ...el,
               width: el.width || (el.type === 'text' ? 200 : productData.canvas_width || 300), // Default width for text/image
               height: el.height || (el.type === 'text' ? 40 : productData.canvas_height || 600), // Default height for text/image
@@ -524,7 +549,7 @@ const MobileCoverCustomizationPage = () => {
 
     try {
       // Pre-load mockup image to ensure it's in cache and rendered
-      if (mockupOverlayImageUrl) {
+      if (mockupOverlayData?.image_url) {
         await new Promise((resolve) => {
           const img = new window.Image();
           img.crossOrigin = 'Anonymous';
@@ -534,7 +559,7 @@ const MobileCoverCustomizationPage = () => {
             // Do not reject, allow html2canvas to proceed even if this image fails
             resolve(false); 
           };
-          img.src = proxyImageUrl(mockupOverlayImageUrl);
+          img.src = proxyImageUrl(mockupOverlayData.image_url);
         });
       }
 
@@ -1023,18 +1048,18 @@ const MobileCoverCustomizationPage = () => {
                 </div>
               ))}
 
-              {mockupOverlayImageUrl && ( // Use the new state variable here
+              {mockupOverlayData?.image_url && ( // Use the new state variable here
                 <img
-                  key={mockupOverlayImageUrl}
-                  src={mockupOverlayImageUrl}
+                  key={mockupOverlayData.image_url}
+                  src={mockupOverlayData.image_url}
                   alt="Phone Mockup Overlay"
-                  className="absolute object-cover pointer-events-none" // Changed to object-cover
+                  className="absolute object-contain pointer-events-none" // Changed to object-contain
                   style={{
-                    left: 0,
-                    top: 0,
-                    width: '100%',
-                    height: '100%',
-                    transform: `rotate(0deg)`,
+                    left: (mockupOverlayData.mockup_x ?? 0) * scaleFactor,
+                    top: (mockupOverlayData.mockup_y ?? 0) * scaleFactor,
+                    width: `${(mockupOverlayData.mockup_width ?? product.canvas_width) * scaleFactor}px`,
+                    height: `${(mockupOverlayData.mockup_height ?? product.canvas_height) * scaleFactor}px`,
+                    transform: `rotate(${mockupOverlayData.mockup_rotation || 0}deg)`,
                     transformOrigin: 'center center',
                     zIndex: 10,
                   }}
