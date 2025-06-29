@@ -628,7 +628,7 @@ const MobileCoverCustomizationPage = () => {
 
     // 2. Add the element to state with the temporary URL
     addImageElement(tempImageUrl, newElementId); // Use the new addImageElement function
-    showLoading("Your image is being uploaded...");
+    // Removed: showLoading("Your image is being uploaded...");
 
     // Clear the file input immediately
     if (fileInputRef.current) {
