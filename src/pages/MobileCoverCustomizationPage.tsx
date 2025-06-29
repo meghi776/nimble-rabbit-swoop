@@ -949,7 +949,7 @@ const MobileCoverCustomizationPage = () => {
       )}
 
       {!loading && !error && product && (
-        <div className="flex-1 flex flex-col md:flex-row overflow-y-auto pb-50">
+        <div className="flex-1 flex flex-col md:flex-row overflow-y-auto pb-65"> {/* Changed pb-50 to pb-65 */}
           <div
             ref={designAreaRef}
             className="flex-1 flex items-center justify-center relative overflow-hidden"
