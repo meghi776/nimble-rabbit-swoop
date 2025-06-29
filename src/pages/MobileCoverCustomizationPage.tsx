@@ -644,7 +644,7 @@ const MobileCoverCustomizationPage = () => {
           prev.map(el => (el.id === newElementId ? { ...el, value: uploadedUrl } : el))
         );
         URL.revokeObjectURL(tempImageUrl); // Revoke the temporary URL
-        showSuccess("Image uploaded successfully!");
+        // Removed: showSuccess("Image uploaded successfully!");
       } else {
         // If upload fails, remove the element or show a persistent error
         setDesignElements(prev => prev.filter(el => el.id !== newElementId));
