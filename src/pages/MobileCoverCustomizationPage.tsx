@@ -1173,9 +1173,9 @@ const MobileCoverCustomizationPage = () => {
               <Palette className="h-6 w-6" />
               <span className="text-xs mt-1">Back Color</span>
             </Button>
-            <Button variant="ghost" className="flex flex-col h-auto p-2">
-              <LayoutTemplate className="h-6 w-6" />
-              <span className="text-xs mt-1">Readymade</span>
+            <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={handleBuyNowClick} disabled={isBuyNowDisabled}>
+              <ShoppingCart className="h-6 w-6" />
+              <span className="text-xs mt-1">Buy Now</span>
             </Button>
           </>
         )}
