@@ -48,20 +48,8 @@ serve(async (req) => {
       });
     }
 
-    // Check if the invoking user is an admin (only admins can decrement stock via this function)
-    const { data: invokerProfile, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('role')
-      .eq('id', invokerUser.id)
-      .single();
-
-    if (profileError || invokerProfile?.role !== 'admin') {
-      console.error("Profile error or not admin:", profileError);
-      return new Response(JSON.stringify({ error: 'Forbidden: Only administrators can modify inventory.' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 403,
-      });
-    }
+    // Removed the admin role check here.
+    // Any authenticated user can now decrement inventory when placing an order.
 
     // Fetch current inventory and update in a transaction-like manner
     const { data: productData, error: fetchError } = await supabaseAdmin
