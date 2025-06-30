@@ -12,7 +12,7 @@ const Header = () => {
   const handlePreviewClick = () => {
     if (!user) {
       // Optionally, redirect to login or show a message if not logged in
-      // For now, we'll just open the modal with default values if not logged in
+      // For now, we'll just open the modal with default values if not logged in,
       // or you can choose to disable the button if no user.
       // For this request, we'll allow opening the modal even if not logged in,
       // but the actual order placement will require login.
@@ -23,7 +23,7 @@ const Header = () => {
   };
 
   return (
-    <header className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 shadow-md">
+    <header className="flex items-center justify-between py-2 px-4 bg-white dark:bg-gray-800 shadow-md">
       <div className="flex items-center">
         <Link to="/" className="text-2xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 text-transparent bg-clip-text">
           Meghi
