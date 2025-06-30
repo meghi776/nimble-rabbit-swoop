@@ -14,12 +14,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, Eye, Trash2, Image as ImageIcon, ArrowDownWideNarrow, ArrowUpWideNarrow, Download } from 'lucide-react';
+import { Loader2, Eye, Trash2, Image as ImageIcon, ArrowDownWideNarrow, ArrowUpWideNarrow, Download, ShoppingCart } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import JSZip from 'jszip'; // Import JSZip
 import { saveAs } from 'file-saver'; // Import saveAs
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast'; // Import toast utilities
+import { useSession } from '@/contexts/SessionContext'; // Import useSession
 
 interface Order {
   id: string;
@@ -46,6 +47,7 @@ interface UserListItem {
 }
 
 const OrderManagementPage = () => {
+  const { session } = useSession(); // Get session for auth token
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,38 +58,63 @@ const OrderManagementPage = () => {
   const [newStatus, setNewStatus] = useState<string>('');
   const [sortColumn, setSortColumn] = useState<string>('created_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  const [orderTypeFilter, setOrderTypeFilter] = useState<string>('all'); // Changed default to 'all'
-  const [selectedUserIdFilter, setSelectedUserIdFilter] = useState<string>('all'); // New state for user filter
-  const [userList, setUserList] = useState<UserListItem[]>([]); // New state for user list
-  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set()); // Corrected useState declaration
+  const [orderTypeFilter, setOrderTypeFilter] = useState<string>('all');
+  const [selectedUserIdFilter, setSelectedUserIdFilter] = useState<string>('all');
+  const [userList, setUserList] = useState<UserListItem[]>([]);
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
+  const [normalOrderCount, setNormalOrderCount] = useState<number | null>(null); // New state for normal order count
+  const [demoOrderCount, setDemoOrderCount] = useState<number | null>(null); // New state for demo order count
 
   const orderStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
 
-  const fetchOrders = async () => {
+  const fetchOrdersAndCounts = async () => {
     setLoading(true);
     setError(null);
     setSelectedOrderIds(new Set()); // Clear selection on re-fetch
 
-    const payload = {
-      sortColumn,
-      sortDirection,
-      orderType: orderTypeFilter,
-      userId: selectedUserIdFilter === 'all' ? null : selectedUserIdFilter, // Pass selected user ID
-    };
-    console.log("UserOrderListingPage: Sending payload to Edge Function:", payload);
+    if (!session?.access_token) {
+      showError("Authentication required to fetch orders.");
+      setLoading(false);
+      return;
+    }
 
     try {
+      // Fetch order counts
+      const { data: countsData, error: countsInvokeError } = await supabase.functions.invoke('get-order-counts', {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (countsInvokeError) {
+        console.error("Edge Function Invoke Error (get-order-counts):", countsInvokeError);
+        showError(`Failed to load order counts: ${countsInvokeError.message}`);
+        setNormalOrderCount(null);
+        setDemoOrderCount(null);
+      } else if (countsData) {
+        setNormalOrderCount(countsData.normalOrders);
+        setDemoOrderCount(countsData.demoOrders);
+      }
+
+      // Fetch orders list
+      const payload = {
+        sortColumn,
+        sortDirection,
+        orderType: orderTypeFilter,
+        userId: selectedUserIdFilter === 'all' ? null : selectedUserIdFilter,
+      };
+
       const { data, error: invokeError } = await supabase.functions.invoke('get-orders-with-user-email', {
         body: JSON.stringify(payload),
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`, // Pass token for this function too
         },
       });
 
       if (invokeError) {
-        console.error("Edge Function Invoke Error:", invokeError);
-        console.error("Invoke Error Context:", invokeError.context);
-
+        console.error("Edge Function Invoke Error (get-orders-with-user-email):", invokeError);
         let errorMessage = invokeError.message;
         if (invokeError.context?.data) {
           try {
@@ -103,7 +130,7 @@ const OrderManagementPage = () => {
         setError(errorMessage);
       } else if (data && data.orders) {
         setOrders(data.orders || []);
-        setUserList(data.users || []); // Set the user list for the dropdown
+        setUserList(data.users || []);
       } else {
         showError("Unexpected response from server when fetching orders.");
         setError("Unexpected response from server.");
@@ -118,8 +145,8 @@ const OrderManagementPage = () => {
   };
 
   useEffect(() => {
-    fetchOrders();
-  }, [sortColumn, sortDirection, orderTypeFilter, selectedUserIdFilter]); // Re-fetch when user filter changes
+    fetchOrdersAndCounts();
+  }, [sortColumn, sortDirection, orderTypeFilter, selectedUserIdFilter, session?.access_token]); // Re-fetch when session token changes
 
   const openImageModal = (imageUrl: string | null) => {
     if (imageUrl) {
@@ -150,7 +177,7 @@ const OrderManagementPage = () => {
     } else {
       showSuccess("Order status updated successfully!");
       setIsEditStatusModalOpen(false);
-      fetchOrders();
+      fetchOrdersAndCounts();
     }
     dismissToast(toastId);
     setLoading(false);
@@ -193,7 +220,7 @@ const OrderManagementPage = () => {
     const success = await deleteSingleOrder(id, imageUrl);
     if (success) {
       showSuccess("Order deleted successfully!");
-      fetchOrders();
+      fetchOrdersAndCounts();
     } else {
       showError("Failed to delete order.");
     }
@@ -249,7 +276,7 @@ const OrderManagementPage = () => {
       }
     }
 
-    fetchOrders();
+    fetchOrdersAndCounts();
     dismissToast(toastId);
     setLoading(false);
     if (failedDeletions === 0) {
@@ -335,6 +362,29 @@ const OrderManagementPage = () => {
   return (
     <div className="p-4">
       <h1 className="text-3xl font-bold mb-6 text-gray-800 dark:text-gray-100">Order Management</h1>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Normal Orders</CardTitle>
+            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{normalOrderCount !== null ? normalOrderCount : 'N/A'}</div>
+            <p className="text-xs text-muted-foreground">Total non-demo orders</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Demo Orders</CardTitle>
+            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{demoOrderCount !== null ? demoOrderCount : 'N/A'}</div>
+            <p className="text-xs text-muted-foreground">Total demo orders</p>
+          </CardContent>
+        </Card>
+      </div>
 
       <Card>
         <CardHeader className="flex flex-row justify-between items-center">
