@@ -23,6 +23,7 @@ interface Brand {
   category_id: string;
   name: string;
   description: string | null;
+  sort_order: number | null; // Added sort_order
 }
 
 const BrandManagementPage = () => {
@@ -35,6 +36,7 @@ const BrandManagementPage = () => {
   const [currentBrand, setCurrentBrand] = useState<Brand | null>(null);
   const [brandName, setBrandName] = useState('');
   const [brandDescription, setBrandDescription] = useState('');
+  const [brandSortOrder, setBrandSortOrder] = useState<string>('0'); // New state for sort order
 
   useEffect(() => {
     const fetchCategoryAndBrands = async () => {
@@ -60,9 +62,10 @@ const BrandManagementPage = () => {
       // Fetch brands for the category
       const { data: brandsData, error: brandsError } = await supabase
         .from('brands')
-        .select('id, category_id, name, description')
+        .select('id, category_id, name, description, sort_order') // Select sort_order
         .eq('category_id', categoryId)
-        .order('name', { ascending: true });
+        .order('sort_order', { ascending: true }) // Order by sort_order
+        .order('name', { ascending: true }); // Secondary order by name
 
       if (brandsError) {
         console.error("Error fetching brands:", brandsError);
@@ -83,6 +86,7 @@ const BrandManagementPage = () => {
     setCurrentBrand(null);
     setBrandName('');
     setBrandDescription('');
+    setBrandSortOrder('0'); // Default sort order for new brand
     setIsDialogOpen(true);
   };
 
@@ -90,6 +94,7 @@ const BrandManagementPage = () => {
     setCurrentBrand(brand);
     setBrandName(brand.name);
     setBrandDescription(brand.description || '');
+    setBrandSortOrder(brand.sort_order?.toString() || '0'); // Set current sort order
     setIsDialogOpen(true);
   };
 
@@ -111,9 +116,10 @@ const BrandManagementPage = () => {
       // Re-fetch brands after deletion
       const { data: brandsData, error: fetchError } = await supabase
         .from('brands')
-        .select('id, category_id, name, description')
+        .select('id, category_id, name, description, sort_order') // Select sort_order
         .eq('category_id', categoryId)
-        .order('name', { ascending: true });
+        .order('sort_order', { ascending: true }) // Order by sort_order
+        .order('name', { ascending: true }); // Secondary order by name
 
       if (fetchError) {
         console.error("Error re-fetching brands:", fetchError);
@@ -136,12 +142,18 @@ const BrandManagementPage = () => {
       return;
     }
 
+    const parsedSortOrder = parseInt(brandSortOrder);
+    if (isNaN(parsedSortOrder)) {
+      showError("Sort order must be a valid number.");
+      return;
+    }
+
     const toastId = showLoading(currentBrand ? "Saving brand changes..." : "Adding new brand...");
     if (currentBrand) {
       // Update existing brand
       const { error } = await supabase
         .from('brands')
-        .update({ name: brandName, description: brandDescription })
+        .update({ name: brandName, description: brandDescription, sort_order: parsedSortOrder }) // Update sort_order
         .eq('id', currentBrand.id);
 
       if (error) {
@@ -153,9 +165,10 @@ const BrandManagementPage = () => {
         // Re-fetch brands after update
         const { data: brandsData, error: fetchError } = await supabase
           .from('brands')
-          .select('id, category_id, name, description')
+          .select('id, category_id, name, description, sort_order') // Select sort_order
           .eq('category_id', categoryId)
-          .order('name', { ascending: true });
+          .order('sort_order', { ascending: true }) // Order by sort_order
+          .order('name', { ascending: true }); // Secondary order by name
 
         if (fetchError) {
           console.error("Error re-fetching brands:", fetchError);
@@ -168,7 +181,7 @@ const BrandManagementPage = () => {
       // Add new brand
       const { error } = await supabase
         .from('brands')
-        .insert({ category_id: categoryId, name: brandName, description: brandDescription });
+        .insert({ category_id: categoryId, name: brandName, description: brandDescription, sort_order: parsedSortOrder }); // Insert sort_order
 
       if (error) {
         console.error("Error adding brand:", error);
@@ -179,9 +192,10 @@ const BrandManagementPage = () => {
         // Re-fetch brands after addition
         const { data: brandsData, error: fetchError } = await supabase
           .from('brands')
-          .select('id, category_id, name, description')
+          .select('id, category_id, name, description, sort_order') // Select sort_order
           .eq('category_id', categoryId)
-          .order('name', { ascending: true });
+          .order('sort_order', { ascending: true }) // Order by sort_order
+          .order('name', { ascending: true }); // Secondary order by name
 
         if (fetchError) {
           console.error("Error re-fetching brands:", fetchError);
@@ -234,6 +248,7 @@ const BrandManagementPage = () => {
                       <TableRow>
                         <TableHead>Name</TableHead>
                         <TableHead>Description</TableHead>
+                        <TableHead>Sort Order</TableHead> {/* New TableHead for Sort Order */}
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -246,6 +261,7 @@ const BrandManagementPage = () => {
                             </Link>
                           </TableCell>
                           <TableCell>{brand.description || 'N/A'}</TableCell>
+                          <TableCell>{brand.sort_order ?? 'N/A'}</TableCell> {/* Display sort_order */}
                           <TableCell className="text-right">
                             <Button
                               variant="outline"
@@ -299,6 +315,18 @@ const BrandManagementPage = () => {
                 id="description"
                 value={brandDescription}
                 onChange={(e) => setBrandDescription(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="sort-order" className="text-right">
+                Sort Order
+              </Label>
+              <Input
+                id="sort-order"
+                type="number"
+                value={brandSortOrder}
+                onChange={(e) => setBrandSortOrder(e.target.value)}
                 className="col-span-3"
               />
             </div>

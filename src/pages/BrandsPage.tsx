@@ -9,6 +9,7 @@ interface Brand {
   name: string;
   description: string | null;
   category_id: string;
+  sort_order: number | null; // Added sort_order
 }
 
 const BrandsPage = () => {
@@ -46,12 +47,13 @@ const BrandsPage = () => {
           setCategoryName('Unknown Category');
         }
 
-        // Fetch brands
+        // Fetch brands and order by sort_order, then by name
         const { data: brandsData, error: brandsError } = await supabase
           .from('brands')
-          .select('id, name, description, category_id')
+          .select('id, name, description, category_id, sort_order') // Select sort_order
           .eq('category_id', categoryId)
-          .order('name', { ascending: true });
+          .order('sort_order', { ascending: true }) // Order by sort_order first
+          .order('name', { ascending: true }); // Secondary order by name
 
         if (brandsError) {
           console.error("BrandsPage.tsx: Error fetching brands:", brandsError);
