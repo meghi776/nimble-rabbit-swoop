@@ -7,22 +7,32 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log("Edge Function: get-admin-dashboard-data started."); // VERY FIRST LOG
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Log environment variables for debugging
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
     console.log(`Edge Function: SUPABASE_URL present: ${!!supabaseUrl}, length: ${supabaseUrl?.length}`);
     console.log(`Edge Function: SUPABASE_SERVICE_ROLE_KEY present: ${!!supabaseServiceRoleKey}, length: ${supabaseServiceRoleKey?.length}`);
 
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+      console.error("Edge Function: Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables.");
+      return new Response(JSON.stringify({ error: 'Server configuration error: Supabase environment variables are not set.' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
+      });
+    }
+
     // Create a Supabase client with the service role key
     const supabaseAdmin = createClient(
-      supabaseUrl ?? '',
-      supabaseServiceRoleKey ?? ''
+      supabaseUrl, // Use directly, already checked for null
+      supabaseServiceRoleKey // Use directly, already checked for null
     );
 
     // Get the user's ID from the request's Authorization header
