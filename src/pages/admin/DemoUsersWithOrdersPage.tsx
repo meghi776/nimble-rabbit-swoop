@@ -16,18 +16,21 @@ interface DemoUser {
 }
 
 const DemoUsersWithOrdersPage = () => {
-  const { session } = useSession();
+  const { session, loading: sessionLoading } = useSession(); // Get sessionLoading state
   const [users, setUsers] = useState<DemoUser[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Local loading state for data fetch
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDemoUsers = async () => {
-      setLoading(true);
+      setLoading(true); // Start local loading
       setError(null);
 
+      // Only proceed if session is not loading and access_token is available
       if (!session?.access_token) {
-        showError("Authentication required to view demo users.");
+        // This case should ideally be handled by SessionContext redirecting to login
+        // but as a fallback, set an error here.
+        setError("You must be logged in as an administrator to view demo users.");
         setLoading(false);
         return;
       }
@@ -66,12 +69,24 @@ const DemoUsersWithOrdersPage = () => {
         showError(err.message || "An unexpected error occurred while fetching demo users.");
         setError(err.message || "An unexpected error occurred.");
       } finally {
-        setLoading(false);
+        setLoading(false); // End local loading
       }
     };
 
-    fetchDemoUsers();
-  }, [session?.access_token]);
+    // Only trigger fetch when session is not loading and session.access_token is available
+    if (!sessionLoading) {
+      fetchDemoUsers();
+    }
+  }, [session?.access_token, sessionLoading]); // Depend on session.access_token and sessionLoading
+
+  // Display loading spinner if either session is loading or local data is loading
+  if (loading || sessionLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-4">
@@ -84,17 +99,11 @@ const DemoUsersWithOrdersPage = () => {
         <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Demo Orders by User</h1>
       </div>
 
-      {loading && (
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
-        </div>
-      )}
-
       {error && (
         <p className="text-red-500">Error: {error}</p>
       )}
 
-      {!loading && !error && (
+      {!error && (
         <>
           {users.length === 0 ? (
             <p className="text-gray-600 dark:text-gray-300">No users with demo orders found.</p>
