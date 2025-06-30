@@ -1069,7 +1069,7 @@ const MobileCoverCustomizationPage = () => {
         className="hidden"
       />
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-lg p-2 flex flex-wrap justify-around items-center border-t border-gray-200 dark:border-gray-700 z-10">
+      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-lg p-1 flex flex-wrap justify-around items-center border-t border-gray-200 dark:border-gray-700 z-10">
         {selectedElementId && designElements.find(el => el.id === selectedElementId)?.type === 'text' ? (
           <div className="flex flex-col w-full items-center">
             <div className="flex items-center justify-center w-full overflow-x-auto py-1 px-4 scrollbar-hide">
@@ -1119,43 +1119,43 @@ const MobileCoverCustomizationPage = () => {
               ))}
             </div>
             <div className="flex items-center justify-center w-full py-1 px-4">
-              <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={handleBlurBackground}>
-                <Palette className="h-6 w-6" />
-                <span className="text-xs mt-1">Blur Background</span>
+              <Button variant="ghost" className="flex flex-col h-auto p-1" onClick={handleBlurBackground}>
+                <Palette className="h-5 w-5" />
+                <span className="text-xs">Blur Background</span>
               </Button>
               {blurredBackgroundImageUrl && (
-                <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={handleClearBlur}>
-                  <XCircle className="h-6 w-6" />
-                  <span className="text-xs mt-1">Clear Blur</span>
+                <Button variant="ghost" className="flex flex-col h-auto p-1" onClick={handleClearBlur}>
+                  <XCircle className="h-5 w-5" />
+                  <span className="text-xs">Clear Blur</span>
                 </Button>
               )}
-              <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={handleClearBackground}>
-                <XCircle className="h-6 w-6" />
-                <span className="text-xs mt-1">Clear Background</span>
+              <Button variant="ghost" className="flex flex-col h-auto p-1" onClick={handleClearBackground}>
+                <XCircle className="h-5 w-5" />
+                  <span className="text-xs">Clear Background</span>
               </Button>
             </div>
-            <Button variant="ghost" className="flex flex-col h-auto p-2 mt-2" onClick={() => setIsBackColorPaletteOpen(false)}>
-              <XCircle className="h-6 w-6" />
-              <span className="text-xs mt-1">Close</span>
+            <Button variant="ghost" className="flex flex-col h-auto p-1 mt-2" onClick={() => setIsBackColorPaletteOpen(false)}>
+              <XCircle className="h-5 w-5" />
+              <span className="text-xs">Close</span>
             </Button>
           </div>
         ) : (
           <>
-            <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={handleAddTextElement}>
-              <Text className="h-6 w-6" />
-              <span className="text-xs mt-1">Add Text</span>
+            <Button variant="ghost" className="flex flex-col h-auto p-1" onClick={handleAddTextElement}>
+              <Text className="h-5 w-5" />
+              <span className="text-xs">Add Text</span>
             </Button>
-            <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => fileInputRef.current?.click()}>
-              <Image className="h-6 w-6" />
-              <span className="text-xs mt-1">Your Photo</span>
+            <Button variant="ghost" className="flex flex-col h-auto p-1" onClick={() => fileInputRef.current?.click()}>
+              <Image className="h-5 w-5" />
+              <span className="text-xs">Your Photo</span>
             </Button>
-            <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => { setSelectedElementId(null); setIsBackColorPaletteOpen(true); }}>
-              <Palette className="h-6 w-6" />
-              <span className="text-xs mt-1">Back Color</span>
+            <Button variant="ghost" className="flex flex-col h-auto p-1" onClick={() => { setSelectedElementId(null); setIsBackColorPaletteOpen(true); }}>
+              <Palette className="h-5 w-5" />
+              <span className="text-xs">Back Color</span>
             </Button>
-            <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={handleBuyNowClick} disabled={isBuyNowDisabled}>
-              <ShoppingCart className="h-6 w-6" />
-              <span className="text-xs mt-1">Buy Now</span>
+            <Button variant="ghost" className="flex flex-col h-auto p-1" onClick={handleBuyNowClick} disabled={isBuyNowDisabled}>
+              <ShoppingCart className="h-5 w-5" />
+              <span className="text-xs">Buy Now</span>
             </Button>
           </>
         )}
