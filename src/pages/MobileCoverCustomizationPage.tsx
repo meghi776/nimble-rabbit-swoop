@@ -105,7 +105,7 @@ const MobileCoverCustomizationPage = () => {
   const [currentTextShadowEnabled, setCurrentTextShadowEnabled] = useState(false);
   const [blurredBackgroundImageUrl, setBlurredBackgroundImageUrl] = useState<string | null>(null); // New state for blurred background
   const [isBackColorPaletteOpen, setIsBackColorPaletteOpen] = useState(false); // State to control palette visibility
-  const [selectedCanvasColor, setSelectedCanvasColor] = useState<string | null>(null); // State for solid canvas background color
+  const [selectedCanvasColor, setSelectedCanvasColor] = useState<string | null>('#000000'); // State for solid canvas background color - Changed to black
 
   const designAreaRef = useRef<HTMLDivElement>(null);
   const canvasContentRef = useRef<HTMLDivElement>(null);
