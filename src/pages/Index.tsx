@@ -69,8 +69,14 @@ const Index = () => {
     fetchCategories();
   }, []); // Empty dependency array means this runs once on mount
 
+  // Add a useEffect to log the final state of loading and error
+  useEffect(() => {
+    console.log("Index.tsx: Final state - loading:", loading, "error:", error, "categories count:", categories.length);
+  }, [loading, error, categories.length]);
+
+
   return (
-    <div className="flex flex-col items-center justify-center p-4 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-800 dark:to-gray-950"> {/* Removed min-h-screen */}
+    <div className="flex flex-col items-center justify-center p-4 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-800 dark:to-gray-950 min-h-screen"> {/* Re-added min-h-screen */}
       {loading && (
         <p className="text-gray-600 dark:text-gray-300">Loading categories...</p>
       )}
