@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch"; // Import Switch component
 import { useSession } from '@/contexts/SessionContext';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast'; // Import toast utilities
 
@@ -24,6 +25,7 @@ interface Profile {
   first_name: string | null;
   last_name: string | null;
   role: 'user' | 'admin';
+  can_preview: boolean; // Added can_preview
 }
 
 const UserManagementPage = () => {
@@ -36,6 +38,7 @@ const UserManagementPage = () => {
   const [editFirstName, setEditFirstName] = useState('');
   const [editLastName, setEditLastName] = useState('');
   const [editRole, setEditRole] = useState<'user' | 'admin'>('user');
+  const [editCanPreview, setEditCanPreview] = useState(false); // New state for can_preview in edit modal
   const [newEmail, setNewEmail] = useState(''); // New state for new user email
   const [newPassword, setNewPassword] = useState(''); // New state for new user password
   const [newFirstName, setNewFirstName] = useState(''); // New state for new user first name
@@ -48,7 +51,7 @@ const UserManagementPage = () => {
     setError(null);
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, first_name, last_name, role');
+      .select('id, first_name, last_name, role, can_preview'); // Select can_preview
 
     if (error) {
       console.error("Error fetching profiles:", error);
@@ -91,6 +94,7 @@ const UserManagementPage = () => {
     setEditFirstName(profile.first_name || '');
     setEditLastName(profile.last_name || '');
     setEditRole(profile.role);
+    setEditCanPreview(profile.can_preview); // Set current can_preview status
     setIsEditModalOpen(true);
   };
 
@@ -127,6 +131,7 @@ const UserManagementPage = () => {
         first_name: editFirstName,
         last_name: editLastName,
         role: editRole,
+        can_preview: editCanPreview, // Update can_preview status
       })
       .eq('id', currentProfile.id);
 
@@ -279,6 +284,7 @@ const UserManagementPage = () => {
                       <TableHead>First Name</TableHead>
                       <TableHead>Last Name</TableHead>
                       <TableHead>Role</TableHead>
+                      <TableHead>Can Preview</TableHead> {/* New TableHead */}
                       {isAdmin && <TableHead className="text-right">Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
@@ -289,6 +295,12 @@ const UserManagementPage = () => {
                         <TableCell>{profile.first_name || 'N/A'}</TableCell>
                         <TableCell>{profile.last_name || 'N/A'}</TableCell>
                         <TableCell>{profile.role}</TableCell>
+                        <TableCell>
+                          <Switch
+                            checked={profile.can_preview}
+                            disabled={true} // Display only, edit in modal
+                          />
+                        </TableCell>
                         {isAdmin && (
                           <TableCell className="text-right">
                             <Button
@@ -362,6 +374,22 @@ const UserManagementPage = () => {
                   <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-can-preview" className="text-right">
+                Can Preview
+              </Label>
+              <div className="col-span-3 flex items-center">
+                <Switch
+                  id="edit-can-preview"
+                  checked={editCanPreview}
+                  onCheckedChange={setEditCanPreview}
+                  disabled={currentProfile?.id === currentUser?.id} // Prevent changing own can_preview
+                />
+                <span className="ml-2 text-sm text-gray-600 dark:text-gray-300">
+                  {editCanPreview ? 'Enabled' : 'Disabled'}
+                </span>
+              </div>
             </div>
           </div>
           <DialogFooter>
