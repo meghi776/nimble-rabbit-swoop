@@ -149,6 +149,8 @@ const MobileCoverCustomizationPage = () => {
   ];
 
   const selectedTextElement = selectedElementId ? designElements.find(el => el.id === selectedElementId && el.type === 'text') : null;
+  const selectedImageElement = selectedElementId ? designElements.find(el => el.id === selectedElementId && el.type === 'image') : null;
+
 
   const textElementRefs = useRef<Map<string, HTMLDivElement>>(new Map()); // Changed to HTMLDivElement
   const lastCaretPosition = useRef<{ node: Node | null; offset: number } | null>(null);
@@ -325,16 +327,23 @@ const MobileCoverCustomizationPage = () => {
       const originalWidth = img.naturalWidth;
       const originalHeight = img.naturalHeight;
 
-      // Calculate initial size to fit within canvas while maintaining aspect ratio
-      let newWidth = product.canvas_width * 0.8; // Start with 80% of canvas width
-      let newHeight = (originalHeight / originalWidth) * newWidth;
+      // Calculate dimensions to cover the entire canvas while maintaining aspect ratio
+      const canvasAspectRatio = product.canvas_width / product.canvas_height;
+      const imageAspectRatio = originalWidth / originalHeight;
 
-      if (newHeight > product.canvas_height * 0.8) { // If height is too large, scale by height
-        newHeight = product.canvas_height * 0.8;
-        newWidth = (originalWidth / originalHeight) * newHeight;
+      let newWidth, newHeight;
+
+      if (imageAspectRatio > canvasAspectRatio) {
+        // Image is wider than canvas, scale by height to cover
+        newHeight = product.canvas_height;
+        newWidth = newHeight * imageAspectRatio;
+      } else {
+        // Image is taller than canvas, scale by width to cover
+        newWidth = product.canvas_width;
+        newHeight = newWidth / imageAspectRatio;
       }
 
-      // Center the image initially
+      // Center the image
       const newX = (product.canvas_width - newWidth) / 2;
       const newY = (product.canvas_height - newHeight) / 2;
 
@@ -1203,6 +1212,12 @@ const MobileCoverCustomizationPage = () => {
               <Palette className="h-5 w-5" />
               <span className="text-xs">Back Color</span>
             </Button>
+            {selectedImageElement && (
+              <Button variant="ghost" className="flex flex-col h-auto p-1" onClick={() => deleteElement(selectedImageElement.id)}>
+                <Trash2 className="h-5 w-5" />
+                <span className="text-xs">Delete Image</span>
+              </Button>
+            )}
             <Button variant="ghost" className="flex flex-col h-auto p-1" onClick={handleBuyNowClick} disabled={isBuyNowDisabled}>
               <ShoppingCart className="h-5 w-5" />
               <span className="text-xs">Buy Now</span>
