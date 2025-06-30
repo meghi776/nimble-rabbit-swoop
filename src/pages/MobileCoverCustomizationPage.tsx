@@ -690,8 +690,7 @@ const MobileCoverCustomizationPage = () => {
           throw new Error("Product is out of stock.");
         }
         const { data: decrementData, error: decrementError } = await supabase.functions.invoke('decrement-product-inventory', {
-          body: JSON.stringify({ productId: product.id, quantity: 1 }),
-          headers: { 'Content-Type': 'application/json' },
+          body: { productId: product.id, quantity: 1 }, // Simplified body
         });
 
         if (decrementError) {
