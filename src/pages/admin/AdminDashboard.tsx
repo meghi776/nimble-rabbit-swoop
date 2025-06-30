@@ -15,7 +15,13 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (sessionLoading || !user || !session) { // Wait for session to load and user to be present
+      console.log("AdminDashboard: fetchData initiated."); // New log
+      if (sessionLoading) {
+        console.log("AdminDashboard: Session is still loading. Waiting..."); // New log
+        return;
+      }
+      if (!user || !session) {
+        console.log("AdminDashboard: User or session not available. User:", user, "Session:", session); // New log
         setLoading(false); // Set local loading to false if session not ready
         return;
       }
@@ -24,6 +30,9 @@ const AdminDashboard = () => {
       setError(null);
 
       try {
+        console.log("AdminDashboard: Attempting to invoke 'get-admin-dashboard-data' Edge Function."); // New log
+        console.log("AdminDashboard: Session access token length:", session.access_token?.length); // New log
+
         // Invoke the Edge Function to get all dashboard data securely
         const { data, error: invokeError } = await supabase.functions.invoke('get-admin-dashboard-data', {
           headers: {
@@ -33,8 +42,10 @@ const AdminDashboard = () => {
         });
 
         if (invokeError) {
-          console.error("Edge Function Invoke Error:", invokeError);
-          let errorMessage = invokeError.message;
+          console.error("AdminDashboard: Edge Function Invoke Error:", invokeError); // New log
+          console.error("AdminDashboard: Invoke Error Context:", invokeError.context); // New log
+
+          let errorMessage = invokeError.message; // Default to generic message
           if (invokeError.context?.data) {
             try {
               const parsedError = JSON.parse(invokeError.context.data);
@@ -47,18 +58,21 @@ const AdminDashboard = () => {
           }
           throw new Error(`Failed to load dashboard data: ${errorMessage}`);
         } else if (data) {
+          console.log("AdminDashboard: Edge Function returned data:", data); // New log
           setTotalUsers(data.totalUsers);
           setTotalBrands(data.totalBrands);
           setTotalOrders(data.totalOrders);
         } else {
+          console.warn("AdminDashboard: Edge Function returned no data."); // New log
           throw new Error("Unexpected response from server when fetching dashboard data.");
         }
       } catch (err: any) {
-        console.error("Error in AdminDashboard fetchData:", err);
+        console.error("AdminDashboard: Error in AdminDashboard fetchData:", err); // New log
         showError(err.message || "Failed to load dashboard data.");
         setError(err.message || "An unexpected error occurred.");
       } finally {
         setLoading(false);
+        console.log("AdminDashboard: fetchData completed. Loading set to false."); // New log
       }
     };
 
