@@ -64,7 +64,7 @@ serve(async (req) => {
         status: 403,
       });
     }
-    console.log(`Edge Function: Invoker user ${invokerUser.id} is an admin.`);
+    console.log(`Edge Function: Invoker user ${invokerUser.id} is an admin. Role: ${invokerProfile.role}`);
 
     // Fetch total users count
     const { data: usersData, error: usersListError } = await supabaseAdmin.auth.admin.listUsers();
