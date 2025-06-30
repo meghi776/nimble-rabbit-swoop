@@ -12,17 +12,44 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  let email, password, first_name, last_name; // These variables are not used in this function, but are present from previous context.
+  let requestBody;
+  try {
+    // Check if there's a body to parse
+    const contentType = req.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      const bodyText = await req.text(); // Read as text first
+      if (bodyText) {
+        requestBody = JSON.parse(bodyText); // Then parse as JSON
+      } else {
+        console.error("Edge Function: Received application/json with empty body.");
+        return new Response(JSON.stringify({ error: 'Request body is empty. Expected JSON payload.' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        });
+      }
+    } else {
+      console.error("Edge Function: Content-Type is not application/json or missing.");
+      return new Response(JSON.stringify({ error: 'Invalid Content-Type. Expected application/json.' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      });
+    }
+  } catch (jsonParseError) {
+    console.error("Error parsing JSON body in decrement-product-inventory:", jsonParseError);
+    return new Response(JSON.stringify({ error: `Invalid JSON format: ${jsonParseError.message}` }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400,
+    });
+  }
+
+  const productId = requestBody.productId;
+  const quantity = requestBody.quantity ?? 1; // Default to 1 if not provided
+
+  // Log environment variable lengths for debugging
+  console.log("Edge Function: SUPABASE_URL length:", (Deno.env.get('SUPABASE_URL') ?? '').length);
+  console.log("Edge Function: SUPABASE_SERVICE_ROLE_KEY length:", (Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '').length);
 
   try {
-    const requestBody = await req.json();
-    const productId = requestBody.productId;
-    const quantity = requestBody.quantity ?? 1; // Default to 1 if not provided
-
-    // Log environment variable lengths for debugging
-    console.log("Edge Function: SUPABASE_URL length:", (Deno.env.get('SUPABASE_URL') ?? '').length);
-    console.log("Edge Function: SUPABASE_SERVICE_ROLE_KEY length:", (Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '').length);
-
     if (!productId || typeof quantity !== 'number' || quantity <= 0) {
       return new Response(JSON.stringify({ error: 'Invalid productId or quantity provided.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
