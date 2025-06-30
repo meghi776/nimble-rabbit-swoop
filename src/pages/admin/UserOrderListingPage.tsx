@@ -374,16 +374,18 @@ const OrderManagementPage = () => {
             <p className="text-xs text-muted-foreground">Total non-demo orders</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Demo Orders</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{demoOrderCount !== null ? demoOrderCount : 'N/A'}</div>
-            <p className="text-xs text-muted-foreground">Total demo orders</p>
-          </CardContent>
-        </Card>
+        <Link to="/admin/demo-users" className="block"> {/* Added Link here */}
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow"> {/* Added hover effect */}
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Demo Orders</CardTitle>
+              <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{demoOrderCount !== null ? demoOrderCount : 'N/A'}</div>
+              <p className="text-xs text-muted-foreground">Total demo orders</p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       <Card>

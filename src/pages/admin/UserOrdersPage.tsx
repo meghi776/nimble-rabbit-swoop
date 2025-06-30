@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom'; // Import useSearchParams
 import { supabase } from '@/integrations/supabase/client';
 import {
   Table,
@@ -35,6 +35,9 @@ interface Order {
 
 const UserOrdersPage = () => {
   const { userId } = useParams<{ userId: string }>();
+  const [searchParams] = useSearchParams(); // Use useSearchParams to get URL query parameters
+  const orderTypeParam = searchParams.get('type'); // Get the 'type' parameter from URL
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -76,8 +79,8 @@ const UserOrdersPage = () => {
     }
     setUserName(`${profileData?.first_name || 'Unknown'} ${profileData?.last_name || 'User'}`);
 
-    // Fetch orders for the specific user with sorting
-    const { data, error: ordersError } = await supabase
+    // Fetch orders for the specific user with sorting and type filter
+    let query = supabase
       .from('orders')
       .select(`
         id,
@@ -93,8 +96,13 @@ const UserOrdersPage = () => {
         profiles (first_name, last_name),
         type
       `)
-      .eq('user_id', userId)
-      .order(sortColumn, { ascending: sortDirection === 'asc' });
+      .eq('user_id', userId);
+    
+    if (orderTypeParam) { // Apply type filter if present in URL
+      query = query.eq('type', orderTypeParam);
+    }
+
+    const { data, error: ordersError } = await query.order(sortColumn, { ascending: sortDirection === 'asc' });
 
     if (ordersError) {
       console.error("Error fetching orders:", ordersError);
@@ -108,7 +116,7 @@ const UserOrdersPage = () => {
 
   useEffect(() => {
     fetchUserAndOrders();
-  }, [userId, sortColumn, sortDirection]); // Re-fetch when sort options change
+  }, [userId, orderTypeParam, sortColumn, sortDirection]); // Re-fetch when userId, orderTypeParam, or sort options change
 
   const openImageModal = (imageUrl: string | null) => {
     if (imageUrl) {
@@ -189,12 +197,14 @@ const UserOrdersPage = () => {
   return (
     <div className="p-4">
       <div className="flex items-center mb-6">
-        <Link to="/admin/orders" className="mr-4">
+        <Link to={orderTypeParam === 'demo' ? '/admin/demo-users' : '/admin/orders'} className="mr-4"> {/* Dynamic back link */}
           <Button variant="outline" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Orders for {userName || 'Loading...'}</h1>
+        <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">
+          {orderTypeParam === 'demo' ? 'Demo Orders' : 'Orders'} for {userName || 'Loading...'}
+        </h1>
       </div>
 
       <Card>

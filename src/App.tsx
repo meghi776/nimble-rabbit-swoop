@@ -19,6 +19,7 @@ import OrderHistoryPage from "./pages/OrderHistoryPage"; // Import OrderHistoryP
 import PublicLayout from "./components/PublicLayout"; // Import PublicLayout
 import NotFound from "./pages/NotFound"; // Import NotFound
 import { DemoOrderModalProvider } from "./contexts/DemoOrderModalContext"; // Import DemoOrderModalProvider
+import DemoUsersWithOrdersPage from "./pages/admin/DemoUsersWithOrdersPage"; // Import DemoUsersWithOrdersPage
 
 function App() {
   return (
@@ -47,6 +48,7 @@ function App() {
                 <Route path="orders" element={<UserOrderListingPage />} />
                 <Route path="orders/:userId" element={<UserOrdersPage />} />
                 <Route path="demo-orders" element={<DemoOrderListingPage />} />
+                <Route path="demo-users" element={<DemoUsersWithOrdersPage />} /> {/* New route */}
               </Route>
 
               {/* Catch-all route for 404 */}
