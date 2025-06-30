@@ -60,7 +60,7 @@ const BrandListingPage = () => {
   }, [categoryId]);
 
   return (
-    <div className="min-h-screen flex flex-col items-center p-4 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-800 dark:to-gray-950">
+    <div className="flex flex-col items-center p-4 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-800 dark:to-gray-950"> {/* Removed min-h-screen */}
       <div className="w-full max-w-4xl mx-auto">
         <div className="flex items-center mb-6">
           <Link to="/" className="mr-4">

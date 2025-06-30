@@ -70,7 +70,7 @@ const Index = () => {
   }, []); // Empty dependency array means this runs once on mount
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-800 dark:to-gray-950">
+    <div className="flex flex-col items-center justify-center p-4 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-800 dark:to-gray-950"> {/* Removed min-h-screen */}
       {loading && (
         <p className="text-gray-600 dark:text-gray-300">Loading categories...</p>
       )}

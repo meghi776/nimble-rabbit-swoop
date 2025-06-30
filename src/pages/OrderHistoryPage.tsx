@@ -140,7 +140,7 @@ const OrderHistoryPage = () => {
 
   if (sessionLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="flex items-center justify-center bg-gray-50 dark:bg-gray-900"> {/* Removed min-h-screen */}
         <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
       </div>
     );
@@ -148,7 +148,7 @@ const OrderHistoryPage = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 text-red-500">
+      <div className="flex items-center justify-center bg-gray-50 dark:bg-gray-900 text-red-500"> {/* Removed min-h-screen */}
         <p>Error: {error}</p>
       </div>
     );
@@ -156,7 +156,7 @@ const OrderHistoryPage = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50 dark:bg-gray-900">
+      <div className="flex flex-col items-center justify-center p-4 bg-gray-50 dark:bg-gray-900"> {/* Removed min-h-screen */}
         <Card className="w-full max-w-md text-center">
           <CardHeader>
             <CardTitle>Access Denied</CardTitle>
@@ -171,7 +171,7 @@ const OrderHistoryPage = () => {
   }
 
   return (
-    <div className="p-4 min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="p-4 bg-gray-50 dark:bg-gray-900"> {/* Removed min-h-screen */}
       <h1 className="text-3xl font-bold mb-6 text-gray-800 dark:text-gray-100">Your Orders</h1>
 
       <Card>
