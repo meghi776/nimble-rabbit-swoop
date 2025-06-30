@@ -519,6 +519,11 @@ const ProductManagementByBrandPage = () => {
       return;
     }
 
+    if (!user?.id) {
+      showError("User not authenticated. Please log in to import products.");
+      return;
+    }
+
     setLoading(true);
     const toastId = showLoading("Importing products...");
     Papa.parse(file, {
@@ -533,54 +538,99 @@ const ProductManagementByBrandPage = () => {
           return;
         }
 
-        const productsToUpsert = results.data.map((row: any) => ({
-          id: row.id || undefined, // Use undefined for new inserts, existing ID for updates
-          category_id: categoryId,
-          brand_id: brandId,
-          name: row.name,
-          description: row.description || null,
-          price: row.price ? parseFloat(row.price) : null,
-          canvas_width: row.canvas_width ? parseInt(row.canvas_width) : 300,
-          canvas_height: row.canvas_height ? parseInt(row.canvas_height) : 600,
-          is_disabled: row.is_disabled === 'TRUE' || row.is_disabled === 'true' || row.is_disabled === '1', // Parse boolean
-          inventory: row.inventory ? parseInt(row.inventory) : 0, // Parse inventory
-          sku: row.sku || null, // Parse SKU
-          // Mockup properties from CSV
-          mockup_x: row.mockup_x ? parseFloat(row.mockup_x) : 0,
-          mockup_y: row.mockup_y ? parseFloat(row.mockup_y) : 0,
-          mockup_width: row.mockup_width ? parseFloat(row.mockup_width) : null,
-          mockup_height: row.mockup_height ? parseFloat(row.mockup_height) : null,
-          mockup_rotation: row.mockup_rotation ? parseFloat(row.mockup_rotation) : 0,
-        })).filter((product: any) => product.name); // Filter out rows with missing names
-
-        if (productsToUpsert.length === 0) {
+        const rowsToProcess = results.data.filter((row: any) => row.name); // Filter out rows with missing names
+        if (rowsToProcess.length === 0) {
           showError("No valid products found in the CSV to import.");
           dismissToast(toastId);
           setLoading(false);
           return;
         }
 
-        try {
-          const { error: upsertError } = await supabase
-            .from('products')
-            .upsert(productsToUpsert, { onConflict: 'id' }); // Perform batch upsert
+        let successfulImports = 0;
+        let failedImports = 0;
 
-          if (upsertError) {
-            console.error("Error during batch upsert:", upsertError);
-            showError(`Failed to import products: ${upsertError.message}`);
-          } else {
-            showSuccess(`Successfully imported ${productsToUpsert.length} products!`);
+        for (const row of rowsToProcess) {
+          try {
+            // 1. Prepare Product Data
+            const productPayload = {
+              id: row.id || undefined, // Use undefined for new inserts, existing ID for updates
+              category_id: categoryId,
+              brand_id: brandId,
+              name: row.name,
+              description: row.description || null,
+              price: row.price ? parseFloat(row.price) : null,
+              canvas_width: row.canvas_width ? parseInt(row.canvas_width) : 300,
+              canvas_height: row.canvas_height ? parseInt(row.canvas_height) : 600,
+              is_disabled: row.is_disabled === 'TRUE' || row.is_disabled === 'true' || row.is_disabled === '1',
+              inventory: row.inventory ? parseInt(row.inventory) : 0,
+              sku: row.sku || null,
+            };
+
+            // 2. Upsert Product
+            const { data: upsertedProduct, error: productUpsertError } = await supabase
+              .from('products')
+              .upsert(productPayload, { onConflict: 'id' })
+              .select('id')
+              .single();
+
+            if (productUpsertError) {
+              console.error(`Error upserting product ${row.name}:`, productUpsertError);
+              failedImports++;
+              continue; // Skip to next row
+            }
+
+            const productId = upsertedProduct.id;
+
+            // 3. Prepare Mockup Data (if available in CSV)
+            if (row.mockup_image_url) {
+              const mockupPayload = {
+                id: row.mockup_id || undefined, // Use existing mockup_id or undefined for new
+                product_id: productId,
+                user_id: user.id, // Current admin user's ID
+                image_url: row.mockup_image_url,
+                name: `${row.name} Mockup`, // Default mockup name
+                designer: 'Admin', // Default designer
+                mockup_x: row.mockup_x ? parseFloat(row.mockup_x) : 0,
+                mockup_y: row.mockup_y ? parseFloat(row.mockup_y) : 0,
+                mockup_width: row.mockup_width ? parseFloat(row.mockup_width) : null,
+                mockup_height: row.mockup_height ? parseFloat(row.mockup_height) : null,
+                mockup_rotation: row.mockup_rotation ? parseFloat(row.mockup_rotation) : 0,
+                design_data: null, // Not importing design_data via CSV
+              };
+
+              // 4. Upsert Mockup
+              const { error: mockupUpsertError } = await supabase
+                .from('mockups')
+                .upsert(mockupPayload, { onConflict: 'id' });
+
+              if (mockupUpsertError) {
+                console.error(`Error upserting mockup for product ${row.name}:`, mockupUpsertError);
+                // This is a partial failure, product was imported, but mockup failed.
+                // We can still count it as a successful product import, but log the mockup error.
+              }
+            }
+            successfulImports++;
+
+          } catch (e: any) {
+            console.error(`Unexpected error processing row for product ${row.name}:`, e);
+            failedImports++;
           }
-        } catch (e: any) {
-          console.error("Unexpected error during batch upsert:", e);
-          showError(`An unexpected error occurred during import: ${e.message}`);
-        } finally {
-          fetchProducts(); // Re-fetch products to update the list
-          dismissToast(toastId);
-          setLoading(false);
-          if (importFileInputRef.current) {
-            importFileInputRef.current.value = ''; // Clear the file input
-          }
+        }
+
+        // Final feedback
+        if (failedImports === 0) {
+          showSuccess(`Successfully imported ${successfulImports} products!`);
+        } else if (successfulImports > 0) {
+          showError(`${successfulImports} products imported, but ${failedImports} failed.`);
+        } else {
+          showError("Failed to import any products.");
+        }
+
+        fetchProducts(); // Re-fetch products to update the list
+        dismissToast(toastId);
+        setLoading(false);
+        if (importFileInputRef.current) {
+          importFileInputRef.current.value = ''; // Clear the file input
         }
       },
       error: (err) => {
