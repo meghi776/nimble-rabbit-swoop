@@ -931,7 +931,7 @@ const MobileCoverCustomizationPage = () => {
   const isBuyNowDisabled = loading || isPlacingOrder || (product && product.inventory !== null && product.inventory <= 0);
 
   return (
-    <div className="flex flex-col bg-gray-50 dark:bg-gray-900">
+    <div className="flex flex-col bg-gray-50 dark:bg-gray-900 min-h-screen"> {/* Added min-h-screen */}
       {/* Removed header section */}
 
       {loading && (
@@ -949,7 +949,7 @@ const MobileCoverCustomizationPage = () => {
         <div className="flex-1 flex flex-col md:flex-row overflow-y-auto pb-65">
           <div
             ref={designAreaRef}
-            className="flex-1 flex items-center justify-center relative overflow-hidden px-4" {/* Added px-4 here */}
+            className="flex-1 flex items-center justify-center relative overflow-hidden px-4"
             style={{
               // Removed maxWidth, height, and aspectRatio from designAreaRef
               backgroundSize: 'contain',
