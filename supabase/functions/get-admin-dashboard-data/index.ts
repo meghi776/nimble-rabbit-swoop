@@ -22,22 +22,25 @@ serve(async (req) => {
     // Get the user's ID from the request's Authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error("Edge Function: Authorization header missing.");
       return new Response(JSON.stringify({ error: 'Authorization header missing.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 401,
       });
     }
+    console.log("Edge Function: Authorization header found.");
 
     const token = authHeader.split(' ')[1];
     const { data: { user: invokerUser }, error: authError } = await supabaseAdmin.auth.getUser(token);
 
     if (authError || !invokerUser) {
-      console.error("Auth error:", authError);
+      console.error("Edge Function: Auth error during token verification:", authError?.message || "User not found.");
       return new Response(JSON.stringify({ error: 'Unauthorized: Invalid token or user not found.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 401,
       });
     }
+    console.log(`Edge Function: Invoker user ID: ${invokerUser.id}, Email: ${invokerUser.email}`);
 
     // Check if the invoking user is an admin
     const { data: invokerProfile, error: profileError } = await supabaseAdmin
@@ -46,48 +49,60 @@ serve(async (req) => {
       .eq('id', invokerUser.id)
       .single();
 
-    if (profileError || invokerProfile?.role !== 'admin') {
-      console.error("Profile error or not admin:", profileError);
-      return new Response(JSON.stringify({ error: 'Forbidden: Only administrators can access dashboard data.' }), {
+    if (profileError) {
+      console.error("Edge Function: Error fetching invoker profile:", profileError);
+      return new Response(JSON.stringify({ error: `Forbidden: Error fetching user role: ${profileError.message}` }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 403,
       });
     }
 
+    if (invokerProfile?.role !== 'admin') {
+      console.error(`Edge Function: Forbidden: User ${invokerUser.id} (role: ${invokerProfile?.role}) is not an admin.`);
+      return new Response(JSON.stringify({ error: 'Forbidden: Only administrators can access dashboard data.' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 403,
+      });
+    }
+    console.log(`Edge Function: Invoker user ${invokerUser.id} is an admin.`);
+
     // Fetch total users count
     const { data: usersData, error: usersListError } = await supabaseAdmin.auth.admin.listUsers();
     if (usersListError) {
-      console.error("Error listing users:", usersListError);
+      console.error("Edge Function: Error listing users from Auth:", usersListError);
       throw new Error(`Failed to fetch user count: ${usersListError.message}`);
     }
     const totalUsers = usersData.users.length;
+    console.log(`Edge Function: Total users fetched: ${totalUsers}`);
 
     // Fetch total brands count
     const { count: brandsCount, error: brandsError } = await supabaseAdmin
       .from('brands')
       .select('*', { count: 'exact', head: true });
     if (brandsError) {
-      console.error("Error fetching brands count:", brandsError);
+      console.error("Edge Function: Error fetching brands count from DB:", brandsError);
       throw new Error(`Failed to fetch brand count: ${brandsError.message}`);
     }
     const totalBrands = brandsCount;
+    console.log(`Edge Function: Total brands fetched: ${totalBrands}`);
 
     // Fetch total orders count
     const { count: ordersCount, error: ordersError } = await supabaseAdmin
       .from('orders')
       .select('*', { count: 'exact', head: true });
     if (ordersError) {
-      console.error("Error fetching orders count:", ordersError);
+      console.error("Edge Function: Error fetching orders count from DB:", ordersError);
       throw new Error(`Failed to fetch order count: ${ordersError.message}`);
     }
     const totalOrders = ordersCount;
+    console.log(`Edge Function: Total orders fetched: ${totalOrders}`);
 
     return new Response(JSON.stringify({ totalUsers, totalBrands, totalOrders }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
   } catch (error) {
-    console.error("Unexpected error in get-admin-dashboard-data function:", error);
+    console.error("Edge Function: Unexpected error in main logic:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
