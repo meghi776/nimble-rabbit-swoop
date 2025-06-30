@@ -709,6 +709,7 @@ const MobileCoverCustomizationPage = () => {
           }
           throw new Error(`Failed to update inventory: ${errorMessage}`);
         } else if (decrementData && (decrementData as any).error) {
+          // This handles cases where function returns 200 but with an error payload
           throw new Error(`Failed to update inventory: ${(decrementData as any).error}`);
         }
         // Update local product state with new inventory
@@ -777,7 +778,12 @@ const MobileCoverCustomizationPage = () => {
 
     } catch (err: any) {
       console.error("Error placing order:", err);
-      showError(err.message || "An unexpected error occurred while placing your order.");
+      // Prioritize specific error message from Edge Function if available
+      let displayErrorMessage = err.message || "An unexpected error occurred while placing your order.";
+      if (err.message && err.message.includes("Failed to update inventory:") && err.message.includes("Not enough stock available.")) {
+        displayErrorMessage = "Failed to place order: Not enough stock available.";
+      }
+      showError(displayErrorMessage);
     } finally {
       setIsPlacingOrder(false);
       dismissToast(toastId);
@@ -931,7 +937,7 @@ const MobileCoverCustomizationPage = () => {
   const isBuyNowDisabled = loading || isPlacingOrder || (product && product.inventory !== null && product.inventory <= 0);
 
   return (
-    <div className="flex flex-col bg-gray-50 dark:bg-gray-900 min-h-screen"> {/* Added min-h-screen */}
+    <div className="flex flex-col bg-gray-50 dark:bg-gray-900 min-h-screen">
       {/* Removed header section */}
 
       {loading && (
