@@ -951,7 +951,7 @@ const MobileCoverCustomizationPage = () => {
   const isBuyNowDisabled = loading || isPlacingOrder || (product && product.inventory !== null && product.inventory <= 0);
 
   return (
-    <div className="flex flex-col bg-gray-50 dark:bg-gray-900 min-h-screen">
+    <div className="flex flex-col bg-gray-50 dark:bg-gray-900 flex-1"> {/* Removed min-h-screen, added flex-1 */}
       {/* Removed header section */}
 
       {loading && (
