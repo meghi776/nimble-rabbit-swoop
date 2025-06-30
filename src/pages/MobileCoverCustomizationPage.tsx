@@ -1033,8 +1033,12 @@ const MobileCoverCustomizationPage = () => {
                   key={mockupOverlayData.image_url}
                   src={mockupOverlayData.image_url}
                   alt="Phone Mockup Overlay"
-                  className="absolute inset-0 object-cover pointer-events-none" // Changed to inset-0 object-cover
+                  className="absolute object-contain pointer-events-none"
                   style={{
+                    left: (mockupOverlayData.mockup_x ?? 0) * scaleFactor,
+                    top: (mockupOverlayData.mockup_y ?? 0) * scaleFactor,
+                    width: `${(mockupOverlayData.mockup_width ?? product.canvas_width) * scaleFactor}px`,
+                    height: `${(mockupOverlayData.mockup_height ?? product.canvas_height) * scaleFactor}px`,
                     transform: `rotate(${mockupOverlayData.mockup_rotation || 0}deg)`,
                     transformOrigin: 'center center',
                     zIndex: 10,
