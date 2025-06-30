@@ -3,22 +3,34 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Tag, ShoppingCart, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { showError } from '@/utils/toast';
+import { useSession } from '@/contexts/SessionContext'; // Import useSession
 
 const AdminDashboard = () => {
+  const { user, session, loading: sessionLoading } = useSession(); // Get user, session, and sessionLoading
   const [totalUsers, setTotalUsers] = useState<number | null>(null);
   const [totalBrands, setTotalBrands] = useState<number | null>(null);
   const [totalOrders, setTotalOrders] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Local loading state for dashboard data
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
+      if (sessionLoading || !user || !session) { // Wait for session to load and user to be present
+        setLoading(false); // Set local loading to false if session not ready
+        return;
+      }
+
       setLoading(true);
       setError(null);
 
       try {
         // Invoke the Edge Function to get all dashboard data securely
-        const { data, error: invokeError } = await supabase.functions.invoke('get-admin-dashboard-data');
+        const { data, error: invokeError } = await supabase.functions.invoke('get-admin-dashboard-data', {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`, // Explicitly pass the token
+          },
+        });
 
         if (invokeError) {
           console.error("Edge Function Invoke Error:", invokeError);
@@ -51,9 +63,9 @@ const AdminDashboard = () => {
     };
 
     fetchData();
-  }, []);
+  }, [user, session, sessionLoading]); // Add user, session, and sessionLoading to dependencies
 
-  if (loading) {
+  if (loading || sessionLoading) { // Use combined loading state
     return (
       <div className="flex items-center justify-center h-full">
         <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
@@ -65,6 +77,15 @@ const AdminDashboard = () => {
     return (
       <div className="text-red-500 text-center p-4">
         <p>Error loading dashboard data: {error}</p>
+      </div>
+    );
+  }
+
+  // If not loading and no error, but no user (should be redirected by SessionContext for admin routes)
+  if (!user) {
+    return (
+      <div className="text-gray-600 dark:text-gray-300 text-center p-4">
+        <p>Please log in to view the admin dashboard.</p>
       </div>
     );
   }
