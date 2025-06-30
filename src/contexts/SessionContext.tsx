@@ -20,6 +20,7 @@ interface SessionContextType {
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
 
 export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  console.log("SessionContext: Component is rendering."); // NEW LOG HERE
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<CustomUser | null>(null);
   const [loading, setLoading] = useState(true);
