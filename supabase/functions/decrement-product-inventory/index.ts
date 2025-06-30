@@ -12,8 +12,16 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let email, password, first_name, last_name; // These variables are not used in this function, but are present from previous context.
+
   try {
-    const { productId, quantity = 1 } = await req.json();
+    const requestBody = await req.json();
+    const productId = requestBody.productId;
+    const quantity = requestBody.quantity ?? 1; // Default to 1 if not provided
+
+    // Log environment variable lengths for debugging
+    console.log("Edge Function: SUPABASE_URL length:", (Deno.env.get('SUPABASE_URL') ?? '').length);
+    console.log("Edge Function: SUPABASE_SERVICE_ROLE_KEY length:", (Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '').length);
 
     if (!productId || typeof quantity !== 'number' || quantity <= 0) {
       return new Response(JSON.stringify({ error: 'Invalid productId or quantity provided.' }), {
@@ -47,9 +55,6 @@ serve(async (req) => {
         status: 401,
       });
     }
-
-    // Removed the admin role check here.
-    // Any authenticated user can now decrement inventory when placing an order.
 
     // Fetch current inventory and update in a transaction-like manner
     const { data: productData, error: fetchError } = await supabaseAdmin

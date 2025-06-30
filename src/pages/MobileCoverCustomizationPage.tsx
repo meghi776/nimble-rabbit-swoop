@@ -695,17 +695,32 @@ const MobileCoverCustomizationPage = () => {
         });
 
         if (decrementError) {
-          console.error("Edge Function Invoke Error (decrement-product-inventory):", decrementError);
-          let errorMessage = decrementError.message;
+          console.error("--- Edge Function Invoke Error Details (decrement-product-inventory) ---");
+          console.error("Full invokeError object:", JSON.stringify(decrementError, null, 2));
+          console.error("invokeError.context?.data (raw):", decrementError.context?.data);
+          console.error("invokeError.context?.status:", decrementError.context?.status);
+          console.error("--------------------------------------------------------------------");
+
+          let errorMessage = decrementError.message; // Default to generic message
+
           if (decrementError.context?.data) {
             try {
-              const parsedError = JSON.parse(decrementError.context.data);
-              if (parsedError.error) {
-                errorMessage = parsedError.error;
+              const parsedErrorBody = typeof decrementError.context.data === 'string'
+                ? JSON.parse(decrementError.context.data)
+                : decrementError.context.data;
+
+              if (parsedErrorBody && typeof parsedErrorBody === 'object' && 'error' in parsedErrorBody) {
+                errorMessage = parsedErrorBody.error;
+              } else {
+                // If data exists but isn't a simple { error: "message" }
+                errorMessage = `Edge Function responded with status ${decrementError.context?.status || 'unknown'}. Raw response: ${JSON.stringify(parsedErrorBody)}`;
               }
-            } catch (e) {
-              // Fallback if context.data is not JSON
+            } catch (parseErr) {
+              console.error("Failed to parse error response body from Edge Function:", parseErr);
+              errorMessage = `Edge Function responded with status ${decrementError.context?.status || 'unknown'}. Raw response: ${decrementError.context.data}`;
             }
+          } else if (decrementError.context?.status) {
+            errorMessage = `Edge Function returned status code: ${decrementError.context.status}`;
           }
           throw new Error(`Failed to update inventory: ${errorMessage}`);
         } else if (decrementData && (decrementData as any).error) {
