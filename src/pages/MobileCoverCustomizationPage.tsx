@@ -125,9 +125,7 @@ const MobileCoverCustomizationPage = () => {
   const [mockupOverlayData, setMockupOverlayData] = useState<MockupData | null>(null);
 
   // Responsive canvas states
-  const [actualCanvasWidth, setActualCanvasWidth] = useState(0);
-  const [actualCanvasHeight, setActualCanvasHeight] = useState(0);
-  const [scaleFactor, setScaleFactor] = useState(1);
+  const [scaleFactor, setScaleFactor] = useState(1); // Only scaleFactor is needed now
 
   const touchState = useRef<TouchState>({
     mode: 'none',
@@ -155,18 +153,19 @@ const MobileCoverCustomizationPage = () => {
   const textElementRefs = useRef<Map<string, HTMLDivElement>>(new Map()); // Changed to HTMLDivElement
   const lastCaretPosition = useRef<{ node: Node | null; offset: number } | null>(null);
 
-  // Effect to calculate scale factor based on container size and product dimensions
+  // Effect to calculate scale factor based on the rendered size of the canvas content
   useEffect(() => {
     const updateCanvasDimensions = () => {
-      if (designAreaRef.current && product) {
-        const containerWidth = designAreaRef.current.offsetWidth;
-        // Calculate scale factor based on the product's canvas width
-        const newScaleFactor = containerWidth / product.canvas_width;
-        const newActualCanvasWidth = product.canvas_width * newScaleFactor;
-        const newActualCanvasHeight = product.canvas_height * newScaleFactor;
+      if (canvasContentRef.current && product) {
+        const renderedWidth = canvasContentRef.current.offsetWidth;
+        const renderedHeight = canvasContentRef.current.offsetHeight;
 
-        setActualCanvasWidth(newActualCanvasWidth);
-        setActualCanvasHeight(newActualCanvasHeight);
+        // Calculate scale factor based on the actual rendered dimensions of the canvasContentRef
+        // relative to the product's original canvas dimensions.
+        const scaleX = renderedWidth / product.canvas_width;
+        const scaleY = renderedHeight / product.canvas_height;
+        const newScaleFactor = Math.min(scaleX, scaleY); // Use the smaller scale to ensure content fits
+
         setScaleFactor(newScaleFactor);
       }
     };
@@ -176,13 +175,13 @@ const MobileCoverCustomizationPage = () => {
 
     // Set up ResizeObserver for dynamic scaling
     const observer = new ResizeObserver(updateCanvasDimensions);
-    if (designAreaRef.current) {
-      observer.observe(designAreaRef.current);
+    if (canvasContentRef.current) {
+      observer.observe(canvasContentRef.current);
     }
 
     return () => {
-      if (designAreaRef.current) {
-        observer.unobserve(designAreaRef.current);
+      if (canvasContentRef.current) {
+        observer.unobserve(canvasContentRef.current);
       }
     };
   }, [product]); // Depend on product to re-calculate when product data is loaded/changes
@@ -362,11 +361,11 @@ const MobileCoverCustomizationPage = () => {
   };
 
   const getUnscaledCoords = (clientX: number, clientY: number) => {
-    if (!designAreaRef.current) return { x: 0, y: 0 };
-    const designAreaRect = designAreaRef.current.getBoundingClientRect();
+    if (!canvasContentRef.current) return { x: 0, y: 0 }; // Use canvasContentRef for coordinates
+    const canvasRect = canvasContentRef.current.getBoundingClientRect();
     return {
-      x: (clientX - designAreaRect.left) / scaleFactor,
-      y: (clientY - designAreaRect.top) / scaleFactor,
+      x: (clientX - canvasRect.left) / scaleFactor,
+      y: (clientY - canvasRect.top) / scaleFactor,
     };
   };
 
@@ -374,7 +373,7 @@ const MobileCoverCustomizationPage = () => {
     e.stopPropagation();
     setSelectedElementId(id);
     const element = designElements.find(el => el.id === id);
-    if (!element || !designAreaRef.current) return;
+    if (!element || !canvasContentRef.current) return; // Use canvasContentRef
 
     const { x: unscaledClientX, y: unscaledClientY } = getUnscaledCoords(e.clientX, e.clientY);
     const offsetX = unscaledClientX - element.x;
@@ -402,7 +401,7 @@ const MobileCoverCustomizationPage = () => {
     e.stopPropagation();
     setSelectedElementId(id);
     const element = designElements.find(el => el.id === id);
-    if (!element || !designAreaRef.current) return;
+    if (!element || !canvasContentRef.current) return; // Use canvasContentRef
 
     if (e.touches.length === 1) {
       touchState.current = {
@@ -451,7 +450,7 @@ const MobileCoverCustomizationPage = () => {
     if (!isMobile) return; // Only for mobile
     e.preventDefault();
     const { mode, startX, startY, initialElementX, initialElementY, initialDistance, initialElementWidth, initialElementHeight, activeElementId, initialMidX, initialMidY } = touchState.current;
-    if (!activeElementId || !designAreaRef.current) return;
+    if (!activeElementId || !canvasContentRef.current) return; // Use canvasContentRef
 
     const element = designElements.find(el => el.id === activeElementId);
     if (!element) return;
@@ -628,7 +627,6 @@ const MobileCoverCustomizationPage = () => {
 
     // 2. Add the element to state with the temporary URL
     addImageElement(tempImageUrl, newElementId); // Use the new addImageElement function
-    // Removed: showLoading("Your image is being uploaded...");
 
     // Clear the file input immediately
     if (fileInputRef.current) {
@@ -644,7 +642,6 @@ const MobileCoverCustomizationPage = () => {
           prev.map(el => (el.id === newElementId ? { ...el, value: uploadedUrl } : el))
         );
         URL.revokeObjectURL(tempImageUrl); // Revoke the temporary URL
-        // Removed: showSuccess("Image uploaded successfully!");
       } else {
         // If upload fails, remove the element or show a persistent error
         setDesignElements(prev => prev.filter(el => el.id !== newElementId));
@@ -934,7 +931,7 @@ const MobileCoverCustomizationPage = () => {
   const isBuyNowDisabled = loading || isPlacingOrder || (product && product.inventory !== null && product.inventory <= 0);
 
   return (
-    <div className="flex flex-col bg-gray-50 dark:bg-gray-900"> {/* Removed min-h-screen */}
+    <div className="flex flex-col bg-gray-50 dark:bg-gray-900">
       {/* Removed header section */}
 
       {loading && (
@@ -949,15 +946,12 @@ const MobileCoverCustomizationPage = () => {
       )}
 
       {!loading && !error && product && (
-        <div className="flex-1 flex flex-col md:flex-row overflow-y-auto pb-65"> {/* Changed pb-50 to pb-65 */}
+        <div className="flex-1 flex flex-col md:flex-row overflow-y-auto pb-65">
           <div
             ref={designAreaRef}
             className="flex-1 flex items-center justify-center relative overflow-hidden"
             style={{
-              // Use max-width and height auto to make it responsive
-              maxWidth: '100%',
-              height: 'auto',
-              aspectRatio: `${product.canvas_width} / ${product.canvas_height}`, // Use product's aspect ratio
+              // Removed maxWidth, height, and aspectRatio from designAreaRef
               backgroundSize: 'contain',
               backgroundRepeat: 'no-repeat',
               backgroundPosition: 'center',
@@ -967,16 +961,15 @@ const MobileCoverCustomizationPage = () => {
           >
             <div
               ref={canvasContentRef}
-              className="relative shadow-lg overflow-hidden"
+              className="relative shadow-lg overflow-hidden w-full h-full" // Added w-full h-full
               style={{
-                width: `${actualCanvasWidth}px`,
-                height: `${actualCanvasHeight}px`,
-                backgroundSize: 'cover', // Changed to cover for background image
+                aspectRatio: `${product.canvas_width} / ${product.canvas_height}`, // Apply aspect ratio here
+                backgroundSize: 'cover',
                 backgroundRepeat: 'no-repeat',
                 backgroundPosition: 'center',
                 touchAction: 'none',
-                backgroundColor: selectedCanvasColor || '#FFFFFF', // Apply selected solid color, default to white
-                backgroundImage: blurredBackgroundImageUrl ? `url(${blurredBackgroundImageUrl})` : 'none', // Apply blurred image
+                backgroundColor: selectedCanvasColor || '#FFFFFF',
+                backgroundImage: blurredBackgroundImageUrl ? `url(${blurredBackgroundImageUrl})` : 'none',
               }}
               onClick={handleCanvasClick}
             >
@@ -990,8 +983,8 @@ const MobileCoverCustomizationPage = () => {
                     top: el.y * scaleFactor,
                     transform: `rotate(${el.rotation || 0}deg)`,
                     transformOrigin: 'center center',
-                    width: `${el.width * scaleFactor}px`, // Use scaled width
-                    height: `${el.height * scaleFactor}px`, // Use scaled height
+                    width: `${el.width * scaleFactor}px`,
+                    height: `${el.height * scaleFactor}px`,
                     zIndex: 5,
                     touchAction: 'none',
                   }}
@@ -1001,7 +994,7 @@ const MobileCoverCustomizationPage = () => {
                   onTouchEnd={handleTouchEnd}
                 >
                   {el.type === 'text' ? (
-                    <div // Changed to div
+                    <div
                       ref={node => {
                         if (node) textElementRefs.current.set(el.id, node);
                         else textElementRefs.current.delete(el.id);
@@ -1011,36 +1004,36 @@ const MobileCoverCustomizationPage = () => {
                       onBlur={() => {
                       }}
                       suppressContentEditableWarning={true}
-                      className="outline-none w-full h-full flex items-center justify-center" // Added w-full h-full and flex properties
+                      className="outline-none w-full h-full flex items-center justify-center"
                       style={{
-                        fontSize: `${(el.fontSize || 35) * scaleFactor}px`, // Scaled font size
+                        fontSize: `${(el.fontSize || 35) * scaleFactor}px`,
                         color: el.color,
                         fontFamily: el.fontFamily,
                         textShadow: el.textShadow ? '2px 2px 4px rgba(0,0,0,0.5)' : 'none',
-                        wordBreak: 'break-word', // Allow text to wrap
-                        overflow: 'hidden', // Hide overflow if text exceeds bounds
+                        wordBreak: 'break-word',
+                        overflow: 'hidden',
                       }}
                     >
                       {el.value}
                     </div>
                   ) : (
                     <img
-                      src={proxyImageUrl(el.value)} // Always use proxyImageUrl for consistency
+                      src={proxyImageUrl(el.value)}
                       alt="design element"
                       className="w-full h-full object-contain"
-                      crossOrigin="anonymous" // Added for CORS compatibility with html2canvas
+                      crossOrigin="anonymous"
                     />
                   )}
                   {/* Removed resize, delete, and rotate handles */}
                 </div>
               ))}
 
-              {mockupOverlayData?.image_url && ( // Use the new state variable here
+              {mockupOverlayData?.image_url && (
                 <img
                   key={mockupOverlayData.image_url}
                   src={mockupOverlayData.image_url}
                   alt="Phone Mockup Overlay"
-                  className="absolute object-contain pointer-events-none" // Changed to object-contain
+                  className="absolute object-contain pointer-events-none"
                   style={{
                     left: (mockupOverlayData.mockup_x ?? 0) * scaleFactor,
                     top: (mockupOverlayData.mockup_y ?? 0) * scaleFactor,
@@ -1050,7 +1043,7 @@ const MobileCoverCustomizationPage = () => {
                     transformOrigin: 'center center',
                     zIndex: 10,
                   }}
-                  crossOrigin="anonymous" // Added for CORS compatibility with html2canvas
+                  crossOrigin="anonymous"
                 />
               )}
 
