@@ -315,30 +315,47 @@ const MobileCoverCustomizationPage = () => {
     }
   }, [designElements, selectedElementId]);
 
-  const addImageElement = (imageUrl: string, id: string) => {
+  const addImageElement = async (file: File, id: string) => {
     if (!product) return; // Ensure product is loaded
 
-    // Define a reasonable initial size for the image element (e.g., 99% of the smaller canvas dimension)
-    const initialSize = Math.min(product.canvas_width, product.canvas_height) * 0.99;
-    const newWidth = initialSize;
-    const newHeight = initialSize;
+    const img = new window.Image();
+    img.src = URL.createObjectURL(file);
 
-    // Center the image initially
-    const newX = (product.canvas_width - newWidth) / 2;
-    const newY = (product.canvas_height - newHeight) / 2;
+    img.onload = () => {
+      const originalWidth = img.naturalWidth;
+      const originalHeight = img.naturalHeight;
 
-    const newElement: DesignElement = {
-      id: id,
-      type: 'image',
-      value: imageUrl,
-      x: newX,
-      y: newY,
-      width: newWidth,
-      height: newHeight,
-      rotation: 0,
+      // Calculate initial size to fit within canvas while maintaining aspect ratio
+      let newWidth = product.canvas_width * 0.8; // Start with 80% of canvas width
+      let newHeight = (originalHeight / originalWidth) * newWidth;
+
+      if (newHeight > product.canvas_height * 0.8) { // If height is too large, scale by height
+        newHeight = product.canvas_height * 0.8;
+        newWidth = (originalWidth / originalHeight) * newHeight;
+      }
+
+      // Center the image initially
+      const newX = (product.canvas_width - newWidth) / 2;
+      const newY = (product.canvas_height - newHeight) / 2;
+
+      const newElement: DesignElement = {
+        id: id,
+        type: 'image',
+        value: img.src, // Use blob URL initially
+        x: newX,
+        y: newY,
+        width: newWidth,
+        height: newHeight,
+        rotation: 0,
+      };
+      setDesignElements(prev => [...prev, newElement]);
+      setSelectedElementId(newElement.id);
     };
-    setDesignElements(prev => [...prev, newElement]);
-    setSelectedElementId(newElement.id);
+
+    img.onerror = () => {
+      showError("Failed to load image for preview.");
+      URL.revokeObjectURL(img.src);
+    };
   };
 
   const updateElement = useCallback((id: string, updates: Partial<DesignElement>) => {
@@ -544,6 +561,18 @@ const MobileCoverCustomizationPage = () => {
     const mockupImageElement = canvasContentRef.current.querySelector('img[alt="Phone Mockup Overlay"]');
     const selectedElementDiv = document.querySelector(`[data-element-id="${selectedElementId}"]`);
 
+    // Store original overflow styles for text elements
+    const textElementsToRestore: { element: HTMLElement; originalOverflow: string }[] = [];
+    designElements.forEach(el => {
+      if (el.type === 'text') {
+        const textDiv = textElementRefs.current.get(el.id);
+        if (textDiv) {
+          textElementsToRestore.push({ element: textDiv, originalOverflow: textDiv.style.overflow });
+          textDiv.style.overflow = 'visible'; // Temporarily make overflow visible
+        }
+      }
+    });
+
     try {
       // Pre-load mockup image to ensure it's in cache and rendered
       if (mockupOverlayData?.image_url) {
@@ -614,6 +643,10 @@ const MobileCoverCustomizationPage = () => {
       if (selectedElementDiv) {
         selectedElementDiv.classList.add('border-2', 'border-blue-500');
       }
+      // Restore original overflow styles for text elements
+      textElementsToRestore.forEach(({ element, originalOverflow }) => {
+        element.style.overflow = originalOverflow;
+      });
     }
   };
 
@@ -621,37 +654,34 @@ const MobileCoverCustomizationPage = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // 1. Create a temporary blob URL for immediate display
-    const tempImageUrl = URL.createObjectURL(file);
     const newElementId = `image-${Date.now()}`;
 
-    // 2. Add the element to state with the temporary URL
-    addImageElement(tempImageUrl, newElementId); // Use the new addImageElement function
+    // 1. Add the element to state with a temporary URL and calculated dimensions
+    await addImageElement(file, newElementId);
 
     // Clear the file input immediately
     if (fileInputRef.current) {
       fileInputRef.current.value = ''; // Corrected line
     }
 
-    // 3. Start the actual upload in the background
+    // 2. Start the actual upload in the background
     try {
       const uploadedUrl = await handleFileUpload(file, 'order-mockups', 'user-uploads');
       if (uploadedUrl) {
-        // 4. Update the element with the permanent URL once upload is complete
+        // 3. Update the element with the permanent URL once upload is complete
         setDesignElements(prev =>
           prev.map(el => (el.id === newElementId ? { ...el, value: uploadedUrl } : el))
         );
-        URL.revokeObjectURL(tempImageUrl); // Revoke the temporary URL
+        // The temporary URL created by addImageElement will be automatically revoked by the browser
+        // when the blob is no longer referenced, or explicitly if needed.
       } else {
         // If upload fails, remove the element or show a persistent error
         setDesignElements(prev => prev.filter(el => el.id !== newElementId));
-        URL.revokeObjectURL(tempImageUrl);
         showError("Could not upload image to server. Please try again.");
       }
     } catch (err: any) {
       console.error("Error during image upload:", err);
       setDesignElements(prev => prev.filter(el => el.id !== newElementId));
-      URL.revokeObjectURL(tempImageUrl);
       showError(`An error occurred during upload: ${err.message}`);
     }
   };
@@ -1031,7 +1061,7 @@ const MobileCoverCustomizationPage = () => {
                         fontFamily: el.fontFamily,
                         textShadow: el.textShadow ? '2px 2px 4px rgba(0,0,0,0.5)' : 'none',
                         wordBreak: 'break-word',
-                        overflow: 'hidden',
+                        overflow: 'hidden', // Keep hidden for display in editor
                       }}
                     >
                       {el.value}
