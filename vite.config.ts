@@ -14,4 +14,5 @@ export default defineConfig(() => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  base: '/', // Explicitly set the base path for the application
 }));
