@@ -20,7 +20,7 @@ interface SessionContextType {
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
 
 export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  console.log("SessionContext: Component is rendering."); // NEW LOG HERE
+  console.log("SessionContext: Component is rendering.");
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<CustomUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -28,15 +28,18 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   const location = useLocation();
 
   useEffect(() => {
-    console.log("SessionContext: onAuthStateChange listener setup."); // Added log
+    console.log("SessionContext: onAuthStateChange listener setup.");
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      // Only update session state if the session object reference or its access token changes
-      // This prevents unnecessary re-renders if only internal token refresh happens without user change.
+      console.log(`SessionContext: Auth state change event: ${event}`);
+      console.log("SessionContext: currentSession:", currentSession); // Log the session object
+
       setSession(prevSession => {
         if (prevSession?.access_token === currentSession?.access_token && prevSession?.user?.id === currentSession?.user?.id) {
-          return prevSession; // No change in relevant session data, keep old reference
+          console.log("SessionContext: Session object reference unchanged, skipping setSession.");
+          return prevSession;
         }
-        return currentSession; // Session data changed, update
+        console.log("SessionContext: Session object changed, updating state.");
+        return currentSession;
       });
 
       if (currentSession?.user) {
@@ -51,34 +54,41 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
           const newCanPreview = profileData?.can_preview || false;
           // Create a new user object only if the user ID or can_preview status has changed
           if (prevUser?.id === currentSession.user.id && prevUser?.can_preview === newCanPreview) {
-            return prevUser; // No change in relevant user data, keep old reference
+            return prevUser;
           }
           return { ...currentSession.user, can_preview: newCanPreview };
         });
       } else {
+        console.log("SessionContext: No current user, setting user to null.");
         setUser(null);
       }
       setLoading(false);
-      console.log(`SessionContext: Auth state changed to ${event}. Loading set to false.`); // Added log
+      console.log(`SessionContext: Auth state changed to ${event}. Loading set to false.`);
 
       if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
         if (location.pathname === '/login') {
-          navigate('/'); // Redirect authenticated users from login page to home
+          console.log("SessionContext: Signed in/updated, redirecting from /login to /.");
+          navigate('/');
         }
       } else if (event === 'SIGNED_OUT') {
+        console.log("SessionContext: Signed out event detected.");
         if (location.pathname.startsWith('/admin')) {
-          navigate('/login'); // Redirect unauthenticated users from admin to login
+          console.log("SessionContext: Signed out from admin path, redirecting to /login.");
+          navigate('/login');
         }
       }
     });
 
     // Initial session check
-    console.log("SessionContext: Initial getSession call."); // Added log
+    console.log("SessionContext: Initial getSession call.");
     supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
+      console.log("SessionContext: Initial getSession result:", initialSession);
       setSession(prevSession => {
         if (prevSession?.access_token === initialSession?.access_token && prevSession?.user?.id === initialSession?.user?.id) {
+          console.log("SessionContext: Initial session object reference unchanged, skipping setSession.");
           return prevSession;
         }
+        console.log("SessionContext: Initial session object changed, updating state.");
         return initialSession;
       });
 
@@ -97,16 +107,21 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
           return { ...initialSession.user, can_preview: newCanPreview };
         });
       } else {
+        console.log("SessionContext: No initial user, setting user to null.");
         setUser(null);
       }
       setLoading(false);
-      console.log("SessionContext: Initial getSession completed. Loading set to false."); // Added log
+      console.log("SessionContext: Initial getSession completed. Loading set to false.");
       if (!initialSession && location.pathname.startsWith('/admin')) {
+        console.log("SessionContext: No initial session and on admin path, redirecting to /login.");
         navigate('/login');
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      console.log("SessionContext: Unsubscribing from auth state changes.");
+      subscription.unsubscribe();
+    };
   }, [navigate, location.pathname]);
 
   return (
