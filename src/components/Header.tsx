@@ -23,7 +23,7 @@ const Header = () => {
       <div className="flex items-center">
         <Link 
           to="/" 
-          className="text-2xl font-bold text-transparent bg-clip-text 
+          className="text-3xl font-bold text-transparent bg-clip-text 
                      font-dancing-script transition-transform duration-300 ease-in-out hover:scale-105 hover:rotate-1
                      animate-color-cycle" // Added the new animation class
         >
