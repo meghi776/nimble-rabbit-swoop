@@ -5,8 +5,8 @@ import "./globals.css";
 import ToastProvider from "./components/ToastProvider.tsx";
 
 createRoot(document.getElementById("root")!).render(
-  <> {/* Changed from <React.StrictMode> */}
+  <>
     <ToastProvider />
     <App />
-  </> {/* Changed from </React.StrictMode> */}
+  </>
 );
