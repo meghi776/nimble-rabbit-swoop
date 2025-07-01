@@ -8,7 +8,7 @@ interface CustomUser extends User {
     first_name?: string;
     last_name?: string;
   };
-  can_preview?: boolean; // Add can_preview to the user object
+  // Removed can_preview?: boolean;
 }
 
 interface SessionContextType {
@@ -46,22 +46,23 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       });
 
       if (currentSession?.user) {
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('can_preview')
-          .eq('id', currentSession.user.id)
-          .single();
+        // Removed fetching can_preview from profiles table
+        // const { data: profileData, error: profileError } = await supabase
+        //   .from('profiles')
+        //   .select('can_preview')
+        //   .eq('id', currentSession.user.id)
+        //   .single();
 
         setUser(prevUser => {
-          const newCanPreview = profileData?.can_preview || false;
+          // const newCanPreview = profileData?.can_preview || false; // Removed this line
           const isSameUserId = prevUser?.id === currentSession.user.id;
-          const isSameCanPreview = prevUser?.can_preview === newCanPreview;
-          console.log(`SessionContext: setUser check - isSameUserId: ${isSameUserId}, isSameCanPreview: ${isSameCanPreview}`);
-          if (isSameUserId && isSameCanPreview) {
+          // const isSameCanPreview = prevUser?.can_preview === newCanPreview; // Removed this line
+          console.log(`SessionContext: setUser check - isSameUserId: ${isSameUserId}`); // Updated log
+          if (isSameUserId) { // Updated condition
             return prevUser;
           }
-          console.log("SessionContext: User object changed, updating state. New can_preview:", newCanPreview);
-          return { ...currentSession.user, can_preview: newCanPreview };
+          console.log("SessionContext: User object changed, updating state."); // Updated log
+          return { ...currentSession.user }; // Removed can_preview from here
         });
       } else {
         console.log("SessionContext: No current user, setting user to null.");
@@ -100,22 +101,23 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       });
 
       if (initialSession?.user) {
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('can_preview')
-          .eq('id', initialSession.user.id)
-          .single();
+        // Removed fetching can_preview from profiles table
+        // const { data: profileData, error: profileError } = await supabase
+        //   .from('profiles')
+        //   .select('can_preview')
+        //   .eq('id', initialSession.user.id)
+        //   .single();
 
         setUser(prevUser => {
-          const newCanPreview = profileData?.can_preview || false;
+          // const newCanPreview = profileData?.can_preview || false; // Removed this line
           const isSameUserId = prevUser?.id === initialSession.user.id;
-          const isSameCanPreview = prevUser?.can_preview === newCanPreview;
-          console.log(`SessionContext: Initial setUser check - isSameUserId: ${isSameUserId}, isSameCanPreview: ${isSameCanPreview}`);
-          if (isSameUserId && isSameCanPreview) {
+          // const isSameCanPreview = prevUser?.can_preview === newCanPreview; // Removed this line
+          console.log(`SessionContext: Initial setUser check - isSameUserId: ${isSameUserId}`); // Updated log
+          if (isSameUserId) { // Updated condition
             return prevUser;
           }
-          console.log("SessionContext: Initial user object changed, updating state. New can_preview:", newCanPreview);
-          return { ...initialSession.user, can_preview: newCanPreview };
+          console.log("SessionContext: Initial user object changed, updating state."); // Updated log
+          return { ...initialSession.user }; // Removed can_preview from here
         });
       } else {
         console.log("SessionContext: No initial user, setting user to null.");
