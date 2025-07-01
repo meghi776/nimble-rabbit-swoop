@@ -105,7 +105,7 @@ const MobileCoverCustomizationPage = () => {
   const [currentTextShadowEnabled, setCurrentTextShadowEnabled] = useState(false);
   const [blurredBackgroundImageUrl, setBlurredBackgroundImageUrl] = useState<string | null>(null); // New state for blurred background
   const [isBackColorPaletteOpen, setIsBackColorPaletteOpen] = useState(false); // State to control palette visibility
-  const [selectedCanvasColor, setSelectedCanvasColor] = useState<string | null>('#000000'); // State for solid canvas background color - Changed to black
+  const [selectedCanvasColor, setSelectedCanvasColor] = useState<string | null>('#FFFFFF'); // State for solid canvas background color - Changed to white
 
   const designAreaRef = useRef<HTMLDivElement>(null);
   const canvasContentRef = useRef<HTMLDivElement>(null);
@@ -117,7 +117,7 @@ const MobileCoverCustomizationPage = () => {
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerPhone, setCustomerPhone] = '';
   const [paymentMethod, setPaymentMethod] = useState('COD');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
@@ -616,9 +616,10 @@ const MobileCoverCustomizationPage = () => {
         backgroundColor: null, // Let CSS background color be captured
         // Set a high fixed scale for better quality
         scale: 3, // Capture at 3x resolution
-        // Explicitly set the target width and height to the product's original dimensions
-        width: product.canvas_width, // Use product's canvas width
-        height: product.canvas_height, // Use product's canvas height
+        // Explicitly set the target width and height to the product's original dimensions.
+        // This ensures the captured image has the correct aspect ratio and resolution.
+        width: product.canvas_width, 
+        height: product.canvas_height,
         // The x and y coordinates of the area to render.
         // Since canvasContentRef is already the target area, these should be 0.
         x: 0,
@@ -1027,7 +1028,7 @@ const MobileCoverCustomizationPage = () => {
                 backgroundRepeat: 'no-repeat',
                 backgroundPosition: 'center',
                 touchAction: 'none',
-                backgroundColor: selectedCanvasColor || '#FFFFFF',
+                backgroundColor: selectedCanvasColor || '#FFFFFF', // Changed default to #FFFFFF
                 backgroundImage: blurredBackgroundImageUrl ? `url(${blurredBackgroundImageUrl})` : 'none',
               }}
               onClick={handleCanvasClick}
