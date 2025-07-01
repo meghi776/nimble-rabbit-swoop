@@ -127,6 +127,14 @@ serve(async (req) => {
       console.log("Edge Function: No user_id filter applied (userIdFilter was null).");
     }
 
+    // Apply server-side sorting for all columns EXCEPT user_email
+    if (sortColumn !== 'user_email') {
+      query = query.order(sortColumn, { ascending: sortDirection === 'asc' });
+      console.log(`Edge Function: Applying server-side sort: ${sortColumn} ${sortDirection}`);
+    } else {
+      console.log("Edge Function: user_email sort will be handled client-side.");
+    }
+
     const { data: ordersData, error: ordersError } = await query;
     console.log("Edge Function: Orders data fetched:", ordersData);
     console.log("Edge Function: Orders error:", ordersError);
@@ -162,14 +170,6 @@ serve(async (req) => {
       user_email: userEmailMap.get(order.user_id) || null,
     }));
 
-    // Define userListForFrontend here
-    const userListForFrontend = usersData.users.map(user => ({
-      id: user.id,
-      email: user.email,
-      first_name: user.user_metadata?.first_name || null,
-      last_name: user.user_metadata?.last_name || null,
-    }));
-
     // Apply client-side sorting for user_email if requested
     if (sortColumn === 'user_email') {
       ordersWithEmails.sort((a, b) => {
@@ -183,6 +183,14 @@ serve(async (req) => {
       });
       console.log(`Edge Function: Orders sorted by user_email in ${sortDirection} direction (client-side).`);
     }
+
+    // Define userListForFrontend here
+    const userListForFrontend = usersData.users.map(user => ({
+      id: user.id,
+      email: user.email,
+      first_name: user.user_metadata?.first_name || null,
+      last_name: user.user_metadata?.last_name || null,
+    }));
 
     return new Response(JSON.stringify({ orders: ordersWithEmails, users: userListForFrontend }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
