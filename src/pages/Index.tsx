@@ -90,7 +90,7 @@ const Index = () => {
           {categories.length === 0 ? (
             <p className="text-gray-600 dark:text-gray-300">No categories found. Please add some from the admin panel.</p>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-4xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-4xl mx-auto animate-in fade-in-0 duration-500">
               {/* Render categories based on the fetched and sorted 'categories' state */}
               {categories.map((category) => (
                 <React.Fragment key={category.id}>
@@ -99,7 +99,7 @@ const Index = () => {
                       to={`/categories/${category.id}/brands`}
                       className="block"
                     >
-                      <Card className="h-full flex flex-col justify-between p-6 bg-white dark:bg-gray-800 shadow-xl rounded-xl border-2 border-blue-500 hover:border-blue-700 transition-all duration-300 transform hover:scale-105 cursor-pointer">
+                      <Card className="h-full flex flex-col justify-between p-6 bg-white dark:bg-gray-800 shadow-md rounded-xl border-2 border-blue-500 hover:border-blue-700 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 hover:shadow-xl cursor-pointer">
                         <CardHeader className="pb-4 flex flex-col items-center text-center">
                           <Smartphone className="h-12 w-12 text-blue-600 dark:text-blue-400 mb-3" />
                           <CardTitle className="text-2xl font-bold text-gray-900 dark:text-gray-50">{category.name}</CardTitle>
