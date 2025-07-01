@@ -11,16 +11,15 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Edit, Trash2, ArrowLeft, Upload, Download, XCircle, Search } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ArrowLeft, Upload, Download, Search } from 'lucide-react';
 import { useSession } from '@/contexts/SessionContext';
 import Papa from 'papaparse';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Switch } from '@/components/ui/switch'; // Import Switch component
-import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast'; // Import toast utilities
+import { Switch } from '@/components/ui/switch';
+import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
+import { deleteFileFromSupabase } from '@/utils/supabaseStorage'; // Import deleteFileFromSupabase
 
 interface Product {
   id: string;
@@ -33,14 +32,14 @@ interface Product {
   canvas_height: number | null;
   mockup_id: string | null; // ID of the associated mockup
   mockup_image_url: string | null; // URL of the associated mockup image
-  is_disabled: boolean; // Added is_disabled
-  inventory: number | null; // Added inventory
-  sku: string | null; // Added SKU
-  mockup_x: number | null; // Added mockup_x
-  mockup_y: number | null; // Added mockup_y
-  mockup_width: number | null; // Added mockup_width
-  mockup_height: number | null; // Added mockup_height
-  mockup_rotation: number | null; // Added mockup_rotation
+  is_disabled: boolean;
+  inventory: number | null;
+  sku: string | null;
+  mockup_x: number | null;
+  mockup_y: number | null;
+  mockup_width: number | null;
+  mockup_height: number | null;
+  mockup_rotation: number | null;
 }
 
 const ProductManagementByBrandPage = () => {
@@ -50,29 +49,11 @@ const ProductManagementByBrandPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
-  const [productName, setProductName] = useState('');
-  const [productDescription, setProductDescription] = useState('');
-  const [productPrice, setProductPrice] = useState<string>('');
-  const [mockupImageFile, setMockupImageFile] = useState<File | null>(null); // For mockup image file upload
-  const [currentMockupImageUrl, setCurrentMockupImageUrl] = useState<string | null>(null); // For displaying current mockup image
-  const [canvasWidth, setCanvasWidth] = useState<string>('300');
-  const [canvasHeight, setCanvasHeight] = useState<string>('600');
-  const [searchQuery, setSearchQuery] = useState<string>(''); // New state for search query
-  const debounceTimeoutRef = useRef<number | null>(null); // Ref for debounce timeout
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const debounceTimeoutRef = useRef<number | null>(null);
   const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
   const { user } = useSession();
   const importFileInputRef = useRef<HTMLInputElement>(null);
-  const [isProductDisabled, setIsProductDisabled] = useState(false); // New state for product disabled status
-  const [productInventory, setProductInventory] = useState<string>('0'); // New state for product inventory
-  const [productSku, setProductSku] = useState(''); // New state for product SKU
-  // States for mockup image properties
-  const [mockupX, setMockupX] = useState<string>('0');
-  const [mockupY, setMockupY] = useState<string>('0');
-  const [mockupWidth, setMockupWidth] = useState<string>(''); // Empty string for nullable
-  const [mockupHeight, setMockupHeight] = useState<string>(''); // Empty string for nullable
-  const [mockupRotation, setMockupRotation] = useState<string>('0');
 
   // Helper to check if a URL is from Supabase storage
   const isSupabaseStorageUrl = (url: string | null, bucketName: string) => {
@@ -178,63 +159,14 @@ const ProductManagementByBrandPage = () => {
         clearTimeout(debounceTimeoutRef.current);
       }
     };
-  }, [categoryId, brandId, searchQuery]); // Re-run effect when searchQuery changes
-
-  const handleAddProduct = () => {
-    setCurrentProduct(null);
-    setProductName('');
-    setProductDescription('');
-    setProductPrice('');
-    setMockupImageFile(null);
-    setCurrentMockupImageUrl(null);
-    setCanvasWidth('300');
-    setCanvasHeight('600');
-    setIsProductDisabled(false); // Default to enabled for new products
-    setProductInventory('0'); // Default inventory for new products
-    setProductSku(''); // Default SKU for new products
-    // Set default mockup properties for new product
-    setMockupX('0');
-    setMockupY('0');
-    setMockupWidth(''); // Keep empty for nullable
-    setMockupHeight(''); // Keep empty for nullable
-    setMockupRotation('0');
-    setIsDialogOpen(true);
-  };
-
-  const handleEditProduct = async (product: Product) => {
-    setCurrentProduct(product);
-    setProductName(product.name);
-    setProductDescription(product.description || '');
-    setProductPrice(product.price?.toString() || '');
-    setMockupImageFile(null); // Clear file input for edit
-    setCurrentMockupImageUrl(product.mockup_image_url);
-    setCanvasWidth(product.canvas_width?.toString() || '300');
-    setCanvasHeight(product.canvas_height?.toString() || '600');
-    setIsProductDisabled(product.is_disabled); // Set current disabled status
-    setProductInventory(product.inventory?.toString() || '0'); // Set current inventory
-    setProductSku(product.sku || ''); // Set current SKU
-    // Set current mockup properties
-    setMockupX(product.mockup_x?.toString() || '0');
-    setMockupY(product.mockup_y?.toString() || '0');
-    setMockupWidth(product.mockup_width?.toString() || '');
-    setMockupHeight(product.mockup_height?.toString() || '');
-    setMockupRotation(product.mockup_rotation?.toString() || '0');
-    setIsDialogOpen(true);
-  };
+  }, [categoryId, brandId, searchQuery]);
 
   const deleteSingleProduct = async (id: string, mockupId: string | null, mockupImageUrl: string | null) => {
     // 1. Delete mockup image from storage if it exists and is a Supabase URL
     if (mockupImageUrl && isSupabaseStorageUrl(mockupImageUrl, 'order-mockups')) {
       const fileName = mockupImageUrl.split('/').pop();
       if (fileName) {
-        const { error: storageError } = await supabase.storage
-          .from('order-mockups')
-          .remove([`mockups/${fileName}`]); // Assuming mockups are stored in 'mockups/' subfolder
-        if (storageError) {
-          console.error("Error deleting mockup image from storage:", storageError);
-          showError(`Failed to delete mockup image: ${storageError.message}`);
-          return false;
-        }
+        await deleteFileFromSupabase(`mockups/${fileName}`, 'order-mockups');
       }
     }
 
@@ -282,179 +214,6 @@ const ProductManagementByBrandPage = () => {
     setLoading(false);
   };
 
-  const handleFileUpload = async (file: File | Blob, bucketName: string, subfolder: string = '') => {
-    const fileExt = file instanceof File ? file.name.split('.').pop() : 'png'; // Get extension for File, default to png for Blob
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-    const filePath = subfolder ? `${subfolder}/${fileName}` : fileName;
-
-    const { data, error } = await supabase.storage
-      .from(bucketName)
-      .upload(filePath, file);
-
-    if (error) {
-      console.error(`Error uploading image to ${bucketName}/${subfolder}:`, error);
-      showError(`Error uploading image: ${error.message}`);
-      return null;
-    }
-
-    const { data: publicUrlData } = supabase.storage
-      .from(bucketName)
-      .getPublicUrl(filePath);
-
-    return publicUrlData.publicUrl;
-  };
-
-  const handleSubmit = async () => {
-    if (!productName.trim() || !productPrice.trim()) {
-      showError("Product name and price cannot be empty.");
-      return;
-    }
-
-    if (!categoryId || !brandId) {
-      showError("Category ID or Brand ID is missing.");
-      return;
-    }
-
-    if (!user?.id) {
-      showError("User not authenticated. Please log in.");
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    const toastId = showLoading(currentProduct ? "Saving product changes..." : "Adding new product...");
-    let finalMockupImageUrl = currentMockupImageUrl;
-
-    // 1. Handle Mockup Image Upload
-    if (mockupImageFile) {
-      finalMockupImageUrl = await handleFileUpload(mockupImageFile, 'order-mockups', 'mockups'); // Use 'order-mockups' bucket, 'mockups' subfolder
-      if (!finalMockupImageUrl) {
-        dismissToast(toastId);
-        setLoading(false);
-        return; // Image upload failed (error already shown by handleFileUpload)
-      }
-    } else if (!currentMockupImageUrl && !currentProduct) {
-      // If adding a new product and no mockup image is provided
-      showError("Please upload a mockup image for the new product.");
-      dismissToast(toastId);
-      setLoading(false);
-      return;
-    }
-
-    let productIdToUse = currentProduct?.id;
-    let mockupIdToUse = currentProduct?.mockup_id;
-
-    // 2. Insert/Update Product
-    if (currentProduct) {
-      // Update existing product
-      const { data, error } = await supabase
-        .from('products')
-        .update({
-          name: productName,
-          description: productDescription,
-          price: parseFloat(productPrice),
-          canvas_width: parseInt(canvasWidth),
-          canvas_height: parseInt(canvasHeight),
-          is_disabled: isProductDisabled, // Update disabled status
-          inventory: parseInt(productInventory), // Update inventory
-          sku: productSku.trim() === '' ? null : productSku.trim(), // Update SKU
-        })
-        .eq('id', currentProduct.id)
-        .select()
-        .single();
-
-      if (error) {
-        console.error("Error updating product:", error);
-        showError(`Failed to update product: ${error.message}`);
-        dismissToast(toastId);
-        setLoading(false);
-        return;
-      }
-      productIdToUse = data.id;
-    } else {
-      // Add new product
-      const { data, error } = await supabase
-        .from('products')
-        .insert({
-          category_id: categoryId,
-          brand_id: brandId,
-          name: productName,
-          description: productDescription,
-          price: parseFloat(productPrice),
-          canvas_width: parseInt(canvasWidth),
-          canvas_height: parseInt(canvasHeight),
-          is_disabled: isProductDisabled, // Set disabled status for new product
-          inventory: parseInt(productInventory), // Set inventory for new product
-          sku: productSku.trim() === '' ? null : productSku.trim(), // Set SKU for new product
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error("Error adding product:", error);
-        showError(`Failed to add product: ${error.message}`);
-        dismissToast(toastId);
-        setLoading(false);
-        return;
-      }
-      productIdToUse = data.id;
-    }
-
-    // 3. Insert/Update Mockup
-    if (productIdToUse && finalMockupImageUrl) {
-      const mockupData = {
-        image_url: finalMockupImageUrl,
-        name: `${productName} Mockup`,
-        designer: 'Admin',
-        user_id: user.id,
-        product_id: productIdToUse,
-        mockup_x: parseFloat(mockupX),
-        mockup_y: parseFloat(mockupY),
-        mockup_width: mockupWidth ? parseFloat(mockupWidth) : null,
-        mockup_height: mockupHeight ? parseFloat(mockupHeight) : null,
-        mockup_rotation: parseFloat(mockupRotation),
-      };
-
-      if (mockupIdToUse) {
-        // Update existing mockup
-        const { error: mockupUpdateError } = await supabase
-          .from('mockups')
-          .update(mockupData)
-          .eq('id', mockupIdToUse);
-
-        if (mockupUpdateError) {
-          console.error("Error updating mockup:", mockupUpdateError);
-          showError(`Failed to update mockup: ${mockupUpdateError.message}`);
-          dismissToast(toastId);
-          setLoading(false);
-          return;
-        }
-      } else {
-        // Insert new mockup (for new product or existing product without mockup)
-        const { data: newMockup, error: mockupInsertError } = await supabase
-          .from('mockups')
-          .insert(mockupData)
-          .select('id')
-          .single();
-
-        if (mockupInsertError) {
-          console.error("Error inserting mockup:", mockupInsertError);
-          showError(`Failed to insert mockup: ${mockupInsertError.message}`);
-          dismissToast(toastId);
-          setLoading(false);
-          return;
-        }
-        mockupIdToUse = newMockup.id; // Store the new mockup ID
-      }
-    }
-
-    showSuccess(currentProduct ? "Product updated successfully!" : "Product added successfully!");
-    setIsDialogOpen(false);
-    fetchProducts();
-    dismissToast(toastId);
-    setLoading(false);
-  };
-
   const handleToggleDisable = async (productId: string, currentStatus: boolean) => {
     setLoading(true);
     const toastId = showLoading(currentStatus ? "Disabling product..." : "Enabling product...");
@@ -484,15 +243,15 @@ const ProductManagementByBrandPage = () => {
       price: product.price || 0,
       canvas_width: product.canvas_width || 0,
       canvas_height: product.canvas_height || 0,
-      is_disabled: product.is_disabled, // Include disabled status
-      inventory: product.inventory || 0, // Include inventory
-      sku: product.sku || '', // Include SKU
+      is_disabled: product.is_disabled,
+      inventory: product.inventory || 0,
+      sku: product.sku || '',
       mockup_id: product.mockup_id || '',
       mockup_image_url: product.mockup_image_url || '',
       mockup_x: product.mockup_x || 0,
       mockup_y: product.mockup_y || 0,
-      mockup_width: product.mockup_width || '', // Export as empty string if null
-      mockup_height: product.mockup_height || '', // Export as empty string if null
+      mockup_width: product.mockup_width || '',
+      mockup_height: product.mockup_height || '',
       mockup_rotation: product.mockup_rotation || 0,
     }));
 
@@ -708,7 +467,7 @@ const ProductManagementByBrandPage = () => {
   return (
     <div className="p-4">
       <div className="flex items-center mb-6">
-        <Link to={`/admin/categories/${categoryId}/brands`} className="mr-4">
+        <Link to={`/admin/products`} className="mr-4"> {/* Link back to Category Management */}
           <Button variant="outline" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -754,9 +513,11 @@ const ProductManagementByBrandPage = () => {
             <Button onClick={() => importFileInputRef.current?.click()} variant="outline">
               <Upload className="mr-2 h-4 w-4" /> Import CSV
             </Button>
-            <Button onClick={handleAddProduct}>
-              <PlusCircle className="mr-2 h-4 w-4" /> Add Product
-            </Button>
+            <Link to={`/admin/categories/${categoryId}/brands/${brandId}/products/new`}>
+              <Button>
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Product
+              </Button>
+            </Link>
           </div>
         </CardHeader>
         <CardContent>
@@ -787,7 +548,7 @@ const ProductManagementByBrandPage = () => {
                         </TableHead>
                         <TableHead>Mockup Image</TableHead>
                         <TableHead>Name</TableHead>
-                        <TableHead>SKU</TableHead> {/* New TableHead for SKU */}
+                        <TableHead>SKU</TableHead>
                         <TableHead>Description</TableHead>
                         <TableHead>Price</TableHead>
                         <TableHead>Canvas (WxH)</TableHead>
@@ -814,7 +575,7 @@ const ProductManagementByBrandPage = () => {
                             )}
                           </TableCell>
                           <TableCell className="font-medium">{product.name}</TableCell>
-                          <TableCell>{product.sku || 'N/A'}</TableCell> {/* Display SKU */}
+                          <TableCell>{product.sku || 'N/A'}</TableCell>
                           <TableCell>{product.description || 'N/A'}</TableCell>
                           <TableCell>${product.price?.toFixed(2) || '0.00'}</TableCell>
                           <TableCell>{product.canvas_width || 'N/A'}x{product.canvas_height || 'N/A'}</TableCell>
@@ -823,7 +584,7 @@ const ProductManagementByBrandPage = () => {
                             <div className="flex items-center space-x-2">
                               <Switch
                                 id={`product-status-${product.id}`}
-                                checked={!product.is_disabled} // Checked means ENABLED
+                                checked={!product.is_disabled}
                                 onCheckedChange={() => handleToggleDisable(product.id, product.is_disabled)}
                               />
                               <Label htmlFor={`product-status-${product.id}`}>
@@ -832,14 +593,15 @@ const ProductManagementByBrandPage = () => {
                             </div>
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="mr-2"
-                              onClick={() => handleEditProduct(product)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
+                            <Link to={`/admin/categories/${categoryId}/brands/${brandId}/products/${product.id}`}>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="mr-2"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </Link>
                             <Button
                               variant="destructive"
                               size="sm"
@@ -858,209 +620,6 @@ const ProductManagementByBrandPage = () => {
           )}
         </CardContent>
       </Card>
-
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>{currentProduct ? 'Edit Product' : 'Add New Product'}</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                Name
-              </Label>
-              <Input
-                id="name"
-                value={productName}
-                onChange={(e) => setProductName(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="sku" className="text-right">
-                SKU
-              </Label>
-              <Input
-                id="sku"
-                value={productSku}
-                onChange={(e) => setProductSku(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="description" className="text-right">
-                Description
-              </Label>
-              <Textarea
-                id="description"
-                value={productDescription}
-                onChange={(e) => setProductDescription(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="price" className="text-right">
-                Price
-              </Label>
-              <Input
-                id="price"
-                type="number"
-                value={productPrice}
-                onChange={(e) => setProductPrice(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="canvasWidth" className="text-right">
-                Canvas Width
-              </Label>
-              <Input
-                id="canvasWidth"
-                type="number"
-                value={canvasWidth}
-                onChange={(e) => setCanvasWidth(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="canvasHeight" className="text-right">
-                Canvas Height
-              </Label>
-              <Input
-                id="canvasHeight"
-                type="number"
-                value={canvasHeight}
-                onChange={(e) => setCanvasHeight(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="inventory" className="text-right">
-                Inventory
-              </Label>
-              <Input
-                id="inventory"
-                type="number"
-                value={productInventory}
-                onChange={(e) => setProductInventory(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="mockupImage" className="text-right">
-                Mockup Image
-              </Label>
-              <div className="col-span-3 flex items-center gap-2">
-                <Input
-                  id="mockupImage"
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setMockupImageFile(e.target.files ? e.target.files[0] : null)}
-                  className="flex-1"
-                />
-                {currentMockupImageUrl && (
-                  <div className="relative">
-                    <img src={currentMockupImageUrl} alt="Current Mockup" className="w-16 h-16 object-cover rounded-md" />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-red-500 text-white hover:bg-red-600"
-                      onClick={() => {
-                        setCurrentMockupImageUrl(null);
-                        setMockupImageFile(null);
-                      }}
-                    >
-                      <XCircle className="h-3 w-3" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-            {/* Mockup positioning and sizing inputs */}
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="mockupX" className="text-right">
-                Mockup X
-              </Label>
-              <Input
-                id="mockupX"
-                type="number"
-                value={mockupX}
-                onChange={(e) => setMockupX(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="mockupY" className="text-right">
-                Mockup Y
-              </Label>
-              <Input
-                id="mockupY"
-                type="number"
-                value={mockupY}
-                onChange={(e) => setMockupY(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="mockupWidth" className="text-right">
-                Mockup Width (Optional)
-              </Label>
-              <Input
-                id="mockupWidth"
-                type="number"
-                value={mockupWidth}
-                onChange={(e) => setMockupWidth(e.target.value)}
-                className="col-span-3"
-                placeholder="Leave empty for auto"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="mockupHeight" className="text-right">
-                Mockup Height (Optional)
-              </Label>
-              <Input
-                id="mockupHeight"
-                type="number"
-                value={mockupHeight}
-                onChange={(e) => setMockupHeight(e.target.value)}
-                className="col-span-3"
-                placeholder="Leave empty for auto"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="mockupRotation" className="text-right">
-                Mockup Rotation
-              </Label>
-              <Input
-                id="mockupRotation"
-                type="number"
-                value={mockupRotation}
-                onChange={(e) => setMockupRotation(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="product-status" className="text-right">
-                Status
-              </Label>
-              <div className="col-span-3 flex items-center space-x-2">
-                <Switch
-                  id="product-status"
-                  checked={!isProductDisabled} // Checked means ENABLED
-                  onCheckedChange={(checked) => setIsProductDisabled(!checked)}
-                />
-                <Label htmlFor="product-status">
-                  {isProductDisabled ? 'Disabled' : 'Enabled'}
-                </Label>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSubmit}>{currentProduct ? 'Save Changes' : 'Add Product'}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

@@ -20,6 +20,7 @@ import PublicLayout from "./components/PublicLayout"; // Import PublicLayout
 import NotFound from "./pages/NotFound"; // Import NotFound
 import { DemoOrderModalProvider } from "./contexts/DemoOrderModalContext"; // Import DemoOrderModalProvider
 import DemoUsersWithOrdersPage from "./pages/admin/DemoUsersWithOrdersPage"; // Import DemoUsersWithOrdersPage
+import ProductEditPage from "./pages/admin/ProductEditPage"; // Import ProductEditPage
 
 function App() {
   return (
@@ -45,10 +46,12 @@ function App() {
                 <Route path="products" element={<CategoryManagementPage />} /> {/* This will show categories */}
                 <Route path="categories/:categoryId/brands" element={<BrandManagementPage />} />
                 <Route path="categories/:categoryId/brands/:brandId/products" element={<ProductManagementByBrandPage />} />
+                <Route path="categories/:categoryId/brands/:brandId/products/new" element={<ProductEditPage />} /> {/* New product route */}
+                <Route path="categories/:categoryId/brands/:brandId/products/:productId" element={<ProductEditPage />} /> {/* Edit product route */}
                 <Route path="orders" element={<UserOrderListingPage />} />
                 <Route path="orders/:userId" element={<UserOrdersPage />} />
                 <Route path="demo-orders" element={<DemoOrderListingPage />} />
-                <Route path="demo-users" element={<DemoUsersWithOrdersPage />} /> {/* New route */}
+                <Route path="demo-users" element={<DemoUsersWithOrdersPage />} />
               </Route>
 
               {/* Catch-all route for 404 */}
