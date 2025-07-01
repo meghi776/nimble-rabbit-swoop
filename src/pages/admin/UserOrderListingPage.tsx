@@ -61,7 +61,7 @@ const OrderManagementPage = () => {
   const [orderTypeFilter, setOrderTypeFilter] = useState<string>('all');
   const [selectedUserIdFilter, setSelectedUserIdFilter] = useState<string>('all');
   const [userList, setUserList] = useState<UserListItem[]>([]);
-  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
+  const [selectedOrderIds, setSelectedOrderIds] = new useState<Set<string>>(new Set());
   const [normalOrderCount, setNormalOrderCount] = useState<number | null>(null); // New state for normal order count
   const [demoOrderCount, setDemoOrderCount] = useState<number | null>(null); // New state for demo order count
 
@@ -364,7 +364,10 @@ const OrderManagementPage = () => {
       <h1 className="text-3xl font-bold mb-6 text-gray-800 dark:text-gray-100">Order Management</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        <Card>
+        <Card
+          className="cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => setOrderTypeFilter('normal')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Normal Orders</CardTitle>
             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
