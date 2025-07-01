@@ -20,6 +20,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import { deleteFileFromSupabase } from '@/utils/supabaseStorage'; // Import deleteFileFromSupabase
+import ImportMobileProductsButton from '@/components/admin/ImportMobileProductsButton'; // Import the new component
 
 interface Product {
   id: string;
@@ -513,6 +514,7 @@ const ProductManagementByBrandPage = () => {
             <Button onClick={() => importFileInputRef.current?.click()} variant="outline">
               <Upload className="mr-2 h-4 w-4" /> Import CSV
             </Button>
+            <ImportMobileProductsButton onImportComplete={fetchProducts} /> {/* New button */}
             <Link to={`/admin/categories/${categoryId}/brands/${brandId}/products/new`}>
               <Button>
                 <PlusCircle className="mr-2 h-4 w-4" /> Add Product
