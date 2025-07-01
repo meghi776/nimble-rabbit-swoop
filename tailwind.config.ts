@@ -93,6 +93,9 @@ export default {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
       },
+      fontFamily: {
+        'dancing-script': ['"Dancing Script"', 'cursive'],
+      },
     },
   },
   plugins: [require("tailwindcss-animate")],

@@ -21,7 +21,11 @@ const Header = () => {
   return (
     <header className="flex items-center justify-between py-2 px-4 bg-white dark:bg-gray-800 shadow-md">
       <div className="flex items-center">
-        <Link to="/" className="text-2xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 text-transparent bg-clip-text">
+        <Link 
+          to="/" 
+          className="text-2xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 text-transparent bg-clip-text 
+                     font-dancing-script transition-transform duration-300 ease-in-out hover:scale-105 hover:rotate-1"
+        >
           Meghi
         </Link>
       </div>
