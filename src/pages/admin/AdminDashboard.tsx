@@ -1,13 +1,15 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Tag, ShoppingCart, Loader2, RefreshCw } from 'lucide-react';
+import { Users, Tag, ShoppingCart, Loader2, RefreshCw, LogOut } from 'lucide-react'; // Import LogOut icon
 import { Button } from "@/components/ui/button";
 import { supabase } from '@/integrations/supabase/client';
 import { showError, showSuccess } from '@/utils/toast';
 import { useSession } from '@/contexts/SessionContext';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
 const AdminDashboard = () => {
   const { user, session, loading: sessionLoading } = useSession();
+  const navigate = useNavigate(); // Initialize useNavigate
   const [totalUsers, setTotalUsers] = useState<number | null>(null);
   const [totalBrands, setTotalBrands] = useState<number | null>(null);
   const [totalOrders, setTotalOrders] = useState<number | null>(null);
@@ -84,6 +86,18 @@ const AdminDashboard = () => {
     fetchData();
   };
 
+  const handleClearSession = async () => {
+    const toastId = showSuccess("Clearing session...");
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      showError(`Failed to sign out: ${error.message}`);
+    } else {
+      showSuccess("Session cleared. Redirecting to login.");
+      navigate('/login'); // Redirect to login after sign out
+    }
+    // dismissToast(toastId); // Dismiss toast after a short delay or immediately
+  };
+
   if (loading || sessionLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -112,9 +126,14 @@ const AdminDashboard = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Admin Dashboard</h1>
-        <Button onClick={handleRefreshClick} variant="outline" disabled={loading}>
-          <RefreshCw className="mr-2 h-4 w-4" /> Refresh Data
-        </Button>
+        <div className="flex space-x-2">
+          <Button onClick={handleRefreshClick} variant="outline" disabled={loading}>
+            <RefreshCw className="mr-2 h-4 w-4" /> Refresh Data
+          </Button>
+          <Button onClick={handleClearSession} variant="outline">
+            <LogOut className="mr-2 h-4 w-4" /> Clear Session
+          </Button>
+        </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card>
