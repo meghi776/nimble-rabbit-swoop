@@ -1,12 +1,12 @@
-import React from "react"; // Added missing import
+import React from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./globals.css";
-import ToastProvider from "./components/ToastProvider.tsx"; // Import ToastProvider
+import ToastProvider from "./components/ToastProvider.tsx";
 
 createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <ToastProvider /> {/* Add ToastProvider here */}
+  <> {/* Changed from <React.StrictMode> */}
+    <ToastProvider />
     <App />
-  </React.StrictMode>
+  </> {/* Changed from </React.StrictMode> */}
 );
