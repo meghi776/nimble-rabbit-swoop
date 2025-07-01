@@ -49,6 +49,12 @@
     --sidebar-border: 220 13% 91%;
 
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Animated gradient colors */
+    --gradient-color-1: 270 80% 60%; /* Purple */
+    --gradient-color-2: 330 80% 60%; /* Pink */
+    --gradient-color-3: 210 80% 60%; /* Blue */
+    --gradient-color-4: 60 80% 60%;  /* Yellow */
   }
 
   .dark {
@@ -87,6 +93,12 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Animated gradient colors for dark mode */
+    --gradient-color-1: 270 60% 70%; /* Lighter Purple */
+    --gradient-color-2: 330 60% 70%; /* Lighter Pink */
+    --gradient-color-3: 210 60% 70%; /* Lighter Blue */
+    --gradient-color-4: 60 60% 70%;  /* Lighter Yellow */
   }
 }
 
@@ -98,4 +110,33 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* New keyframes for infinite color change */
+@keyframes color-cycle {
+  0% {
+    background-position: 0% 50%;
+    background-image: linear-gradient(to right, hsl(var(--gradient-color-1)), hsl(var(--gradient-color-2)));
+  }
+  25% {
+    background-position: 50% 100%;
+    background-image: linear-gradient(to right, hsl(var(--gradient-color-2)), hsl(var(--gradient-color-3)));
+  }
+  50% {
+    background-position: 100% 50%;
+    background-image: linear-gradient(to right, hsl(var(--gradient-color-3)), hsl(var(--gradient-color-4)));
+  }
+  75% {
+    background-position: 50% 0%;
+    background-image: linear-gradient(to right, hsl(var(--gradient-color-4)), hsl(var(--gradient-color-1)));
+  }
+  100% {
+    background-position: 0% 50%;
+    background-image: linear-gradient(to right, hsl(var(--gradient-color-1)), hsl(var(--gradient-color-2)));
+  }
+}
+
+.animate-color-cycle {
+  background-size: 200% 200%;
+  animation: color-cycle 10s ease infinite;
 }

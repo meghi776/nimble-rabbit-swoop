@@ -23,8 +23,9 @@ const Header = () => {
       <div className="flex items-center">
         <Link 
           to="/" 
-          className="text-2xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 text-transparent bg-clip-text 
-                     font-dancing-script transition-transform duration-300 ease-in-out hover:scale-105 hover:rotate-1"
+          className="text-2xl font-bold text-transparent bg-clip-text 
+                     font-dancing-script transition-transform duration-300 ease-in-out hover:scale-105 hover:rotate-1
+                     animate-color-cycle" // Added the new animation class
         >
           Meghi
         </Link>
