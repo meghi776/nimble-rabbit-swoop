@@ -140,7 +140,7 @@ const ProductEditPage = () => {
         }
       } else if (currentMockupImageUrl === null && isEditing) {
         // If editing and user explicitly removed the image, delete from storage
-        const oldFileName = products.find(p => p.id === productId)?.mockup_image_url?.split('/').pop();
+        const oldFileName = currentMockupImageUrl?.split('/').pop(); // Use currentMockupImageUrl directly
         if (oldFileName) {
           await deleteFileFromSupabase(`mockups/${oldFileName}`, 'order-mockups');
         }
@@ -150,7 +150,21 @@ const ProductEditPage = () => {
       }
 
       let productIdToUse = productId;
-      let mockupIdToUse = products.find(p => p.id === productId)?.mockup_id || null;
+      // Fetch mockup_id if editing, otherwise it will be null for new product
+      let mockupIdToUse: string | null = null;
+      if (isEditing && productId) {
+        const { data: existingMockup, error: fetchMockupError } = await supabase
+          .from('mockups')
+          .select('id')
+          .eq('product_id', productId)
+          .single();
+        if (fetchMockupError && fetchMockupError.code !== 'PGRST116') { // PGRST116 means no rows found
+          console.error("Error fetching existing mockup ID:", fetchMockupError);
+          // Don't throw, just log and proceed without mockupIdToUse
+        } else if (existingMockup) {
+          mockupIdToUse = existingMockup.id;
+        }
+      }
 
       // 2. Insert/Update Product
       if (isEditing) {
