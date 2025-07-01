@@ -15,9 +15,6 @@ const Header = () => {
     setIsDemoOrderModalOpen(true);
   };
 
-  // Only show the preview button if session is not loading and user exists and can_preview is true
-  // const showPreviewButton = !sessionLoading && user && user.can_preview; // Removed this line
-
   return (
     <header className="flex items-center justify-between py-2 px-4 bg-white dark:bg-gray-800 shadow-md">
       <div className="flex items-center">
@@ -31,13 +28,11 @@ const Header = () => {
         </Link>
       </div>
       <nav className="flex items-center space-x-2">
-        {/* Removed conditional rendering for Preview button */}
-        {/* {showPreviewButton && (
-          <Button variant="ghost" onClick={handlePreviewClick}>
-            <Eye className="h-5 w-5 mr-2" />
-            Preview
-          </Button>
-        )} */}
+        {/* The Preview button is now always visible */}
+        <Button variant="ghost" onClick={handlePreviewClick}>
+          <Eye className="h-5 w-5 mr-2" />
+          Preview
+        </Button>
         <Link to="/admin">
           <Button variant="ghost">Admin</Button>
         </Link>
