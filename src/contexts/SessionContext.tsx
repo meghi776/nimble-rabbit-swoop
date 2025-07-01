@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -31,19 +31,21 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     console.log("SessionContext: onAuthStateChange listener setup.");
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       console.log(`SessionContext: Auth state change event: ${event}`);
-      console.log("SessionContext: currentSession:", currentSession); // Log the session object
+      console.log("SessionContext: currentSession:", currentSession);
 
       setSession(prevSession => {
-        if (prevSession?.access_token === currentSession?.access_token && prevSession?.user?.id === currentSession?.user?.id) {
+        const isSameAccessToken = prevSession?.access_token === currentSession?.access_token;
+        const isSameUserId = prevSession?.user?.id === currentSession?.user?.id;
+        console.log(`SessionContext: setSession check - isSameAccessToken: ${isSameAccessToken}, isSameUserId: ${isSameUserId}`);
+        if (isSameAccessToken && isSameUserId) {
           console.log("SessionContext: Session object reference unchanged, skipping setSession.");
           return prevSession;
         }
-        console.log("SessionContext: Session object changed, updating state.");
+        console.log("SessionContext: Session object changed, updating state. New access_token (first 10 chars):", currentSession?.access_token?.substring(0, 10), "New user ID:", currentSession?.user?.id);
         return currentSession;
       });
 
       if (currentSession?.user) {
-        // Fetch profile data including can_preview
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('can_preview')
@@ -52,10 +54,13 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
 
         setUser(prevUser => {
           const newCanPreview = profileData?.can_preview || false;
-          // Create a new user object only if the user ID or can_preview status has changed
-          if (prevUser?.id === currentSession.user.id && prevUser?.can_preview === newCanPreview) {
+          const isSameUserId = prevUser?.id === currentSession.user.id;
+          const isSameCanPreview = prevUser?.can_preview === newCanPreview;
+          console.log(`SessionContext: setUser check - isSameUserId: ${isSameUserId}, isSameCanPreview: ${isSameCanPreview}`);
+          if (isSameUserId && isSameCanPreview) {
             return prevUser;
           }
+          console.log("SessionContext: User object changed, updating state. New can_preview:", newCanPreview);
           return { ...currentSession.user, can_preview: newCanPreview };
         });
       } else {
@@ -79,16 +84,18 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       }
     });
 
-    // Initial session check
     console.log("SessionContext: Initial getSession call.");
     supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
       console.log("SessionContext: Initial getSession result:", initialSession);
       setSession(prevSession => {
-        if (prevSession?.access_token === initialSession?.access_token && prevSession?.user?.id === initialSession?.user?.id) {
+        const isSameAccessToken = prevSession?.access_token === initialSession?.access_token;
+        const isSameUserId = prevSession?.user?.id === initialSession?.user?.id;
+        console.log(`SessionContext: Initial setSession check - isSameAccessToken: ${isSameAccessToken}, isSameUserId: ${isSameUserId}`);
+        if (isSameAccessToken && isSameUserId) {
           console.log("SessionContext: Initial session object reference unchanged, skipping setSession.");
           return prevSession;
         }
-        console.log("SessionContext: Initial session object changed, updating state.");
+        console.log("SessionContext: Initial session object changed, updating state. New access_token (first 10 chars):", initialSession?.access_token?.substring(0, 10), "New user ID:", initialSession?.user?.id);
         return initialSession;
       });
 
@@ -101,9 +108,13 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
 
         setUser(prevUser => {
           const newCanPreview = profileData?.can_preview || false;
-          if (prevUser?.id === initialSession.user.id && prevUser?.can_preview === newCanPreview) {
+          const isSameUserId = prevUser?.id === initialSession.user.id;
+          const isSameCanPreview = prevUser?.can_preview === newCanPreview;
+          console.log(`SessionContext: Initial setUser check - isSameUserId: ${isSameUserId}, isSameCanPreview: ${isSameCanPreview}`);
+          if (isSameUserId && isSameCanPreview) {
             return prevUser;
           }
+          console.log("SessionContext: Initial user object changed, updating state. New can_preview:", newCanPreview);
           return { ...initialSession.user, can_preview: newCanPreview };
         });
       } else {
@@ -124,8 +135,15 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     };
   }, [navigate, location.pathname]);
 
+  // Memoize the context value to prevent unnecessary re-renders of consumers
+  const contextValue = useMemo(() => ({
+    session,
+    user,
+    loading
+  }), [session, user, loading]);
+
   return (
-    <SessionContext.Provider value={{ session, user, loading }}>
+    <SessionContext.Provider value={contextValue}>
       {children}
     </SessionContext.Provider>
   );
