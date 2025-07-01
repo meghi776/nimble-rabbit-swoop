@@ -1,15 +1,26 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom'; // Import useNavigate
 import { Button } from '@/components/ui/button';
 import { Eye } from 'lucide-react'; // Import Eye icon
 import { useDemoOrderModal } from '@/contexts/DemoOrderModalContext'; // Import useDemoOrderModal
 import { useSession } from '@/contexts/SessionContext'; // Import useSession to check if user is logged in
+import { showError } from '@/utils/toast'; // Import showError
 
 const Header = () => {
   const { setIsDemoOrderModalOpen, setDemoOrderDetails } = useDemoOrderModal();
   const { user, loading: sessionLoading } = useSession(); // Get current user and session loading state
+  const navigate = useNavigate(); // Initialize useNavigate
 
   const handlePreviewClick = () => {
+    if (sessionLoading) {
+      showError("Session is still loading. Please wait a moment.");
+      return;
+    }
+    if (!user) {
+      showError("Please log in to place a demo order.");
+      navigate('/login');
+      return;
+    }
     // Set some default details for the demo order when opening from header
     setDemoOrderDetails('0.00', 'Preview Address'); 
     setIsDemoOrderModalOpen(true);
