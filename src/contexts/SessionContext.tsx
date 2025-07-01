@@ -30,7 +30,15 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   useEffect(() => {
     console.log("SessionContext: onAuthStateChange listener setup."); // Added log
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      setSession(currentSession);
+      // Only update session state if the session object reference or its access token changes
+      // This prevents unnecessary re-renders if only internal token refresh happens without user change.
+      setSession(prevSession => {
+        if (prevSession?.access_token === currentSession?.access_token && prevSession?.user?.id === currentSession?.user?.id) {
+          return prevSession; // No change in relevant session data, keep old reference
+        }
+        return currentSession; // Session data changed, update
+      });
+
       if (currentSession?.user) {
         // Fetch profile data including can_preview
         const { data: profileData, error: profileError } = await supabase
@@ -39,12 +47,14 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
           .eq('id', currentSession.user.id)
           .single();
 
-        if (profileError) {
-          console.error("Error fetching user profile for session context:", profileError);
-          setUser({ ...currentSession.user, can_preview: false }); // Default to false on error
-        } else {
-          setUser({ ...currentSession.user, can_preview: profileData?.can_preview || false });
-        }
+        setUser(prevUser => {
+          const newCanPreview = profileData?.can_preview || false;
+          // Create a new user object only if the user ID or can_preview status has changed
+          if (prevUser?.id === currentSession.user.id && prevUser?.can_preview === newCanPreview) {
+            return prevUser; // No change in relevant user data, keep old reference
+          }
+          return { ...currentSession.user, can_preview: newCanPreview };
+        });
       } else {
         setUser(null);
       }
@@ -65,7 +75,13 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     // Initial session check
     console.log("SessionContext: Initial getSession call."); // Added log
     supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
-      setSession(initialSession);
+      setSession(prevSession => {
+        if (prevSession?.access_token === initialSession?.access_token && prevSession?.user?.id === initialSession?.user?.id) {
+          return prevSession;
+        }
+        return initialSession;
+      });
+
       if (initialSession?.user) {
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
@@ -73,12 +89,13 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
           .eq('id', initialSession.user.id)
           .single();
 
-        if (profileError) {
-          console.error("Error fetching initial user profile for session context:", profileError);
-          setUser({ ...initialSession.user, can_preview: false });
-        } else {
-          setUser({ ...initialSession.user, can_preview: profileData?.can_preview || false });
-        }
+        setUser(prevUser => {
+          const newCanPreview = profileData?.can_preview || false;
+          if (prevUser?.id === initialSession.user.id && prevUser?.can_preview === newCanPreview) {
+            return prevUser;
+          }
+          return { ...initialSession.user, can_preview: newCanPreview };
+        });
       } else {
         setUser(null);
       }
