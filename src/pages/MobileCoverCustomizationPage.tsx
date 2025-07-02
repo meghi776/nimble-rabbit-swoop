@@ -37,11 +37,7 @@ import { Switch } from "@/components/ui/switch";
 import { proxyImageUrl } from '@/utils/imageProxy';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast'; // Import toast utilities
 import { useDemoOrderModal } from '@/contexts/DemoOrderModalContext'; // Import useDemoOrderModal
-import * as QRCodeModule from 'qrcode.react'; // Import all exports as QRCodeModule
-
-// Access the QRCode component from the imported module.
-// Based on the error, it's likely the default export is the component itself.
-const QRCode = QRCodeModule.default || QRCodeModule.QRCode; // Fallback in case it's a named export within the module object
+import { QRCode } from 'qrcode.react'; // Corrected import: direct named import
 
 interface Product {
   id: string;
@@ -99,7 +95,7 @@ const MobileCoverCustomizationPage = () => {
   const { productId } = useParams<{ productId: string }>();
   const navigate = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
-  const [loading, setLoading] = useState(true); // Corrected this line
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [designElements, setDesignElements] = useState<DesignElement[]>([]);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
