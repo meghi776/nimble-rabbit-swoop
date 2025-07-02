@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Edit, Trash2, ArrowLeft, Upload, Download, Search } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ArrowLeft, Upload, Download, Search, ListChecks } from 'lucide-react';
 import { useSession } from '@/contexts/SessionContext';
 import Papa from 'papaparse';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -21,6 +21,9 @@ import { Switch } from '@/components/ui/switch';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import { deleteFileFromSupabase } from '@/utils/supabaseStorage'; // Import deleteFileFromSupabase
 import ImportMobileProductsButton from '@/components/admin/ImportMobileProductsButton'; // Import the new component
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"; // Import Dialog components
+import { Textarea } from '@/components/ui/textarea'; // Import Textarea
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Import Select
 
 interface Product {
   id: string;
@@ -53,8 +56,25 @@ const ProductManagementByBrandPage = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const debounceTimeoutRef = useRef<number | null>(null);
   const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
-  const { user } = useSession();
+  const { user, session } = useSession(); // Get session for auth token
   const importFileInputRef = useRef<HTMLInputElement>(null);
+
+  // State for Bulk Edit Modal
+  const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
+  const [bulkEditFields, setBulkEditFields] = useState({
+    price: false,
+    inventory: false,
+    is_disabled: false,
+    description: false,
+    sku: false,
+  });
+  const [bulkEditValues, setBulkEditValues] = useState({
+    price: '',
+    inventory: '',
+    is_disabled: 'false', // Use string for select
+    description: '',
+    sku: '',
+  });
 
   // Helper to check if a URL is from Supabase storage
   const isSupabaseStorageUrl = (url: string | null, bucketName: string) => {
@@ -462,6 +482,97 @@ const ProductManagementByBrandPage = () => {
     }
   };
 
+  const handleBulkEditSubmit = async () => {
+    if (selectedProductIds.size === 0) {
+      showError("No products selected for bulk edit.");
+      return;
+    }
+
+    const updates: { [key: string]: any } = {};
+    if (bulkEditFields.price) {
+      const parsedPrice = parseFloat(bulkEditValues.price);
+      if (isNaN(parsedPrice)) {
+        showError("Invalid price value. Please enter a number.");
+        return;
+      }
+      updates.price = parsedPrice;
+    }
+    if (bulkEditFields.inventory) {
+      const parsedInventory = parseInt(bulkEditValues.inventory);
+      if (isNaN(parsedInventory)) {
+        showError("Invalid inventory value. Please enter an integer.");
+        return;
+      }
+      updates.inventory = parsedInventory;
+    }
+    if (bulkEditFields.is_disabled) {
+      updates.is_disabled = bulkEditValues.is_disabled === 'true';
+    }
+    if (bulkEditFields.description) {
+      updates.description = bulkEditValues.description.trim() === '' ? null : bulkEditValues.description;
+    }
+    if (bulkEditFields.sku) {
+      updates.sku = bulkEditValues.sku.trim() === '' ? null : bulkEditValues.sku;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      showError("No fields selected for update or no valid values provided.");
+      return;
+    }
+
+    if (!session?.access_token) {
+      showError("Authentication required for bulk edit.");
+      return;
+    }
+
+    setLoading(true);
+    const toastId = showLoading(`Updating ${selectedProductIds.size} products...`);
+
+    try {
+      const { data, error: invokeError } = await supabase.functions.invoke('bulk-update-products', {
+        body: JSON.stringify({ productIds: Array.from(selectedProductIds), updates }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (invokeError) {
+        console.error("Edge Function Invoke Error (bulk-update-products):", invokeError);
+        let errorMessage = invokeError.message;
+        if (invokeError.context?.data) {
+          try {
+            const parsedError = JSON.parse(invokeError.context.data);
+            if (parsedError.error) {
+              errorMessage = parsedError.error;
+            }
+          } catch (e) {
+            // Fallback if context.data is not JSON
+          }
+        }
+        showError(`Failed to bulk update products: ${errorMessage}`);
+      } else if (data) {
+        showSuccess(`Successfully updated ${data.updatedCount} products!`);
+        setIsBulkEditModalOpen(false);
+        setBulkEditFields({
+          price: false, inventory: false, is_disabled: false, description: false, sku: false,
+        });
+        setBulkEditValues({
+          price: '', inventory: '', is_disabled: 'false', description: '', sku: '',
+        });
+        fetchProducts(); // Re-fetch products to update the list
+      } else {
+        showError("Unexpected response from server during bulk update.");
+      }
+    } catch (err: any) {
+      console.error("Network or unexpected error during bulk update:", err);
+      showError(err.message || "An unexpected error occurred during bulk update.");
+    } finally {
+      dismissToast(toastId);
+      setLoading(false);
+    }
+  };
+
   const isAllSelected = products.length > 0 && selectedProductIds.size === products.length;
   const isIndeterminate = selectedProductIds.size > 0 && selectedProductIds.size < products.length;
 
@@ -483,13 +594,22 @@ const ProductManagementByBrandPage = () => {
           <CardTitle>Products List</CardTitle>
           <div className="flex space-x-2 items-center">
             {selectedProductIds.size > 0 && (
-              <Button
-                variant="destructive"
-                onClick={handleBulkDelete}
-                disabled={loading}
-              >
-                <Trash2 className="mr-2 h-4 w-4" /> Delete Selected ({selectedProductIds.size})
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsBulkEditModalOpen(true)}
+                  disabled={loading}
+                >
+                  <ListChecks className="mr-2 h-4 w-4" /> Bulk Edit ({selectedProductIds.size})
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleBulkDelete}
+                  disabled={loading}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete Selected ({selectedProductIds.size})
+                </Button>
+              </>
             )}
             <div className="relative w-48">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -622,6 +742,119 @@ const ProductManagementByBrandPage = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Bulk Edit Dialog */}
+      <Dialog open={isBulkEditModalOpen} onOpenChange={setIsBulkEditModalOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Bulk Edit Products ({selectedProductIds.size} selected)</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <p className="text-sm text-muted-foreground">Select fields to update and enter new values. Only selected fields will be applied.</p>
+
+            {/* Price */}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="bulk-edit-price"
+                checked={bulkEditFields.price}
+                onCheckedChange={(checked) => setBulkEditFields(prev => ({ ...prev, price: checked as boolean }))}
+              />
+              <Label htmlFor="bulk-edit-price" className="flex-1">Price</Label>
+              <Input
+                type="number"
+                value={bulkEditValues.price}
+                onChange={(e) => setBulkEditValues(prev => ({ ...prev, price: e.target.value }))}
+                disabled={!bulkEditFields.price}
+                className="w-3/4"
+                placeholder="e.g., 999.00"
+              />
+            </div>
+
+            {/* Inventory */}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="bulk-edit-inventory"
+                checked={bulkEditFields.inventory}
+                onCheckedChange={(checked) => setBulkEditFields(prev => ({ ...prev, inventory: checked as boolean }))}
+              />
+              <Label htmlFor="bulk-edit-inventory" className="flex-1">Inventory</Label>
+              <Input
+                type="number"
+                value={bulkEditValues.inventory}
+                onChange={(e) => setBulkEditValues(prev => ({ ...prev, inventory: e.target.value }))}
+                disabled={!bulkEditFields.inventory}
+                className="w-3/4"
+                placeholder="e.g., 100"
+              />
+            </div>
+
+            {/* Status (is_disabled) */}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="bulk-edit-status"
+                checked={bulkEditFields.is_disabled}
+                onCheckedChange={(checked) => setBulkEditFields(prev => ({ ...prev, is_disabled: checked as boolean }))}
+              />
+              <Label htmlFor="bulk-edit-status" className="flex-1">Status</Label>
+              <Select
+                value={bulkEditValues.is_disabled}
+                onValueChange={(value) => setBulkEditValues(prev => ({ ...prev, is_disabled: value }))}
+                disabled={!bulkEditFields.is_disabled}
+              >
+                <SelectTrigger className="w-3/4">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="false">Enabled</SelectItem>
+                  <SelectItem value="true">Disabled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Description */}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="bulk-edit-description"
+                checked={bulkEditFields.description}
+                onCheckedChange={(checked) => setBulkEditFields(prev => ({ ...prev, description: checked as boolean }))}
+              />
+              <Label htmlFor="bulk-edit-description" className="flex-1">Description</Label>
+              <Textarea
+                value={bulkEditValues.description}
+                onChange={(e) => setBulkEditValues(prev => ({ ...prev, description: e.target.value }))}
+                disabled={!bulkEditFields.description}
+                className="w-3/4"
+                placeholder="New description (leave empty to clear)"
+              />
+            </div>
+
+            {/* SKU */}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="bulk-edit-sku"
+                checked={bulkEditFields.sku}
+                onCheckedChange={(checked) => setBulkEditFields(prev => ({ ...prev, sku: checked as boolean }))}
+              />
+              <Label htmlFor="bulk-edit-sku" className="flex-1">SKU</Label>
+              <Input
+                type="text"
+                value={bulkEditValues.sku}
+                onChange={(e) => setBulkEditValues(prev => ({ ...prev, sku: e.target.value }))}
+                disabled={!bulkEditFields.sku}
+                className="w-3/4"
+                placeholder="New SKU (leave empty to clear)"
+              />
+            </div>
+
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsBulkEditModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleBulkEditSubmit} disabled={loading}>
+              Apply Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
