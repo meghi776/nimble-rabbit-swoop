@@ -37,7 +37,7 @@ import { Switch } from "@/components/ui/switch";
 import { proxyImageUrl } from '@/utils/imageProxy';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast'; // Import toast utilities
 import { useDemoOrderModal } from '@/contexts/DemoOrderModalContext'; // Import useDemoOrderModal
-import { QRCode } from 'qrcode.react'; // Corrected import: changed from default to named import
+import QRCode from 'qrcode.react'; // Corrected import: changed from named to default import
 
 interface Product {
   id: string;
