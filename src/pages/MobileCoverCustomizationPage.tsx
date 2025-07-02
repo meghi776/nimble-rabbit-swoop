@@ -1020,21 +1020,7 @@ const MobileCoverCustomizationPage = () => {
 
       {!loading && !error && product && (
         <div className="flex-1 flex flex-col md:flex-row overflow-y-auto pb-65">
-          {/* Header section for the customization page */}
-          <div className="flex items-center justify-between mb-6 p-4 w-full">
-            <div className="flex items-center">
-              <Link to={`/categories/${product.category_id}/brands/${product.brand_id}/products`} className="mr-4">
-                <Button variant="outline" size="icon">
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-              </Link>
-              <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">
-                {product.name}
-              </h1>
-            </div>
-            {/* Removed Delete Image button from here */}
-          </div>
-
+          {/* Removed Header section for the customization page */}
           <div
             ref={designAreaRef}
             className="flex-1 flex items-center justify-center relative overflow-hidden px-4"
