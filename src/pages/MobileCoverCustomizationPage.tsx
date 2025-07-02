@@ -1235,7 +1235,7 @@ const MobileCoverCustomizationPage = () => {
                 <span className="text-xs">Delete Image</span>
               </Button>
             )}
-            <Button variant="default" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={handleBuyNowClick} disabled={isBuyNowDisabled}>
+            <Button variant="default" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105 animate-pulse-highlight" onClick={handleBuyNowClick} disabled={isBuyNowDisabled}>
               <ShoppingCart className="h-5 w-5" />
               <span className="text-xs">Buy Now</span>
             </Button>
