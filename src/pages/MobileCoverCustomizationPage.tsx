@@ -1235,7 +1235,7 @@ const MobileCoverCustomizationPage = () => {
                 <span className="text-xs">Delete Image</span>
               </Button>
             )}
-            <Button variant="ghost" className="flex flex-col h-auto p-1" onClick={handleBuyNowClick} disabled={isBuyNowDisabled}>
+            <Button variant="default" className="flex flex-col h-auto p-1" onClick={handleBuyNowClick} disabled={isBuyNowDisabled}>
               <ShoppingCart className="h-5 w-5" />
               <span className="text-xs">Buy Now</span>
             </Button>
@@ -1304,7 +1304,7 @@ const MobileCoverCustomizationPage = () => {
             {paymentMethod === 'UPI' && product && (
               <div className="col-span-4 flex flex-col items-center justify-center p-4 border rounded-md bg-gray-50 dark:bg-gray-700">
                 <p className="text-lg font-semibold mb-2">Scan to Pay</p>
-                <QRCodeModule.default value={generateUpiQrData()} size={200} level="H" includeMargin={true} /> {/* Changed to QRCodeModule.default */}
+                <QRCodeModule.default value={generateUpiQrData()} size={200} level="H" includeMargin={true} />
                 <p className="text-sm text-muted-foreground mt-2">Amount: ₹{product.price?.toFixed(2)}</p>
                 <p className="text-xs text-muted-foreground text-center mt-1">
                   (This is a demo QR. Payment will not be automatically confirmed.)
