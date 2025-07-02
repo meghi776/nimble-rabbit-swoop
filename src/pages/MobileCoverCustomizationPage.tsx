@@ -37,7 +37,6 @@ import { Switch } from "@/components/ui/switch";
 import { proxyImageUrl } from '@/utils/imageProxy';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast'; // Import toast utilities
 import { useDemoOrderModal } from '@/contexts/DemoOrderModalContext'; // Import useDemoOrderModal
-import QRCode from 'qrcode.react'; // Changed import to directly import QRCode
 
 interface Product {
   id: string;
@@ -95,7 +94,7 @@ const MobileCoverCustomizationPage = () => {
   const { productId } = useParams<{ productId: string }>();
   const navigate = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
-  const [loading, setLoading] = true;
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [designElements, setDesignElements] = useState<DesignElement[]>([]);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
@@ -154,10 +153,6 @@ const MobileCoverCustomizationPage = () => {
 
   const textElementRefs = useRef<Map<string, HTMLDivElement>>(new Map()); // Changed to HTMLDivElement
   const lastCaretPosition = useRef<{ node: Node | null; offset: number } | null>(null);
-
-  // UPI details (placeholder - in a real app, this would come from a secure backend/env variables)
-  const UPI_VPA = 'your_upi_id@bank'; // Replace with your actual UPI ID
-  const UPI_PAYEE_NAME = 'Your Business Name'; // Replace with your business name
 
   // Effect to calculate scale factor based on the rendered size of the canvas content
   useEffect(() => {
@@ -997,14 +992,6 @@ const MobileCoverCustomizationPage = () => {
 
   const isBuyNowDisabled = loading || isPlacingOrder || (product && product.inventory !== null && product.inventory <= 0);
 
-  // Generate UPI QR code data string
-  const generateUpiQrData = () => {
-    if (!product || !product.price) return '';
-    const amount = product.price.toFixed(2);
-    const transactionId = `ORDER_${Date.now()}`; // Unique transaction ID
-    return `upi://pay?pa=${UPI_VPA}&pn=${encodeURIComponent(UPI_PAYEE_NAME)}&am=${amount}&cu=INR&tid=${transactionId}`;
-  };
-
   return (
     <div className="flex flex-col bg-gray-50 dark:bg-gray-900 flex-1">
       {loading && (
@@ -1289,20 +1276,9 @@ const MobileCoverCustomizationPage = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="COD">Cash on Delivery</SelectItem>
-                  <SelectItem value="UPI">UPI Scanner</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            {paymentMethod === 'UPI' && product && (
-              <div className="col-span-4 flex flex-col items-center justify-center p-4 border rounded-md bg-gray-50 dark:bg-gray-700">
-                <p className="text-lg font-semibold mb-2">Scan to Pay</p>
-                <QRCode value={generateUpiQrData()} size={200} level="H" includeMargin={true} />
-                <p className="text-sm text-muted-foreground mt-2">Amount: ₹{product.price?.toFixed(2)}</p>
-                <p className="text-xs text-muted-foreground text-center mt-1">
-                  (This is a demo QR. Payment will not be automatically confirmed.)
-                </p>
-              </div>
-            )}
             {product && (
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right font-bold">Total Price</Label>
