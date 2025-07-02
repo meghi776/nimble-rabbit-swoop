@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom'; // Import Link
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1007,9 +1007,7 @@ const MobileCoverCustomizationPage = () => {
   };
 
   return (
-    <div className="flex flex-col bg-gray-50 dark:bg-gray-900 flex-1"> {/* Removed min-h-screen, added flex-1 */}
-      {/* Removed header section */}
-
+    <div className="flex flex-col bg-gray-50 dark:bg-gray-900 flex-1">
       {loading && (
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
@@ -1023,11 +1021,34 @@ const MobileCoverCustomizationPage = () => {
 
       {!loading && !error && product && (
         <div className="flex-1 flex flex-col md:flex-row overflow-y-auto pb-65">
+          {/* Header section for the customization page */}
+          <div className="flex items-center justify-between mb-6 p-4 w-full">
+            <div className="flex items-center">
+              <Link to={`/categories/${product.category_id}/brands/${product.brand_id}/products`} className="mr-4">
+                <Button variant="outline" size="icon">
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+              </Link>
+              <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">
+                {product.name}
+              </h1>
+            </div>
+            {selectedImageElement && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => deleteElement(selectedImageElement.id)}
+                className="ml-auto" // Push to the right
+              >
+                <Trash2 className="h-4 w-4 mr-2" /> Delete Image
+              </Button>
+            )}
+          </div>
+
           <div
             ref={designAreaRef}
             className="flex-1 flex items-center justify-center relative overflow-hidden px-4"
             style={{
-              // Removed maxWidth, height, and aspectRatio from designAreaRef
               backgroundSize: 'contain',
               backgroundRepeat: 'no-repeat',
               backgroundPosition: 'center',
@@ -1037,14 +1058,14 @@ const MobileCoverCustomizationPage = () => {
           >
             <div
               ref={canvasContentRef}
-              className="relative shadow-lg overflow-hidden w-full h-full" // Added w-full h-full
+              className="relative shadow-lg overflow-hidden w-full h-full"
               style={{
-                aspectRatio: `${product.canvas_width} / ${product.canvas_height}`, // Apply aspect ratio here
+                aspectRatio: `${product.canvas_width} / ${product.canvas_height}`,
                 backgroundSize: 'cover',
                 backgroundRepeat: 'no-repeat',
                 backgroundPosition: 'center',
                 touchAction: 'none',
-                backgroundColor: selectedCanvasColor || '#FFFFFF', // Changed default to #FFFFFF
+                backgroundColor: selectedCanvasColor || '#FFFFFF',
                 backgroundImage: blurredBackgroundImageUrl ? `url(${blurredBackgroundImageUrl})` : 'none',
               }}
               onClick={handleCanvasClick}
@@ -1229,12 +1250,6 @@ const MobileCoverCustomizationPage = () => {
               <Palette className="h-5 w-5" />
               <span className="text-xs">Back Color</span>
             </Button>
-            {selectedImageElement && (
-              <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={() => deleteElement(selectedImageElement.id)}>
-                <Trash2 className="h-5 w-5" />
-                <span className="text-xs">Delete Image</span>
-              </Button>
-            )}
             <Button variant="default" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105 animate-pulse-highlight" onClick={handleBuyNowClick} disabled={isBuyNowDisabled}>
               <ShoppingCart className="h-5 w-5" />
               <span className="text-xs">Buy Now</span>
