@@ -37,7 +37,11 @@ import { Switch } from "@/components/ui/switch";
 import { proxyImageUrl } from '@/utils/imageProxy';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast'; // Import toast utilities
 import { useDemoOrderModal } from '@/contexts/DemoOrderModalContext'; // Import useDemoOrderModal
-import QRCode from 'qrcode.react'; // Corrected import: changed from named to default import
+import * as QRCodeModule from 'qrcode.react'; // Import all exports as QRCodeModule
+
+// Access the QRCode component from the imported module.
+// Based on the error, it's likely the default export is the component itself.
+const QRCode = QRCodeModule.default || QRCodeModule.QRCode; // Fallback in case it's a named export within the module object
 
 interface Product {
   id: string;
@@ -95,7 +99,7 @@ const MobileCoverCustomizationPage = () => {
   const { productId } = useParams<{ productId: string }>();
   const navigate = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = true);
   const [error, setError] = useState<string | null>(null);
   const [designElements, setDesignElements] = useState<DesignElement[]>([]);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
@@ -620,13 +624,16 @@ const MobileCoverCustomizationPage = () => {
         allowTaint: true, // Allow tainting, but it will prevent toDataURL if not truly CORS-compliant
         backgroundColor: null, // Let CSS background color be captured
         // Set a high fixed scale for better quality
-        scale: 3, // Capture at 3x resolution
-        // Explicitly set the target width and height to the product's original dimensions.
-        // This ensures the captured image has the correct aspect ratio and resolution.
+        // The scale property in html2canvas is a multiplier for the rendered size.
+        // To get a high-resolution image that matches the product's original canvas dimensions,
+        // we should set the scale such that the rendered canvas matches the target dimensions.
+        // If product.canvas_width and product.canvas_height are the target dimensions,
+        // and canvasContentRef.current.offsetWidth/Height are the *current* rendered dimensions,
+        // then the scale should be target_dimension / current_rendered_dimension.
+        // Setting `scale: 3` is a good general practice for higher quality.
+        scale: 3, 
         width: product.canvas_width, 
         height: product.canvas_height,
-        // The x and y coordinates of the area to render.
-        // Since canvasContentRef is already the target area, these should be 0.
         x: 0,
         y: 0,
       });
