@@ -67,6 +67,8 @@ const ProductManagementByBrandPage = () => {
     is_disabled: false,
     description: false,
     sku: false,
+    mockup_x: false, // New field
+    mockup_y: false, // New field
   });
   const [bulkEditValues, setBulkEditValues] = useState({
     price: '',
@@ -74,6 +76,8 @@ const ProductManagementByBrandPage = () => {
     is_disabled: 'false', // Use string for select
     description: '',
     sku: '',
+    mockup_x: '', // New field
+    mockup_y: '', // New field
   });
 
   // Helper to check if a URL is from Supabase storage
@@ -514,6 +518,23 @@ const ProductManagementByBrandPage = () => {
     if (bulkEditFields.sku) {
       updates.sku = bulkEditValues.sku.trim() === '' ? null : bulkEditValues.sku;
     }
+    // Add mockup_x and mockup_y to updates
+    if (bulkEditFields.mockup_x) {
+      const parsedMockupX = parseFloat(bulkEditValues.mockup_x);
+      if (isNaN(parsedMockupX)) {
+        showError("Invalid Mockup X value. Please enter a number.");
+        return;
+      }
+      updates.mockup_x = parsedMockupX;
+    }
+    if (bulkEditFields.mockup_y) {
+      const parsedMockupY = parseFloat(bulkEditValues.mockup_y);
+      if (isNaN(parsedMockupY)) {
+        showError("Invalid Mockup Y value. Please enter a number.");
+        return;
+      }
+      updates.mockup_y = parsedMockupY;
+    }
 
     if (Object.keys(updates).length === 0) {
       showError("No fields selected for update or no valid values provided.");
@@ -556,9 +577,11 @@ const ProductManagementByBrandPage = () => {
         setIsBulkEditModalOpen(false);
         setBulkEditFields({
           price: false, inventory: false, is_disabled: false, description: false, sku: false,
+          mockup_x: false, mockup_y: false, // Reset new fields
         });
         setBulkEditValues({
           price: '', inventory: '', is_disabled: 'false', description: '', sku: '',
+          mockup_x: '', mockup_y: '', // Reset new fields
         });
         fetchProducts(); // Re-fetch products to update the list
       } else {
@@ -843,6 +866,42 @@ const ProductManagementByBrandPage = () => {
                 disabled={!bulkEditFields.sku}
                 className="w-3/4"
                 placeholder="New SKU (leave empty to clear)"
+              />
+            </div>
+
+            {/* Mockup X */}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="bulk-edit-mockup-x"
+                checked={bulkEditFields.mockup_x}
+                onCheckedChange={(checked) => setBulkEditFields(prev => ({ ...prev, mockup_x: checked as boolean }))}
+              />
+              <Label htmlFor="bulk-edit-mockup-x" className="flex-1">Mockup X</Label>
+              <Input
+                type="number"
+                value={bulkEditValues.mockup_x}
+                onChange={(e) => setBulkEditValues(prev => ({ ...prev, mockup_x: e.target.value }))}
+                disabled={!bulkEditFields.mockup_x}
+                className="w-3/4"
+                placeholder="e.g., 0"
+              />
+            </div>
+
+            {/* Mockup Y */}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="bulk-edit-mockup-y"
+                checked={bulkEditFields.mockup_y}
+                onCheckedChange={(checked) => setBulkEditFields(prev => ({ ...prev, mockup_y: checked as boolean }))}
+              />
+              <Label htmlFor="bulk-edit-mockup-y" className="flex-1">Mockup Y</Label>
+              <Input
+                type="number"
+                value={bulkEditValues.mockup_y}
+                onChange={(e) => setBulkEditValues(prev => ({ ...prev, mockup_y: e.target.value }))}
+                disabled={!bulkEditFields.mockup_y}
+                className="w-3/4"
+                placeholder="e.g., 0"
               />
             </div>
 
