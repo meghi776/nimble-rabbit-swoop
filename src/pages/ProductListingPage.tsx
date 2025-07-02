@@ -177,6 +177,9 @@ const ProductListingPage = () => {
                       {product.inventory !== null && product.inventory <= 0 && (
                         <span className="text-red-500 text-sm ml-2">Out of Stock</span>
                       )}
+                      {product.price !== null && (
+                        <span className="text-sm font-bold ml-auto">₹{product.price.toFixed(2)}</span>
+                      )}
                     </Link>
                   </div>
                 ))}

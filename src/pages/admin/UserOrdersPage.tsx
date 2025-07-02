@@ -288,7 +288,7 @@ const UserOrdersPage = () => {
                           <TableCell>{order.type}</TableCell> {/* Display order type */}
                           <TableCell>{order.payment_method}</TableCell> {/* Display payment method */}
                           <TableCell>{order.status}</TableCell>
-                          <TableCell className="text-right">${order.total_price?.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">₹{order.total_price?.toFixed(2)}</TableCell>
                           <TableCell className="text-right">
                             <Button
                               variant="outline"

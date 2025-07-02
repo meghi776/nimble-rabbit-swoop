@@ -1282,7 +1282,7 @@ const MobileCoverCustomizationPage = () => {
             {product && (
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right font-bold">Total Price</Label>
-                <span className="col-span-3 text-lg font-bold">${product.price?.toFixed(2)}</span>
+                <span className="col-span-3 text-lg font-bold">₹{product.price?.toFixed(2)}</span>
               </div>
             )}
           </div>

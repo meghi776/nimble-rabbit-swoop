@@ -579,7 +579,7 @@ const ProductManagementByBrandPage = () => {
                           <TableCell className="font-medium">{product.name}</TableCell>
                           <TableCell>{product.sku || 'N/A'}</TableCell>
                           <TableCell>{product.description || 'N/A'}</TableCell>
-                          <TableCell>${product.price?.toFixed(2) || '0.00'}</TableCell>
+                          <TableCell>₹{product.price?.toFixed(2) || '0.00'}</TableCell>
                           <TableCell>{product.canvas_width || 'N/A'}x{product.canvas_height || 'N/A'}</TableCell>
                           <TableCell>{product.inventory ?? 'N/A'}</TableCell>
                           <TableCell>

@@ -250,7 +250,7 @@ const OrderHistoryPage = () => {
                       <TableCell>{order.customer_phone}</TableCell>
                       <TableCell>{order.payment_method}</TableCell>
                       <TableCell>{order.status}</TableCell>
-                      <TableCell className="text-right">${order.total_price?.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">₹{order.total_price?.toFixed(2)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

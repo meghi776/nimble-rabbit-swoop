@@ -258,7 +258,7 @@ const DemoOrderListingPage = () => {
                             )}
                           </TableCell>
                           <TableCell>{order.status}</TableCell>
-                          <TableCell className="text-right">${order.total_price?.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">₹{order.total_price?.toFixed(2)}</TableCell>
                           <TableCell className="text-right">
                             <Button
                               variant="outline"

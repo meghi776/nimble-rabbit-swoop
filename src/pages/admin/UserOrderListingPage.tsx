@@ -532,7 +532,7 @@ const OrderManagementPage = () => {
                           <TableCell>{order.type}</TableCell>
                           <TableCell>{order.payment_method}</TableCell> {/* Display payment method */}
                           <TableCell>{order.status}</TableCell>
-                          <TableCell className="text-right">${order.total_price?.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">₹{order.total_price?.toFixed(2)}</TableCell>
                           <TableCell className="text-right">
                             <Button
                               variant="outline"
