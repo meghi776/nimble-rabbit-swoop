@@ -115,7 +115,7 @@ const MobileCoverCustomizationPage = () => {
   const { user } = useSession();
   const { isDemoOrderModalOpen, setIsDemoOrderModalOpen, demoOrderPrice, setDemoOrderDetails, demoOrderAddress } = useDemoOrderModal(); // Use context
 
-  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
+  const [isCheckoutModalOpen, setIsCheckoutModal] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
   const [customerPhone, setCustomerPhone] = useState(''); // Changed to useState
@@ -829,7 +829,7 @@ const MobileCoverCustomizationPage = () => {
       }
 
       showSuccess(isDemo ? "Demo order placed successfully!" : "Order placed successfully!");
-      setIsCheckoutModalOpen(false);
+      setIsCheckoutModal(false);
       setIsDemoOrderModalOpen(false);
       
       if (isDemo) {
@@ -866,7 +866,7 @@ const MobileCoverCustomizationPage = () => {
       showError("This product is currently out of stock.");
       return;
     }
-    setIsCheckoutModalOpen(true);
+    setIsCheckoutModal(true);
   }, [user, product, navigate]);
 
   // Removed handleDemoOrderClick as it's now triggered from the header
@@ -1217,25 +1217,25 @@ const MobileCoverCustomizationPage = () => {
           </div>
         ) : (
           <>
-            <Button variant="ghost" className="flex flex-col h-auto p-1" onClick={handleAddTextElement}>
+            <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={handleAddTextElement}>
               <Text className="h-5 w-5" />
               <span className="text-xs">Add Text</span>
             </Button>
-            <Button variant="ghost" className="flex flex-col h-auto p-1" onClick={() => fileInputRef.current?.click()}>
+            <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={() => fileInputRef.current?.click()}>
               <Image className="h-5 w-5" />
               <span className="text-xs">Your Photo</span>
             </Button>
-            <Button variant="ghost" className="flex flex-col h-auto p-1" onClick={() => { setSelectedElementId(null); setIsBackColorPaletteOpen(true); }}>
+            <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={() => { setSelectedElementId(null); setIsBackColorPaletteOpen(true); }}>
               <Palette className="h-5 w-5" />
               <span className="text-xs">Back Color</span>
             </Button>
             {selectedImageElement && (
-              <Button variant="ghost" className="flex flex-col h-auto p-1" onClick={() => deleteElement(selectedImageElement.id)}>
+              <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={() => deleteElement(selectedImageElement.id)}>
                 <Trash2 className="h-5 w-5" />
                 <span className="text-xs">Delete Image</span>
               </Button>
             )}
-            <Button variant="default" className="flex flex-col h-auto p-1" onClick={handleBuyNowClick} disabled={isBuyNowDisabled}>
+            <Button variant="default" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={handleBuyNowClick} disabled={isBuyNowDisabled}>
               <ShoppingCart className="h-5 w-5" />
               <span className="text-xs">Buy Now</span>
             </Button>
@@ -1243,7 +1243,7 @@ const MobileCoverCustomizationPage = () => {
         )}
       </div>
 
-      <Dialog open={isCheckoutModalOpen} onOpenChange={setIsCheckoutModalOpen}>
+      <Dialog open={isCheckoutModal} onOpenChange={setIsCheckoutModal}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Checkout</DialogTitle>
@@ -1319,7 +1319,7 @@ const MobileCoverCustomizationPage = () => {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCheckoutModalOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setIsCheckoutModal(false)}>Cancel</Button>
             <Button onClick={() => handlePlaceOrder(false)} disabled={isPlacingOrder}>
               {isPlacingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Place Order
