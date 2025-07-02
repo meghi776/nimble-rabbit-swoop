@@ -79,7 +79,7 @@ interface TouchState {
   startX: number;
   startY: number;
   initialElementX: number;
-  initialElementY: number;
+  initialElementY: 0;
   initialDistance?: number;
   initialElementWidth?: number;
   initialElementHeight?: number;
@@ -115,7 +115,7 @@ const MobileCoverCustomizationPage = () => {
   const { user } = useSession();
   const { isDemoOrderModalOpen, setIsDemoOrderModalOpen, demoOrderPrice, setDemoOrderDetails, demoOrderAddress } = useDemoOrderModal(); // Use context
 
-  const [isCheckoutModalOpen, setIsCheckoutModal] = useState(false);
+  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
   const [customerPhone, setCustomerPhone] = useState(''); // Changed to useState
@@ -829,7 +829,7 @@ const MobileCoverCustomizationPage = () => {
       }
 
       showSuccess(isDemo ? "Demo order placed successfully!" : "Order placed successfully!");
-      setIsCheckoutModal(false);
+      setIsCheckoutModalOpen(false);
       setIsDemoOrderModalOpen(false);
       
       if (isDemo) {
@@ -866,7 +866,7 @@ const MobileCoverCustomizationPage = () => {
       showError("This product is currently out of stock.");
       return;
     }
-    setIsCheckoutModal(true);
+    setIsCheckoutModalOpen(true);
   }, [user, product, navigate]);
 
   // Removed handleDemoOrderClick as it's now triggered from the header
@@ -1195,22 +1195,22 @@ const MobileCoverCustomizationPage = () => {
               ))}
             </div>
             <div className="flex items-center justify-center w-full py-1 px-4">
-              <Button variant="ghost" className="flex flex-col h-auto p-1" onClick={handleBlurBackground}>
+              <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={handleBlurBackground}>
                 <Palette className="h-5 w-5" />
                 <span className="text-xs">Blur Background</span>
               </Button>
               {blurredBackgroundImageUrl && (
-                <Button variant="ghost" className="flex flex-col h-auto p-1" onClick={handleClearBlur}>
+                <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={handleClearBlur}>
                   <XCircle className="h-5 w-5" />
                   <span className="text-xs">Clear Blur</span>
                 </Button>
               )}
-              <Button variant="ghost" className="flex flex-col h-auto p-1" onClick={handleClearBackground}>
+              <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={handleClearBackground}>
                 <XCircle className="h-5 w-5" />
                   <span className="text-xs">Clear Background</span>
               </Button>
             </div>
-            <Button variant="ghost" className="flex flex-col h-auto p-1 mt-2" onClick={() => setIsBackColorPaletteOpen(false)}>
+            <Button variant="ghost" className="flex flex-col h-auto p-1 mt-2 transition-transform duration-200 hover:scale-105" onClick={() => setIsBackColorPaletteOpen(false)}>
               <XCircle className="h-5 w-5" />
               <span className="text-xs">Close</span>
             </Button>
@@ -1243,7 +1243,7 @@ const MobileCoverCustomizationPage = () => {
         )}
       </div>
 
-      <Dialog open={isCheckoutModal} onOpenChange={setIsCheckoutModal}>
+      <Dialog open={isCheckoutModalOpen} onOpenChange={setIsCheckoutModalOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Checkout</DialogTitle>
@@ -1319,7 +1319,7 @@ const MobileCoverCustomizationPage = () => {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCheckoutModal(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setIsCheckoutModalOpen(false)}>Cancel</Button>
             <Button onClick={() => handlePlaceOrder(false)} disabled={isPlacingOrder}>
               {isPlacingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Place Order
