@@ -150,8 +150,7 @@ const MobileCoverCustomizationPage = () => {
   ];
 
   const selectedTextElement = selectedElementId ? designElements.find(el => el.id === selectedElementId && el.type === 'text') : null;
-  const selectedImageElement = selectedElementId ? designElements.find(el => el.id === selectedElementId && el.type === 'image') : null;
-
+  // Removed selectedImageElement as it's no longer needed for the delete button
 
   const textElementRefs = useRef<Map<string, HTMLDivElement>>(new Map()); // Changed to HTMLDivElement
   const lastCaretPosition = useRef<{ node: Node | null; offset: number } | null>(null);
@@ -1033,16 +1032,7 @@ const MobileCoverCustomizationPage = () => {
                 {product.name}
               </h1>
             </div>
-            {selectedImageElement && (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => deleteElement(selectedImageElement.id)}
-                className="ml-auto" // Push to the right
-              >
-                <Trash2 className="h-4 w-4 mr-2" /> Delete Image
-              </Button>
-            )}
+            {/* Removed Delete Image button from here */}
           </div>
 
           <div
@@ -1250,6 +1240,7 @@ const MobileCoverCustomizationPage = () => {
               <Palette className="h-5 w-5" />
               <span className="text-xs">Back Color</span>
             </Button>
+            {/* Removed Delete Image button from here */}
             <Button variant="default" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105 animate-pulse-highlight" onClick={handleBuyNowClick} disabled={isBuyNowDisabled}>
               <ShoppingCart className="h-5 w-5" />
               <span className="text-xs">Buy Now</span>
