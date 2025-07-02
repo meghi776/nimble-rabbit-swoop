@@ -223,6 +223,7 @@ const UserOrdersPage = () => {
                 <SelectItem value="total_price">Total Price</SelectItem>
                 <SelectItem value="status">Status</SelectItem>
                 <SelectItem value="type">Type</SelectItem>
+                <SelectItem value="payment_method">Payment Method</SelectItem> {/* Added payment_method sort */}
               </SelectContent>
             </Select>
             <Button
@@ -263,6 +264,7 @@ const UserOrdersPage = () => {
                         <TableHead>Product</TableHead>
                         <TableHead>Design</TableHead>
                         <TableHead>Type</TableHead> {/* New TableHead for Type */}
+                        <TableHead>Payment Method</TableHead> {/* New TableHead for Payment Method */}
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Total</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
@@ -284,6 +286,7 @@ const UserOrdersPage = () => {
                             )}
                           </TableCell>
                           <TableCell>{order.type}</TableCell> {/* Display order type */}
+                          <TableCell>{order.payment_method}</TableCell> {/* Display payment method */}
                           <TableCell>{order.status}</TableCell>
                           <TableCell className="text-right">${order.total_price?.toFixed(2)}</TableCell>
                           <TableCell className="text-right">

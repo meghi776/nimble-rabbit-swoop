@@ -37,6 +37,7 @@ import { Switch } from "@/components/ui/switch";
 import { proxyImageUrl } from '@/utils/imageProxy';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast'; // Import toast utilities
 import { useDemoOrderModal } from '@/contexts/DemoOrderModalContext'; // Import useDemoOrderModal
+import QRCode from 'qrcode.react'; // Import qrcode.react
 
 interface Product {
   id: string;
@@ -117,7 +118,7 @@ const MobileCoverCustomizationPage = () => {
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
-  const [customerPhone, setCustomerPhone] = '';
+  const [customerPhone, setCustomerPhone] = useState(''); // Changed to useState
   const [paymentMethod, setPaymentMethod] = useState('COD');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
@@ -154,6 +155,10 @@ const MobileCoverCustomizationPage = () => {
 
   const textElementRefs = useRef<Map<string, HTMLDivElement>>(new Map()); // Changed to HTMLDivElement
   const lastCaretPosition = useRef<{ node: Node | null; offset: number } | null>(null);
+
+  // UPI details (placeholder - in a real app, this would come from a secure backend/env variables)
+  const UPI_VPA = 'your_upi_id@bank'; // Replace with your actual UPI ID
+  const UPI_PAYEE_NAME = 'Your Business Name'; // Replace with your business name
 
   // Effect to calculate scale factor based on the rendered size of the canvas content
   useEffect(() => {
@@ -295,7 +300,7 @@ const MobileCoverCustomizationPage = () => {
     if (selectedElementId && lastCaretPosition.current) {
       const element = designElements.find(el => el.id === selectedElementId);
       if (element && element.type === 'text') {
-        const divRef = textElementRefs.current.get(selectedElementId);
+        const divRef = textElementRefs.current.get(el.id);
         if (divRef) {
           const selection = window.getSelection();
           const range = document.createRange();
@@ -705,7 +710,7 @@ const MobileCoverCustomizationPage = () => {
     const finalCustomerName = isDemo ? 'Demo User' : customerName;
     const finalCustomerAddress = isDemo ? demoOrderAddress : customerAddress;
     const finalCustomerPhone = isDemo ? '0000000000' : customerPhone;
-    const finalPaymentMethod = isDemo ? 'Demo' : 'COD';
+    const finalPaymentMethod = isDemo ? 'Demo' : paymentMethod; // Use selected payment method
     const finalStatus = isDemo ? 'Demo' : 'Pending';
     const finalTotalPrice = isDemo ? parseFloat(demoOrderPrice) : product.price;
     const finalOrderType = isDemo ? 'demo' : 'normal';
@@ -842,7 +847,7 @@ const MobileCoverCustomizationPage = () => {
       setIsPlacingOrder(false);
       dismissToast(toastId);
     }
-  }, [product, user, customerName, customerAddress, customerPhone, demoOrderPrice, demoOrderAddress, designElements, navigate, setIsDemoOrderModalOpen]);
+  }, [product, user, customerName, customerAddress, customerPhone, paymentMethod, demoOrderPrice, demoOrderAddress, designElements, navigate, setIsDemoOrderModalOpen]);
 
   const handleBuyNowClick = useCallback(() => {
     if (!user) {
@@ -989,6 +994,14 @@ const MobileCoverCustomizationPage = () => {
   };
 
   const isBuyNowDisabled = loading || isPlacingOrder || (product && product.inventory !== null && product.inventory <= 0);
+
+  // Generate UPI QR code data string
+  const generateUpiQrData = () => {
+    if (!product || !product.price) return '';
+    const amount = product.price.toFixed(2);
+    const transactionId = `ORDER_${Date.now()}`; // Unique transaction ID
+    return `upi://pay?pa=${UPI_VPA}&pn=${encodeURIComponent(UPI_PAYEE_NAME)}&am=${amount}&cu=INR&tid=${transactionId}`;
+  };
 
   return (
     <div className="flex flex-col bg-gray-50 dark:bg-gray-900 flex-1"> {/* Removed min-h-screen, added flex-1 */}
@@ -1275,13 +1288,26 @@ const MobileCoverCustomizationPage = () => {
               <Label htmlFor="payment-method" className="text-right">
                 Payment
               </Label>
-              <Input
-                id="payment-method"
-                value="Cash on Delivery"
-                readOnly
-                className="col-span-3 bg-gray-100 dark:bg-gray-700"
-              />
+              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select payment method" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="COD">Cash on Delivery</SelectItem>
+                  <SelectItem value="UPI">UPI Scanner</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+            {paymentMethod === 'UPI' && product && (
+              <div className="col-span-4 flex flex-col items-center justify-center p-4 border rounded-md bg-gray-50 dark:bg-gray-700">
+                <p className="text-lg font-semibold mb-2">Scan to Pay</p>
+                <QRCode value={generateUpiQrData()} size={200} level="H" includeMargin={true} />
+                <p className="text-sm text-muted-foreground mt-2">Amount: ₹{product.price?.toFixed(2)}</p>
+                <p className="text-xs text-muted-foreground text-center mt-1">
+                  (This is a demo QR. Payment will not be automatically confirmed.)
+                </p>
+              </div>
+            )}
             {product && (
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right font-bold">Total Price</Label>

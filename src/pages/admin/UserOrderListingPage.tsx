@@ -65,7 +65,7 @@ const OrderManagementPage = () => {
   const [normalOrderCount, setNormalOrderCount] = useState<number | null>(null); // New state for normal order count
   const [demoOrderCount, setDemoOrderCount] = useState<number | null>(null); // New state for demo order count
 
-  const orderStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
+  const orderStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Demo']; // Added 'Demo' status
 
   const fetchOrdersAndCounts = async () => {
     setLoading(true);
@@ -489,6 +489,9 @@ const OrderManagementPage = () => {
                         <TableHead className="cursor-pointer hover:text-primary" onClick={() => handleSort('type')}>
                           <div className="flex items-center">Type {getSortIcon('type')}</div>
                         </TableHead>
+                        <TableHead className="cursor-pointer hover:text-primary" onClick={() => handleSort('payment_method')}>
+                          <div className="flex items-center">Payment Method {getSortIcon('payment_method')}</div>
+                        </TableHead>
                         <TableHead className="cursor-pointer hover:text-primary" onClick={() => handleSort('status')}>
                           <div className="flex items-center">Status {getSortIcon('status')}</div>
                         </TableHead>
@@ -527,6 +530,7 @@ const OrderManagementPage = () => {
                             )}
                           </TableCell>
                           <TableCell>{order.type}</TableCell>
+                          <TableCell>{order.payment_method}</TableCell> {/* Display payment method */}
                           <TableCell>{order.status}</TableCell>
                           <TableCell className="text-right">${order.total_price?.toFixed(2)}</TableCell>
                           <TableCell className="text-right">
