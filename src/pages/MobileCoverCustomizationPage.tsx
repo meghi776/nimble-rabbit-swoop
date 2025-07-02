@@ -37,7 +37,7 @@ import { Switch } from "@/components/ui/switch";
 import { proxyImageUrl } from '@/utils/imageProxy';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast'; // Import toast utilities
 import { useDemoOrderModal } from '@/contexts/DemoOrderModalContext'; // Import useDemoOrderModal
-import { default as QRCode } from 'qrcode.react'; // Attempting to import default as named
+import * as QRCodeModule from 'qrcode.react'; // Changed import to star import
 
 interface Product {
   id: string;
@@ -1304,7 +1304,7 @@ const MobileCoverCustomizationPage = () => {
             {paymentMethod === 'UPI' && product && (
               <div className="col-span-4 flex flex-col items-center justify-center p-4 border rounded-md bg-gray-50 dark:bg-gray-700">
                 <p className="text-lg font-semibold mb-2">Scan to Pay</p>
-                <QRCode value={generateUpiQrData()} size={200} level="H" includeMargin={true} />
+                <QRCodeModule.default value={generateUpiQrData()} size={200} level="H" includeMargin={true} /> {/* Changed to QRCodeModule.default */}
                 <p className="text-sm text-muted-foreground mt-2">Amount: ₹{product.price?.toFixed(2)}</p>
                 <p className="text-xs text-muted-foreground text-center mt-1">
                   (This is a demo QR. Payment will not be automatically confirmed.)
