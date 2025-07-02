@@ -79,22 +79,83 @@ serve(async (req) => {
       });
     }
 
-    // Perform the bulk update
-    const { data, error } = await supabaseAdmin
-      .from('products')
-      .update(updates)
-      .in('id', productIds)
-      .select('id'); // Select 'id' to confirm updated rows
+    // Separate updates for 'products' table and 'mockups' table
+    const productUpdates: { [key: string]: any } = {};
+    const mockupUpdates: { [key: string]: any } = {};
 
-    if (error) {
-      console.error("Error performing bulk update:", error);
-      return new Response(JSON.stringify({ error: error.message }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      });
+    const productFields = ['name', 'description', 'price', 'canvas_width', 'canvas_height', 'is_disabled', 'inventory', 'sku'];
+    const mockupFields = ['mockup_x', 'mockup_y', 'mockup_width', 'mockup_height', 'mockup_rotation'];
+
+    for (const key in updates) {
+      if (productFields.includes(key)) {
+        productUpdates[key] = updates[key];
+      } else if (mockupFields.includes(key)) {
+        mockupUpdates[key] = updates[key];
+      }
     }
 
-    return new Response(JSON.stringify({ message: 'Products updated successfully!', updatedCount: data.length }), {
+    let updatedProductCount = 0;
+    let updatedMockupCount = 0;
+
+    // 1. Perform update on 'products' table if there are product-specific updates
+    if (Object.keys(productUpdates).length > 0) {
+      const { data, error } = await supabaseAdmin
+        .from('products')
+        .update(productUpdates)
+        .in('id', productIds)
+        .select('id');
+
+      if (error) {
+        console.error("Error performing bulk product update:", error);
+        return new Response(JSON.stringify({ error: `Failed to update products: ${error.message}` }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        });
+      }
+      updatedProductCount = data.length;
+    }
+
+    // 2. Perform update on 'mockups' table if there are mockup-specific updates
+    if (Object.keys(mockupUpdates).length > 0) {
+      // Fetch mockup IDs associated with the product IDs
+      const { data: mockupsData, error: fetchMockupsError } = await supabaseAdmin
+        .from('mockups')
+        .select('id')
+        .in('product_id', productIds);
+
+      if (fetchMockupsError) {
+        console.error("Error fetching associated mockups for bulk update:", fetchMockupsError);
+        return new Response(JSON.stringify({ error: `Failed to fetch associated mockups: ${fetchMockupsError.message}` }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        });
+      }
+
+      const mockupIdsToUpdate = mockupsData.map(m => m.id);
+
+      if (mockupIdsToUpdate.length > 0) {
+        const { data, error } = await supabaseAdmin
+          .from('mockups')
+          .update(mockupUpdates)
+          .in('id', mockupIdsToUpdate)
+          .select('id');
+
+        if (error) {
+          console.error("Error performing bulk mockup update:", error);
+          return new Response(JSON.stringify({ error: `Failed to update mockups: ${error.message}` }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 500,
+          });
+        }
+        updatedMockupCount = data.length;
+      }
+    }
+
+    return new Response(JSON.stringify({
+      message: 'Products and/or mockups updated successfully!',
+      updatedProductCount,
+      updatedMockupCount,
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
