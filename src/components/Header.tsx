@@ -41,8 +41,7 @@ const Header = () => {
       <nav className="flex items-center space-x-2">
         {/* The Preview button is now always visible */}
         <Button variant="ghost" onClick={handlePreviewClick}>
-          <Eye className="h-5 w-5 mr-2" />
-          Preview
+          <Eye className="h-5 w-5" /> {/* Removed "Preview" text */}
         </Button>
         <Link to="/admin">
           <Button variant="ghost">Admin</Button>
