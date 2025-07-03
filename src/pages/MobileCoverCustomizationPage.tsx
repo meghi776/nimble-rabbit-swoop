@@ -1343,7 +1343,8 @@ const MobileCoverCustomizationPage = () => {
           </div>
         ) : isBackColorPaletteOpen ? (
           <div className="flex flex-col w-full items-center">
-            <div className="flex items-center justify-center gap-1 p-1 w-full overflow-x-auto scrollbar-hide">
+            {/* Color circles with padding */}
+            <div className="flex items-center justify-center gap-1 px-4 py-1 w-full overflow-x-auto scrollbar-hide">
               {predefinedColors.map((color) => (
                 <div
                   key={color}
@@ -1354,7 +1355,8 @@ const MobileCoverCustomizationPage = () => {
                 />
               ))}
             </div>
-            <div className="flex items-center justify-center w-full py-1 px-4">
+            {/* Blur, Clear, Close buttons on a single line */}
+            <div className="flex items-center justify-center w-full py-1 px-4 space-x-2"> {/* Use space-x-2 for spacing */}
               <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={handleBlurBackground}>
                 <Palette className="h-5 w-5" />
                 <span className="text-xs">Blur Background</span>
@@ -1367,13 +1369,13 @@ const MobileCoverCustomizationPage = () => {
               )}
               <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={handleClearBackground}>
                 <XCircle className="h-5 w-5" />
-                  <span className="text-xs">Clear Background</span>
+                  <span className="text-xs">Clear All</span>
+              </Button>
+              <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={() => setIsBackColorPaletteOpen(false)}>
+                <XCircle className="h-5 w-5" />
+                <span className="text-xs">Close</span>
               </Button>
             </div>
-            <Button variant="ghost" className="flex flex-col h-auto p-1 mt-2 transition-transform duration-200 hover:scale-105" onClick={() => setIsBackColorPaletteOpen(false)}>
-              <XCircle className="h-5 w-5" />
-              <span className="text-xs">Close</span>
-            </Button>
           </div>
         ) : (
           <>
