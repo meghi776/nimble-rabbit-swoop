@@ -990,14 +990,14 @@ const ProductCustomizerPage = () => {
         throw new Error(`Failed to place order: ${orderInsertError.message}`);
       }
 
-      showSuccess(isDemo ? "Demo order placed successfully!" : "Order placed successfully!");
+      showSuccess(isDemo ? "Demo order placed successfully!" : "Your order placed successfully");
       setIsCheckoutModalOpen(false);
       setIsDemoOrderModalOpen(false);
       
       if (isDemo) {
         navigate('/admin/demo-orders');
       } else {
-        navigate('/orders');
+        navigate('/');
       }
 
     } catch (err: any) {
