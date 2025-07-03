@@ -103,8 +103,6 @@ const OrderManagementPage = () => {
 
       // Fetch orders list
       const payload = {
-        sortColumn,
-        sortDirection,
         orderType: orderTypeFilter,
         userId: selectedUserIdFilter === 'all' ? null : selectedUserIdFilter,
         startDate: startDate ? startDate.toISOString() : null,
@@ -135,7 +133,41 @@ const OrderManagementPage = () => {
         showError(`Failed to load orders: ${errorMessage}`);
         setError(errorMessage);
       } else if (data && data.orders) {
-        setOrders(data.orders || []);
+        let sortedData = data.orders || [];
+        // Client-side sorting
+        sortedData.sort((a: Order, b: Order) => {
+          let valA: any;
+          let valB: any;
+
+          if (sortColumn === 'user_email') {
+            valA = a.user_email || '';
+            valB = b.user_email || '';
+          } else if (sortColumn === 'customer_name') {
+            valA = `${a.profiles?.first_name || ''} ${a.profiles?.last_name || ''}`.trim() || a.customer_name;
+            valB = `${b.profiles?.first_name || ''} ${b.profiles?.last_name || ''}`.trim() || b.customer_name;
+          } else {
+            valA = a[sortColumn as keyof Order];
+            valB = b[sortColumn as keyof Order];
+          }
+
+          if (valA === null || valA === undefined) return 1;
+          if (valB === null || valB === undefined) return -1;
+
+          if (typeof valA === 'number' && typeof valB === 'number') {
+            return sortDirection === 'asc' ? valA - valB : valB - valA;
+          }
+          
+          if (sortColumn === 'created_at') {
+             const dateA = new Date(valA as string);
+             const dateB = new Date(valB as string);
+             return sortDirection === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
+          }
+
+          return sortDirection === 'asc' 
+            ? String(valA).localeCompare(String(valB)) 
+            : String(valB).localeCompare(String(valA));
+        });
+        setOrders(sortedData);
         setUserList(data.users || []);
       } else {
         showError("Unexpected response from server when fetching orders.");

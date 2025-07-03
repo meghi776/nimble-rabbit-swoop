@@ -15,15 +15,13 @@ serve(async (req) => {
     // 1. Get Payload and Set Defaults
     const body = await req.json().catch(() => ({})); // Handle empty body case
     const {
-      sortColumn = 'created_at',
-      sortDirection = 'desc',
       orderType = 'all',
       userId: userIdFilter = null,
-      startDate = null, // New: Add startDate
-      endDate = null,   // New: Add endDate
+      startDate = null,
+      endDate = null,
     } = body;
 
-    console.log(`Edge Function: Received filters - sortColumn=${sortColumn}, sortDirection=${sortDirection}, orderType=${orderType}, userIdFilter=${userIdFilter}, startDate=${startDate}, endDate=${endDate}`);
+    console.log(`Edge Function: Received filters - orderType=${orderType}, userIdFilter=${userIdFilter}, startDate=${startDate}, endDate=${endDate}`);
 
     // 2. Create Admin Client and Authenticate
     const supabaseAdmin = createClient(
@@ -79,20 +77,17 @@ serve(async (req) => {
     if (userIdFilter) {
       query = query.eq('user_id', userIdFilter);
     }
-    // Add date filters
     if (startDate) {
       query = query.gte('created_at', startDate);
     }
     if (endDate) {
       const endOfDay = new Date(endDate);
-      endOfDay.setUTCHours(23, 59, 59, 999); // Use UTC hours to include the entire end day
+      endOfDay.setUTCHours(23, 59, 59, 999);
       query = query.lte('created_at', endOfDay.toISOString());
     }
-
-    // Apply sorting (except for user_email which is handled later)
-    if (sortColumn !== 'user_email') {
-      query = query.order(sortColumn, { ascending: sortDirection === 'asc' });
-    }
+    
+    // Default sort by creation date on the database level for initial load
+    query = query.order('created_at', { ascending: false });
 
     // 5. Execute Query
     const { data: ordersData, error: ordersError } = await query;
@@ -108,21 +103,12 @@ serve(async (req) => {
     }
 
     const userEmailMap = new Map(usersData.users.map(user => [user.id, user.email]));
-    let ordersWithEmails = ordersData.map(order => ({
+    const ordersWithEmails = ordersData.map(order => ({
       ...order,
       user_email: userEmailMap.get(order.user_id) || null,
     }));
 
-    // 7. Handle user_email sorting
-    if (sortColumn === 'user_email') {
-      ordersWithEmails.sort((a, b) => {
-        const emailA = a.user_email || '';
-        const emailB = b.user_email || '';
-        return sortDirection === 'asc' ? emailA.localeCompare(emailB) : emailB.localeCompare(emailA);
-      });
-    }
-
-    // 8. Prepare and Return Response
+    // 7. Prepare and Return Response
     const userListForFrontend = usersData.users.map(user => ({
       id: user.id,
       email: user.email,
