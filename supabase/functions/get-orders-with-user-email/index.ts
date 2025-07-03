@@ -21,7 +21,7 @@ serve(async (req) => {
   try {
     const contentType = req.headers.get('content-type');
     if (contentType && contentType.includes('application/json')) {
-      const bodyText = await req.text();
+      const bodyText = await req.text(); // Read as text first
       if (bodyText) {
         try {
           requestBody = JSON.parse(bodyText);
@@ -31,9 +31,14 @@ serve(async (req) => {
           userIdFilter = requestBody.userId || null;
         } catch (jsonParseError) {
           console.error("Edge Function: Error parsing JSON body:", jsonParseError);
+          // Return 400 here if JSON is malformed
+          return new Response(JSON.stringify({ error: `Invalid JSON format: ${jsonParseError.message}` }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400,
+          });
         }
       } else {
-        console.log("Edge Function: Received application/json with empty body.");
+        console.log("Edge Function: Received application/json with empty body. Proceeding with defaults.");
       }
     }
   } catch (error) {
@@ -55,7 +60,7 @@ serve(async (req) => {
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      console.error("Edge Function: Authorization header missing.");
+      console.error("Edge Function: Authorization header missing. Returning 401.");
       return new Response(JSON.stringify({ error: 'Authorization header missing.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 401,
@@ -66,7 +71,7 @@ serve(async (req) => {
     const { data: { user: invokerUser }, error: authError } = await supabaseAdmin.auth.getUser(token);
 
     if (authError || !invokerUser) {
-      console.error("Edge Function: Auth error during token verification:", authError?.message || "User not found.");
+      console.error("Edge Function: Auth error during token verification:", authError?.message || "User not found. Returning 401.");
       return new Response(JSON.stringify({ error: 'Unauthorized: Invalid token or user not found.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 401,
@@ -81,7 +86,7 @@ serve(async (req) => {
       .single();
 
     if (profileError) {
-      console.error("Edge Function: Error fetching invoker profile:", profileError);
+      console.error("Edge Function: Error fetching invoker profile:", profileError, "Returning 403.");
       return new Response(JSON.stringify({ error: `Forbidden: Error fetching user role: ${profileError.message}` }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 403,
@@ -89,13 +94,13 @@ serve(async (req) => {
     }
 
     if (invokerProfile?.role !== 'admin') {
-      console.error(`Edge Function: Forbidden: User ${invokerUser.id} (role: ${invokerProfile?.role}) is not an admin.`);
+      console.error(`Edge Function: Forbidden: User ${invokerUser.id} (role: ${invokerProfile?.role}) is not an admin. Returning 403.`);
       return new Response(JSON.stringify({ error: 'Forbidden: Only administrators can view all orders.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 403,
       });
     }
-    console.log(`Edge Function: Invoker user ${invokerUser.id} is an admin.`);
+    console.log(`Edge Function: Invoker user ${invokerUser.id} is an admin. Role: ${invokerProfile.role}`);
 
     let query = supabaseAdmin
       .from('orders')
@@ -140,7 +145,7 @@ serve(async (req) => {
     console.log("Edge Function: Orders error:", ordersError);
 
     if (ordersError) {
-      console.error("Edge Function: Error fetching orders from DB:", ordersError);
+      console.error("Edge Function: Error fetching orders from DB:", ordersError, "Returning 500.");
       return new Response(JSON.stringify({ error: ordersError.message }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
@@ -155,7 +160,7 @@ serve(async (req) => {
     });
 
     if (usersError) {
-      console.error("Edge Function: Error listing users from Auth:", usersError);
+      console.error("Edge Function: Error listing users from Auth:", usersError, "Returning 500.");
       return new Response(JSON.stringify({ error: usersError.message }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
@@ -197,7 +202,7 @@ serve(async (req) => {
       status: 200,
     });
   } catch (error) {
-    console.error("Edge Function: Unexpected error in main logic:", error);
+    console.error("Edge Function: Unexpected top-level error in main logic:", error, "Returning 500.");
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
