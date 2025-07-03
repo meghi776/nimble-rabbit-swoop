@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PlusCircle, Edit, Trash2, ArrowLeft, Upload, Download, Search, ListChecks } from 'lucide-react';
-import { useSession } from '@/contexts/SessionContext';
+import { useSession } => '@/contexts/SessionContext';
 import Papa from 'papaparse';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
@@ -560,20 +560,32 @@ const ProductManagementByBrandPage = () => {
 
       if (invokeError) {
         console.error("Edge Function Invoke Error (bulk-update-products):", invokeError);
-        let errorMessage = invokeError.message;
+        console.error("Invoke Error Context:", invokeError.context);
+
+        let errorMessage = invokeError.message; // Default to generic message
+
         if (invokeError.context?.data) {
           try {
-            const parsedError = JSON.parse(invokeError.context.data);
-            if (parsedError.error) {
-              errorMessage = parsedError.error;
+            const parsedErrorBody = typeof invokeError.context.data === 'string'
+              ? JSON.parse(invokeError.context.data)
+              : invokeError.context.data;
+
+            if (parsedErrorBody && typeof parsedErrorBody === 'object' && 'error' in parsedErrorBody) {
+              errorMessage = parsedErrorBody.error;
+            } else {
+              // If data exists but isn't a simple { error: "message" }
+              errorMessage = `Edge Function responded with status ${invokeError.context?.status || 'unknown'}. Raw response: ${JSON.stringify(parsedErrorBody)}`;
             }
-          } catch (e) {
-            // Fallback if context.data is not JSON
+          } catch (parseErr) {
+            console.error("Failed to parse error response body from Edge Function:", parseErr);
+            errorMessage = `Edge Function responded with status ${invokeError.context?.status || 'unknown'}. Raw response: ${invokeError.context.data}`;
           }
+        } else if (invokeError.context?.status) {
+          errorMessage = `Edge Function returned status code: ${invokeError.context.status}`;
         }
         showError(`Failed to bulk update products: ${errorMessage}`);
       } else if (data) {
-        showSuccess(`Successfully updated ${data.updatedCount} products!`);
+        showSuccess(`Successfully updated ${data.updatedProductCount} products and ${data.updatedMockupCount} mockups!`);
         setIsBulkEditModalOpen(false);
         setBulkEditFields({
           price: false, inventory: false, is_disabled: false, description: false, sku: false,
