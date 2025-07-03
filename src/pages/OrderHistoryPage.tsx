@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, Image as ImageIcon, ArrowDownWideNarrow, ArrowUpWideNarrow, Calendar as CalendarIcon, XCircle } from 'lucide-react';
+import { Loader2, Image as ImageIcon, ArrowDownWideNarrow, ArrowUpWideNarrow, Calendar as CalendarIcon, XCircle, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -20,6 +20,7 @@ import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import OrderHistoryCard from '@/components/OrderHistoryCard';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
+import { deleteFileFromSupabase } from '@/utils/supabaseStorage';
 
 interface Order {
   id: string;
@@ -162,6 +163,39 @@ const OrderHistoryPage = () => {
     } catch (err: any) {
       console.error("Error cancelling order:", err);
       showError(`Failed to cancel order: ${err.message}`);
+    } finally {
+      dismissToast(toastId);
+    }
+  };
+
+  const handleDeleteOrder = async (orderId: string, imageUrl: string | null) => {
+    if (!window.confirm("Are you sure you want to permanently delete this order? This action cannot be undone.")) {
+      return;
+    }
+    const toastId = showLoading("Deleting order...");
+    try {
+      // RLS policy will ensure only demo users can delete their own orders.
+      // First, delete the image from storage if it exists.
+      if (imageUrl && imageUrl.startsWith('https://smpjbedvyqensurarrym.supabase.co/storage/v1/object/public/order-mockups/')) {
+        const fileName = imageUrl.split('/').pop();
+        if (fileName) {
+          await deleteFileFromSupabase(`orders/${fileName}`, 'order-mockups');
+        }
+      }
+      
+      // Then, delete the order record.
+      const { error } = await supabase
+        .from('orders')
+        .delete()
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      showSuccess("Order deleted successfully.");
+      setOrders(prev => prev.filter(o => o.id !== orderId));
+    } catch (err: any) {
+      console.error("Error deleting order:", err);
+      showError(`Failed to delete order: ${err.message}`);
     } finally {
       dismissToast(toastId);
     }
@@ -344,14 +378,23 @@ const OrderHistoryPage = () => {
                       <TableCell>{order.payment_method}</TableCell>
                       <TableCell>{order.status}</TableCell>
                       <TableCell className="text-right">₹{order.total_price?.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right space-x-2">
                         {order.status === 'Pending' && (
                           <Button
-                            variant="destructive"
+                            variant="outline"
                             size="sm"
                             onClick={() => handleCancelOrder(order.id)}
                           >
                             <XCircle className="mr-1 h-4 w-4" /> Cancel
+                          </Button>
+                        )}
+                        {user.role === 'demo' && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDeleteOrder(order.id, order.ordered_design_image_url)}
+                          >
+                            <Trash2 className="mr-1 h-4 w-4" /> Delete
                           </Button>
                         )}
                       </TableCell>

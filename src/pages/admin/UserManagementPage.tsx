@@ -24,8 +24,7 @@ interface Profile {
   id: string;
   first_name: string | null;
   last_name: string | null;
-  role: 'user' | 'admin';
-  // Removed can_preview: boolean;
+  role: 'user' | 'admin' | 'demo';
 }
 
 const UserManagementPage = () => {
@@ -37,8 +36,7 @@ const UserManagementPage = () => {
   const [currentProfile, setCurrentProfile] = useState<Profile | null>(null);
   const [editFirstName, setEditFirstName] = useState('');
   const [editLastName, setEditLastName] = useState('');
-  const [editRole, setEditRole] = useState<'user' | 'admin'>('user');
-  // Removed [editCanPreview, setEditCanPreview] = useState(false);
+  const [editRole, setEditRole] = useState<'user' | 'admin' | 'demo'>('user');
   const [newEmail, setNewEmail] = useState(''); // New state for new user email
   const [newPassword, setNewPassword] = useState(''); // New state for new user password
   const [newFirstName, setNewFirstName] = useState(''); // New state for new user first name
@@ -51,7 +49,7 @@ const UserManagementPage = () => {
     setError(null);
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, first_name, last_name, role'); // Removed can_preview from select
+      .select('id, first_name, last_name, role');
 
     if (error) {
       console.error("Error fetching profiles:", error);
@@ -94,7 +92,6 @@ const UserManagementPage = () => {
     setEditFirstName(profile.first_name || '');
     setEditLastName(profile.last_name || '');
     setEditRole(profile.role);
-    // Removed setEditCanPreview(profile.can_preview);
     setIsEditModalOpen(true);
   };
 
@@ -131,7 +128,6 @@ const UserManagementPage = () => {
         first_name: editFirstName,
         last_name: editLastName,
         role: editRole,
-        // Removed can_preview: editCanPreview,
       })
       .eq('id', currentProfile.id);
 
@@ -181,7 +177,6 @@ const UserManagementPage = () => {
 
       const { data, error: invokeError } = await supabase.functions.invoke('create-user-admin', {
         body: JSON.stringify(requestBody),
-        // Removed explicit Authorization header, relying on Supabase client to attach it
         headers: {
           'Content-Type': 'application/json',
         },
@@ -198,7 +193,6 @@ const UserManagementPage = () => {
 
         let errorMessage = "An unexpected error occurred while creating the user."; // Default fallback message
 
-        // Try to extract error from context.data
         if (invokeError.context?.data) {
           try {
             let parsedErrorBody: any;
@@ -211,7 +205,6 @@ const UserManagementPage = () => {
             if (parsedErrorBody && typeof parsedErrorBody === 'object' && 'error' in parsedErrorBody) {
               errorMessage = parsedErrorBody.error;
             } else {
-              // If context.data is present but not in expected { error: "message" } format
               errorMessage = `Failed to create user: Unexpected response format. Status: ${invokeError.context?.status || 'N/A'}. Raw: ${JSON.stringify(invokeError.context.data)}`;
             }
           } catch (parseErr) {
@@ -219,20 +212,19 @@ const UserManagementPage = () => {
             errorMessage = `Failed to create user: ${invokeError.message}. Raw response: ${invokeError.context.data}`;
           }
         } else if (invokeError.message) {
-          // Fallback to invokeError.message if context.data is not available
           errorMessage = invokeError.message;
         }
 
         setError(errorMessage);
         showError(errorMessage);
-      } else if (data && (data as any).error) { // This handles cases where function returns 200 but with an error payload
+      } else if (data && (data as any).error) { 
         console.error("Edge Function returned error in data payload (status 200):", (data as any).error);
         setError(`Failed to create user: ${(data as any).error}`);
         showError(`Failed to create user: ${(data as any).error}`);
       } else {
         showSuccess("User created successfully!");
         setIsAddUserModalOpen(false);
-        fetchProfiles(); // Re-fetch profiles to show the new user
+        fetchProfiles(); 
       }
     } catch (err) {
       console.error("Network or unexpected error invoking Edge Function:", err);
@@ -284,7 +276,6 @@ const UserManagementPage = () => {
                       <TableHead>First Name</TableHead>
                       <TableHead>Last Name</TableHead>
                       <TableHead>Role</TableHead>
-                      {/* Removed TableHead for Can Preview */}
                       {isAdmin && <TableHead className="text-right">Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
@@ -295,7 +286,6 @@ const UserManagementPage = () => {
                         <TableCell>{profile.first_name || 'N/A'}</TableCell>
                         <TableCell>{profile.last_name || 'N/A'}</TableCell>
                         <TableCell>{profile.role}</TableCell>
-                        {/* Removed TableCell for Can Preview */}
                         {isAdmin && (
                           <TableCell className="text-right">
                             <Button
@@ -303,7 +293,7 @@ const UserManagementPage = () => {
                               size="sm"
                               className="mr-2"
                               onClick={() => handleEditClick(profile)}
-                              disabled={profile.id === currentUser?.id} // Prevent editing own profile role here to avoid self-lockout
+                              disabled={profile.id === currentUser?.id}
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -311,7 +301,7 @@ const UserManagementPage = () => {
                               variant="destructive"
                               size="sm"
                               onClick={() => handleDeleteClick(profile.id)}
-                              disabled={profile.id === currentUser?.id} // Prevent deleting own profile
+                              disabled={profile.id === currentUser?.id}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -327,7 +317,6 @@ const UserManagementPage = () => {
         </Card>
       )}
 
-      {/* Edit User Profile Dialog */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
         <DialogContent>
           <DialogHeader>
@@ -360,33 +349,17 @@ const UserManagementPage = () => {
               <Label htmlFor="edit-role" className="text-right">
                 Role
               </Label>
-              <Select value={editRole} onValueChange={(value: 'user' | 'admin') => setEditRole(value)}>
+              <Select value={editRole} onValueChange={(value: 'user' | 'admin' | 'demo') => setEditRole(value)}>
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="user">User</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="demo">Demo</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            {/* Removed Can Preview switch */}
-            {/* <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-can-preview" className="text-right">
-                Can Preview
-              </Label>
-              <div className="col-span-3 flex items-center">
-                <Switch
-                  id="edit-can-preview"
-                  checked={editCanPreview}
-                  onCheckedChange={setEditCanPreview}
-                  disabled={currentProfile?.id === currentUser?.id}
-                />
-                <span className="ml-2 text-sm text-gray-600 dark:text-gray-300">
-                  {editCanPreview ? 'Enabled' : 'Disabled'}
-                </span>
-              </div>
-            </div> */}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
@@ -395,7 +368,6 @@ const UserManagementPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Add New User Dialog */}
       <Dialog open={isAddUserModalOpen} onOpenChange={setIsAddUserModalOpen}>
         <DialogContent>
           <DialogHeader>

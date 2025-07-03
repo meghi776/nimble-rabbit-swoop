@@ -8,7 +8,7 @@ interface CustomUser extends User {
     first_name?: string;
     last_name?: string;
   };
-  // Removed can_preview?: boolean;
+  role?: 'user' | 'admin' | 'demo';
 }
 
 interface SessionContextType {
@@ -46,23 +46,22 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       });
 
       if (currentSession?.user) {
-        // Removed fetching can_preview from profiles table
-        // const { data: profileData, error: profileError } = await supabase
-        //   .from('profiles')
-        //   .select('can_preview')
-        //   .eq('id', currentSession.user.id)
-        //   .single();
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', currentSession.user.id)
+          .single();
 
         setUser(prevUser => {
-          // const newCanPreview = profileData?.can_preview || false; // Removed this line
+          const newRole = profileData?.role || 'user';
           const isSameUserId = prevUser?.id === currentSession.user.id;
-          // const isSameCanPreview = prevUser?.can_preview === newCanPreview; // Removed this line
-          console.log(`SessionContext: setUser check - isSameUserId: ${isSameUserId}`); // Updated log
-          if (isSameUserId) { // Updated condition
+          const isSameRole = prevUser?.role === newRole;
+          console.log(`SessionContext: setUser check - isSameUserId: ${isSameUserId}, isSameRole: ${isSameRole}`);
+          if (isSameUserId && isSameRole) {
             return prevUser;
           }
-          console.log("SessionContext: User object changed, updating state."); // Updated log
-          return { ...currentSession.user }; // Removed can_preview from here
+          console.log("SessionContext: User object changed, updating state.");
+          return { ...currentSession.user, role: newRole };
         });
       } else {
         console.log("SessionContext: No current user, setting user to null.");
@@ -101,23 +100,22 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       });
 
       if (initialSession?.user) {
-        // Removed fetching can_preview from profiles table
-        // const { data: profileData, error: profileError } = await supabase
-        //   .from('profiles')
-        //   .select('can_preview')
-        //   .eq('id', initialSession.user.id)
-        //   .single();
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', initialSession.user.id)
+          .single();
 
         setUser(prevUser => {
-          // const newCanPreview = profileData?.can_preview || false; // Removed this line
+          const newRole = profileData?.role || 'user';
           const isSameUserId = prevUser?.id === initialSession.user.id;
-          // const isSameCanPreview = prevUser?.can_preview === newCanPreview; // Removed this line
-          console.log(`SessionContext: Initial setUser check - isSameUserId: ${isSameUserId}`); // Updated log
-          if (isSameUserId) { // Updated condition
+          const isSameRole = prevUser?.role === newRole;
+          console.log(`SessionContext: Initial setUser check - isSameUserId: ${isSameUserId}, isSameRole: ${isSameRole}`);
+          if (isSameUserId && isSameRole) {
             return prevUser;
           }
-          console.log("SessionContext: Initial user object changed, updating state."); // Updated log
-          return { ...initialSession.user }; // Removed can_preview from here
+          console.log("SessionContext: Initial user object changed, updating state.");
+          return { ...initialSession.user, role: newRole };
         });
       } else {
         console.log("SessionContext: No initial user, setting user to null.");

@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { format } from 'date-fns';
-import { Eye, Image as ImageIcon, XCircle } from 'lucide-react';
+import { Eye, Image as ImageIcon, XCircle, Trash2 } from 'lucide-react';
 
 interface Order {
   id: string;
@@ -23,9 +23,11 @@ interface OrderHistoryCardProps {
   order: Order;
   onViewImage: (imageUrl: string | null) => void;
   onCancelOrder: (orderId: string) => void;
+  onDeleteOrder: (orderId: string, imageUrl: string | null) => void;
+  userRole?: 'user' | 'admin' | 'demo';
 }
 
-const OrderHistoryCard: React.FC<OrderHistoryCardProps> = ({ order, onViewImage, onCancelOrder }) => {
+const OrderHistoryCard: React.FC<OrderHistoryCardProps> = ({ order, onViewImage, onCancelOrder, onDeleteOrder, userRole }) => {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   return (
@@ -57,11 +59,20 @@ const OrderHistoryCard: React.FC<OrderHistoryCardProps> = ({ order, onViewImage,
           </Button>
           {order.status === 'Pending' && (
             <Button
-              variant="destructive"
+              variant="outline"
               className="flex-1"
               onClick={() => onCancelOrder(order.id)}
             >
-              <XCircle className="mr-2 h-4 w-4" /> Cancel Order
+              <XCircle className="mr-2 h-4 w-4" /> Cancel
+            </Button>
+          )}
+          {userRole === 'demo' && (
+            <Button
+              variant="destructive"
+              className="flex-1"
+              onClick={() => onDeleteOrder(order.id, order.ordered_design_image_url)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" /> Delete
             </Button>
           )}
         </CardFooter>
