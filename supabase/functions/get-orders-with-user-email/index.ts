@@ -19,9 +19,11 @@ serve(async (req) => {
       sortDirection = 'desc',
       orderType = 'all',
       userId: userIdFilter = null,
+      startDate = null, // New: Add startDate
+      endDate = null,   // New: Add endDate
     } = body;
 
-    console.log(`Edge Function: Received filters - sortColumn=${sortColumn}, sortDirection=${sortDirection}, orderType=${orderType}, userIdFilter=${userIdFilter}`);
+    console.log(`Edge Function: Received filters - sortColumn=${sortColumn}, sortDirection=${sortDirection}, orderType=${orderType}, userIdFilter=${userIdFilter}, startDate=${startDate}, endDate=${endDate}`);
 
     // 2. Create Admin Client and Authenticate
     const supabaseAdmin = createClient(
@@ -76,6 +78,15 @@ serve(async (req) => {
     }
     if (userIdFilter) {
       query = query.eq('user_id', userIdFilter);
+    }
+    // Add date filters
+    if (startDate) {
+      query = query.gte('created_at', startDate);
+    }
+    if (endDate) {
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999); // Use UTC hours to include the entire end day
+      query = query.lte('created_at', endOfDay.toISOString());
     }
 
     // Apply sorting (except for user_email which is handled later)

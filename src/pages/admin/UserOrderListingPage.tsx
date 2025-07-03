@@ -14,13 +14,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, Eye, Trash2, Image as ImageIcon, ArrowDownWideNarrow, ArrowUpWideNarrow, Download, ShoppingCart } from 'lucide-react';
+import { Loader2, Eye, Trash2, Image as ImageIcon, ArrowDownWideNarrow, ArrowUpWideNarrow, Download, ShoppingCart, Calendar as CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import JSZip from 'jszip'; // Import JSZip
 import { saveAs } from 'file-saver'; // Import saveAs
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast'; // Import toast utilities
 import { useSession } from '@/contexts/SessionContext'; // Import useSession
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 
 interface Order {
   id: string;
@@ -64,6 +66,8 @@ const OrderManagementPage = () => {
   const [selectedOrderIds, setSelectedOrderIds] = new useState<Set<string>>(new Set());
   const [normalOrderCount, setNormalOrderCount] = useState<number | null>(null); // New state for normal order count
   const [demoOrderCount, setDemoOrderCount] = useState<number | null>(null); // New state for demo order count
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
 
   const orderStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Demo']; // Added 'Demo' status
 
@@ -103,6 +107,8 @@ const OrderManagementPage = () => {
         sortDirection,
         orderType: orderTypeFilter,
         userId: selectedUserIdFilter === 'all' ? null : selectedUserIdFilter,
+        startDate: startDate ? startDate.toISOString() : null,
+        endDate: endDate ? endDate.toISOString() : null,
       };
 
       const { data, error: invokeError } = await supabase.functions.invoke('get-orders-with-user-email', {
@@ -146,7 +152,7 @@ const OrderManagementPage = () => {
 
   useEffect(() => {
     fetchOrdersAndCounts();
-  }, [sortColumn, sortDirection, orderTypeFilter, selectedUserIdFilter, session?.access_token]); // Re-fetch when session token changes
+  }, [sortColumn, sortDirection, orderTypeFilter, selectedUserIdFilter, session?.access_token, startDate, endDate]); // Re-fetch when session token or filters change
 
   const openImageModal = (imageUrl: string | null) => {
     if (imageUrl) {
@@ -392,29 +398,65 @@ const OrderManagementPage = () => {
       </div>
 
       <Card>
-        <CardHeader className="flex flex-row justify-between items-center">
+        <CardHeader className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           <CardTitle>All Orders</CardTitle>
-          <div className="flex items-center space-x-4">
+          <div className="flex flex-wrap items-center gap-2">
             {selectedOrderIds.size > 0 && (
               <>
                 <Button
                   variant="outline"
                   onClick={handleBulkDownloadDesigns}
                   disabled={loading}
+                  size="sm"
                 >
-                  <Download className="mr-2 h-4 w-4" /> Download Designs ({selectedOrderIds.size})
+                  <Download className="mr-2 h-4 w-4" /> Download ({selectedOrderIds.size})
                 </Button>
                 <Button
                   variant="destructive"
                   onClick={handleBulkDelete}
                   disabled={loading}
+                  size="sm"
                 >
-                  <Trash2 className="mr-2 h-4 w-4" /> Delete Selected ({selectedOrderIds.size})
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete ({selectedOrderIds.size})
                 </Button>
               </>
             )}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant={"outline"} className="w-[200px] justify-start text-left font-normal" size="sm">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {startDate ? format(startDate, "PPP") : <span>Start date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={startDate}
+                  onSelect={setStartDate}
+                  disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant={"outline"} className="w-[200px] justify-start text-left font-normal" size="sm">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {endDate ? format(endDate, "PPP") : <span>End date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={endDate}
+                  onSelect={setEndDate}
+                  disabled={(date) => date > new Date() || (startDate && date < startDate)}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
             <div className="flex items-center space-x-2">
-              <Label htmlFor="order-type-filter">Type:</Label>
+              <Label htmlFor="order-type-filter" className="text-sm">Type:</Label>
               <Select value={orderTypeFilter} onValueChange={(value) => setOrderTypeFilter(value)}>
                 <SelectTrigger id="order-type-filter" className="w-[150px]">
                   <SelectValue placeholder="Select type" />
@@ -427,7 +469,7 @@ const OrderManagementPage = () => {
               </Select>
             </div>
             <div className="flex items-center space-x-2">
-              <Label htmlFor="user-email-filter">User:</Label>
+              <Label htmlFor="user-email-filter" className="text-sm">User:</Label>
               <Select value={selectedUserIdFilter} onValueChange={(value) => setSelectedUserIdFilter(value)}>
                 <SelectTrigger id="user-email-filter" className="w-[200px]">
                   <SelectValue placeholder="Filter by user" />
@@ -458,7 +500,7 @@ const OrderManagementPage = () => {
           {!loading && !error && (
             <>
               {orders.length === 0 ? (
-                <p className="text-gray-600 dark:text-gray-300">No orders found.</p>
+                <p className="text-gray-600 dark:text-gray-300 text-center py-8">No orders found for the selected filters.</p>
               ) : (
                 <div className="overflow-x-auto">
                   <Table>
@@ -467,7 +509,6 @@ const OrderManagementPage = () => {
                         <TableHead className="w-[30px]">
                           <Checkbox
                             checked={isAllSelected}
-                            indeterminate={isIndeterminate}
                             onCheckedChange={handleSelectAllOrders}
                             aria-label="Select all"
                           />
