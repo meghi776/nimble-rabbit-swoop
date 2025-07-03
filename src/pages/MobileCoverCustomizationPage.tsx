@@ -28,6 +28,8 @@ import {
   XCircle,
   RotateCw,
   Download,
+  Save, // Import Save icon
+  FolderOpen, // Import FolderOpen icon
 } from 'lucide-react';
 import html2canvas from 'html2canvas'; // Corrected import for html2canvas
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -205,6 +207,62 @@ const MobileCoverCustomizationPage = () => {
     };
   }, [product]); // Depend on product to re-calculate when product data is loaded/changes
 
+  // Function to save design to local storage
+  const saveDesignToLocalStorage = useCallback(() => {
+    if (!productId) {
+      showError("Cannot save design: Product ID is missing.");
+      return;
+    }
+    // Ensure all images are uploaded before saving
+    const imagesStillUploading = designElements.some(el => el.type === 'image' && el.value.startsWith('blob:'));
+    if (imagesStillUploading) {
+      showError("Please wait for all images to finish uploading before saving your design.");
+      return;
+    }
+
+    try {
+      localStorage.setItem(`product-${productId}-design`, JSON.stringify(designElements));
+      localStorage.setItem(`product-${productId}-background-color`, selectedCanvasColor || '');
+      localStorage.setItem(`product-${productId}-blurred-background`, blurredBackgroundImageUrl || '');
+      showSuccess("Design saved locally!");
+    } catch (e: any) {
+      console.error("Error saving design to local storage:", e);
+      showError(`Failed to save design: ${e.message || "Storage limit exceeded or other error."}`);
+    }
+  }, [productId, designElements, selectedCanvasColor, blurredBackgroundImageUrl]);
+
+  // Function to load design from local storage
+  const loadDesignFromLocalStorage = useCallback(() => {
+    if (!productId) {
+      showError("Cannot load design: Product ID is missing.");
+      return;
+    }
+    try {
+      const savedDesign = localStorage.getItem(`product-${productId}-design`);
+      const savedBgColor = localStorage.getItem(`product-${productId}-background-color`);
+      const savedBlurredBg = localStorage.getItem(`product-${productId}-blurred-background`);
+
+      if (savedDesign) {
+        const loadedElements: DesignElement[] = JSON.parse(savedDesign);
+        setDesignElements(loadedElements);
+        showSuccess("Design loaded from local storage!");
+      } else {
+        showError("No saved design found for this product.");
+      }
+
+      if (savedBgColor !== null) {
+        setSelectedCanvasColor(savedBgColor === '' ? null : savedBgColor);
+      }
+      if (savedBlurredBg !== null) {
+        setBlurredBackgroundImageUrl(savedBlurredBg === '' ? null : savedBlurredBg);
+      }
+
+    } catch (e: any) {
+      console.error("Error loading design from local storage:", e);
+      showError(`Failed to load design: ${e.message || "Corrupted data or other error."}`);
+    }
+  }, [productId]);
+
   useEffect(() => {
     const fetchProductAndMockup = async () => {
       setLoading(true);
@@ -257,9 +315,43 @@ const MobileCoverCustomizationPage = () => {
           sku: productData.sku, // Set SKU
         });
 
-        if (mockup?.design_data) {
+        // Prioritize local storage design if available
+        const savedDesign = localStorage.getItem(`product-${productId}-design`);
+        const savedBgColor = localStorage.getItem(`product-${productId}-background-color`);
+        const savedBlurredBg = localStorage.getItem(`product-${productId}-blurred-background`);
+
+        if (savedDesign) {
           try {
-            // Ensure loaded design elements conform to the new interface (add default width/height if missing)
+            const loadedElements: DesignElement[] = JSON.parse(savedDesign);
+            setDesignElements(loadedElements);
+            if (savedBgColor !== null) {
+              setSelectedCanvasColor(savedBgColor === '' ? null : savedBgColor);
+            }
+            if (savedBlurredBg !== null) {
+              setBlurredBackgroundImageUrl(savedBlurredBg === '' ? null : savedBlurredBg);
+            }
+            showSuccess("Previously saved design loaded automatically!");
+          } catch (parseError) {
+            console.error("Error parsing locally saved design:", parseError);
+            showError("Failed to load locally saved design. It might be corrupted.");
+            // Fallback to database design if local is corrupted
+            if (mockup?.design_data) {
+              try {
+                const loadedElements: DesignElement[] = JSON.parse(mockup.design_data as string).map((el: any) => ({
+                  ...el,
+                  width: el.width || (el.type === 'text' ? 200 : productData.canvas_width || 300),
+                  height: el.height || (el.type === 'text' ? 40 : productData.canvas_height || 600),
+                }));
+                setDesignElements(loadedElements);
+              } catch (dbParseError) {
+                console.error("Error parsing database design data:", dbParseError);
+                showError("Failed to load existing design data from database.");
+              }
+            }
+          }
+        } else if (mockup?.design_data) {
+          // Load from database if no local storage design
+          try {
             const loadedElements: DesignElement[] = JSON.parse(mockup.design_data as string).map((el: any) => ({
               ...el,
               width: el.width || (el.type === 'text' ? 200 : productData.canvas_width || 300), // Default width for text/image
@@ -280,7 +372,7 @@ const MobileCoverCustomizationPage = () => {
     if (productId) {
       fetchProductAndMockup();
     }
-  }, [productId, setDemoOrderDetails]); // Add setDemoOrderDetails to dependencies
+  }, [productId, setDemoOrderDetails, loadDesignFromLocalStorage]); // Add loadDesignFromLocalStorage to dependencies
 
   // Cleanup for temporary Blob URLs
   useEffect(() => {
@@ -1391,7 +1483,14 @@ const MobileCoverCustomizationPage = () => {
               <Palette className="h-5 w-5" />
               <span className="text-xs">Back Color</span>
             </Button>
-            {/* Removed Delete Image button from here */}
+            <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={saveDesignToLocalStorage}>
+              <Save className="h-5 w-5" />
+              <span className="text-xs">Save Design</span>
+            </Button>
+            <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={loadDesignFromLocalStorage}>
+              <FolderOpen className="h-5 w-5" />
+              <span className="text-xs">Load Design</span>
+            </Button>
             <Button variant="default" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105 animate-pulse-highlight" onClick={handleBuyNowClick} disabled={isBuyNowDisabled}>
               <ShoppingCart className="h-5 w-5" />
               <span className="text-xs">Buy Now</span>
