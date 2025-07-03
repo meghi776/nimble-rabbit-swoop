@@ -5,14 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -40,7 +32,7 @@ import { proxyImageUrl } from '@/utils/imageProxy';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast'; // Import toast utilities
 import { useDemoOrderModal } from '@/contexts/DemoOrderModalContext'; // Import useDemoOrderModal
 import { uploadFileToSupabase, deleteFileFromSupabase } from '@/utils/supabaseStorage'; // Import supabaseStorage utilities
-import SavedDesignsModal from '@/components/SavedDesignsModal'; // Import the new modal
+import CustomizerModals from '@/components/customizer/CustomizerModals'; // Import the new modals component
 
 interface Product {
   id: string;
@@ -1440,136 +1432,33 @@ const ProductCustomizerPage = () => {
           )}
         </div>
 
-        <Dialog open={isCheckoutModalOpen} onOpenChange={setIsCheckoutModalOpen}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Checkout</DialogTitle>
-              <DialogDescription>Please provide your details to complete the order.</DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="customer-name" className="text-right">
-                  Name
-                </Label>
-                <Input
-                  id="customer-name"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  className="col-span-3"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="customer-address" className="text-right">
-                  Address
-                </Label>
-                <Textarea
-                  id="customer-address"
-                  value={customerAddress}
-                  onChange={(e) => setCustomerAddress(e.target.value)}
-                  className="col-span-3"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="customer-phone" className="text-right">
-                  Phone
-                </Label>
-                <Input
-                  id="customer-phone"
-                  type="tel"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                  className="col-span-3"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="payment-method" className="text-right">
-                  Payment
-                </Label>
-                <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select payment method" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="COD">Cash on Delivery</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {product && (
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right font-bold">Total Price</Label>
-                  <span className="col-span-3 text-lg font-bold">₹{product.price?.toFixed(2)}</span>
-                </div>
-              )}
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCheckoutModalOpen(false)}>Cancel</Button>
-              <Button onClick={() => handlePlaceOrder(false)} disabled={isPlacingOrder}>
-                {isPlacingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Place Order
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={isDemoOrderModalOpen} onOpenChange={setIsDemoOrderModalOpen}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Place Demo Order</DialogTitle>
-              <DialogDescription>Enter details for your demo order. This will not be a real purchase.</DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="demo-price" className="text-right">
-                  Price
-                </Label>
-                <Input
-                  id="demo-price"
-                  type="number"
-                  value={demoOrderPrice}
-                  onChange={(e) => setDemoOrderDetails(e.target.value, demoOrderAddress)}
-                  className="col-span-3"
-                  placeholder="e.g., 19.99"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="demo-address" className="text-right">
-                  Address
-                </Label>
-                <Textarea
-                  id="demo-address"
-                  value={demoOrderAddress}
-                  onChange={(e) => setDemoOrderDetails(demoOrderPrice, e.target.value)}
-                  className="col-span-3"
-                  placeholder="e.g., 123 Demo St, Demo City"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDemoOrderModalOpen(false)}>Cancel</Button>
-              <Button onClick={() => handlePlaceOrder(true)} disabled={isPlacingOrder}>
-                {isPlacingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Confirm Demo Order
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {product && (
-          <SavedDesignsModal
-            productId={product.id}
-            isOpen={isSavedDesignsModalOpen}
-            onOpenChange={setIsSavedDesignsModalOpen}
-            currentDesignElements={designElements}
-            currentSelectedCanvasColor={selectedCanvasColor}
-            currentBlurredBackgroundImageUrl={blurredBackgroundImageUrl}
-            onLoadDesign={loadDesign}
-            canvasContentRef={canvasContentRef} {/* Pass the ref */}
-            product={product} {/* Pass the product object */}
-          />
-        )}
+        <CustomizerModals
+          product={product}
+          isCheckoutModalOpen={isCheckoutModalOpen}
+          setIsCheckoutModalOpen={setIsCheckoutModalOpen}
+          customerName={customerName}
+          setCustomerName={setCustomerName}
+          customerAddress={customerAddress}
+          setCustomerAddress={setCustomerAddress}
+          customerPhone={customerPhone}
+          setCustomerPhone={setCustomerPhone}
+          paymentMethod={paymentMethod}
+          setPaymentMethod={setPaymentMethod}
+          isPlacingOrder={isPlacingOrder}
+          handlePlaceOrder={handlePlaceOrder}
+          isDemoOrderModalOpen={isDemoOrderModalOpen}
+          setIsDemoOrderModalOpen={setIsDemoOrderModalOpen}
+          demoOrderPrice={demoOrderPrice}
+          demoOrderAddress={demoOrderAddress}
+          setDemoOrderDetails={setDemoOrderDetails}
+          isSavedDesignsModalOpen={isSavedDesignsModalOpen}
+          setIsSavedDesignsModalOpen={setIsSavedDesignsModalOpen}
+          currentDesignElements={designElements}
+          currentSelectedCanvasColor={selectedCanvasColor}
+          currentBlurredBackgroundImageUrl={blurredBackgroundImageUrl}
+          onLoadDesign={loadDesign}
+          canvasContentRef={canvasContentRef}
+        />
       </main>
     </>
   );
