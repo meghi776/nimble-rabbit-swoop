@@ -565,7 +565,7 @@ const MobileCoverCustomizationPage = () => {
     if (!isMobile || e.touches.length !== 1) return;
     e.stopPropagation();
     setSelectedElementId(id);
-    const element = designElements.find(el => el.id === id);
+    const element = designElements.sfind(el => el.id === id);
     if (!element || !canvasContentRef.current) return;
 
     const { x: unscaledClientX, y: unscaledClientY } = getUnscaledCoords(e.touches[0].clientX, e.touches[0].clientY);
