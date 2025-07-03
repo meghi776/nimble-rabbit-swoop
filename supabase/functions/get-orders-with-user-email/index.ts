@@ -86,6 +86,13 @@ serve(async (req) => {
       .single();
 
     if (profileError) {
+      if (profileError.code === 'PGRST116') { // No rows found
+        console.error(`Edge Function: User profile not found for ID: ${invokerUser.id}. Returning 403.`);
+        return new Response(JSON.stringify({ error: 'Forbidden: User profile not found. Please ensure your profile exists and has a role.' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 403,
+        });
+      }
       console.error("Edge Function: Error fetching invoker profile:", profileError, "Returning 403.");
       return new Response(JSON.stringify({ error: `Forbidden: Error fetching user role: ${profileError.message}` }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
