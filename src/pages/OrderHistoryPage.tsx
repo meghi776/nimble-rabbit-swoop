@@ -10,10 +10,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, Package, DollarSign, Calendar, MapPin, Phone, User, Image as ImageIcon, ArrowDownWideNarrow, ArrowUpWideNarrow } from 'lucide-react';
+import { Loader2, Image as ImageIcon, ArrowDownWideNarrow, ArrowUpWideNarrow, Calendar as CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import OrderHistoryCard from '@/components/OrderHistoryCard';
@@ -39,10 +41,12 @@ const OrderHistoryPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
-  const [orderTypeFilter, setOrderTypeFilter] = useState<'all' | 'normal' | 'demo'>('all'); // New state for filter
-  const [sortColumn, setSortColumn] = useState<keyof Order | 'product_name'>('created_at'); // Added 'product_name' for sorting
+  const [orderTypeFilter, setOrderTypeFilter] = useState<'all' | 'normal' | 'demo'>('all');
+  const [sortColumn, setSortColumn] = useState<keyof Order | 'product_name'>('created_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  const navigate = useNavigate(); // Initialize useNavigate
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -74,6 +78,15 @@ const OrderHistoryPage = () => {
 
       if (orderTypeFilter !== 'all') {
         query = query.eq('type', orderTypeFilter);
+      }
+
+      if (startDate) {
+        query = query.gte('created_at', startDate.toISOString());
+      }
+      if (endDate) {
+        const endOfDay = new Date(endDate);
+        endOfDay.setHours(23, 59, 59, 999);
+        query = query.lte('created_at', endOfDay.toISOString());
       }
 
       const { data, error } = await query;
@@ -116,7 +129,7 @@ const OrderHistoryPage = () => {
     };
 
     fetchOrders();
-  }, [user, sessionLoading, orderTypeFilter, sortColumn, sortDirection]); // Re-fetch when orderTypeFilter or sort options change
+  }, [user, sessionLoading, orderTypeFilter, sortColumn, sortDirection, startDate, endDate]);
 
   const openImageModal = (imageUrl: string | null) => {
     if (imageUrl) {
@@ -130,7 +143,7 @@ const OrderHistoryPage = () => {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
       setSortColumn(column);
-      setSortDirection('asc'); // Default to ascending when changing column
+      setSortDirection('asc');
     }
   };
 
@@ -143,7 +156,7 @@ const OrderHistoryPage = () => {
 
   if (sessionLoading || loading) {
     return (
-      <div className="flex items-center justify-center bg-gray-50 dark:bg-gray-900"> {/* Removed min-h-screen */}
+      <div className="flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
       </div>
     );
@@ -151,7 +164,7 @@ const OrderHistoryPage = () => {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center bg-gray-50 dark:bg-gray-900 text-red-500"> {/* Removed min-h-screen */}
+      <div className="flex items-center justify-center bg-gray-50 dark:bg-gray-900 text-red-500">
         <p>Error: {error}</p>
       </div>
     );
@@ -159,7 +172,7 @@ const OrderHistoryPage = () => {
 
   if (!user) {
     return (
-      <div className="flex flex-col items-center justify-center p-4 bg-gray-50 dark:bg-gray-900"> {/* Removed min-h-screen */}
+      <div className="flex flex-col items-center justify-center p-4 bg-gray-50 dark:bg-gray-900">
         <Card className="w-full max-w-md text-center">
           <CardHeader>
             <CardTitle>Access Denied</CardTitle>
@@ -174,39 +187,77 @@ const OrderHistoryPage = () => {
   }
 
   return (
-    <div className="p-4 bg-gray-50 dark:bg-gray-900"> {/* Removed min-h-screen */}
+    <div className="p-4 bg-gray-50 dark:bg-gray-900">
       <h1 className="text-3xl font-bold mb-6 text-gray-800 dark:text-gray-100">Your Orders</h1>
 
       <Card>
         <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <CardTitle>Order History</CardTitle>
-          <div className="flex space-x-2">
-            <Button
-              variant={orderTypeFilter === 'all' ? 'default' : 'outline'}
-              onClick={() => setOrderTypeFilter('all')}
-              size="sm"
-            >
-              All
-            </Button>
-            <Button
-              variant={orderTypeFilter === 'normal' ? 'default' : 'outline'}
-              onClick={() => setOrderTypeFilter('normal')}
-              size="sm"
-            >
-              Normal
-            </Button>
-            <Button
-              variant={orderTypeFilter === 'demo' ? 'default' : 'outline'}
-              onClick={() => setOrderTypeFilter('demo')}
-              size="sm"
-            >
-              Demo
-            </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex space-x-2">
+              <Button
+                variant={orderTypeFilter === 'all' ? 'default' : 'outline'}
+                onClick={() => setOrderTypeFilter('all')}
+                size="sm"
+              >
+                All
+              </Button>
+              <Button
+                variant={orderTypeFilter === 'normal' ? 'default' : 'outline'}
+                onClick={() => setOrderTypeFilter('normal')}
+                size="sm"
+              >
+                Normal
+              </Button>
+              <Button
+                variant={orderTypeFilter === 'demo' ? 'default' : 'outline'}
+                onClick={() => setOrderTypeFilter('demo')}
+                size="sm"
+              >
+                Demo
+              </Button>
+            </div>
+            <div className="flex space-x-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant={"outline"} className="w-[240px] justify-start text-left font-normal">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, "PPP") : <span>Start date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={setStartDate}
+                    disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant={"outline"} className="w-[240px] justify-start text-left font-normal">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, "PPP") : <span>End date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={setEndDate}
+                    disabled={(date) => date > new Date() || (startDate && date < startDate)}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
           {orders.length === 0 ? (
-            <p className="text-gray-600 dark:text-gray-300 text-center py-8">No {orderTypeFilter !== 'all' ? orderTypeFilter : ''} orders found yet.</p>
+            <p className="text-gray-600 dark:text-gray-300 text-center py-8">No {orderTypeFilter !== 'all' ? orderTypeFilter : ''} orders found for the selected date range.</p>
           ) : isMobile ? (
             <div className="space-y-4">
               {orders.map((order) => (
@@ -256,7 +307,7 @@ const OrderHistoryPage = () => {
                           'N/A'
                         )}
                       </TableCell>
-                      <TableCell>{order.type}</TableCell> {/* Display order type */}
+                      <TableCell>{order.type}</TableCell>
                       <TableCell>{order.customer_name}</TableCell>
                       <TableCell className="text-xs max-w-[150px] truncate">{order.customer_address}</TableCell>
                       <TableCell>{order.customer_phone}</TableCell>
