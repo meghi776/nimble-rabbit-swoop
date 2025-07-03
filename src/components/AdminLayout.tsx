@@ -1,18 +1,32 @@
 import React from 'react';
-import { Link, Outlet } from 'react-router-dom';
-import { Home, Users, Package, ShoppingCart } from 'lucide-react';
+import { Link, Outlet, useNavigate } from 'react-router-dom'; // Import useNavigate
+import { Home, Users, Package, ShoppingCart, LogOut } from 'lucide-react'; // Import LogOut icon
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { supabase } from '@/integrations/supabase/client'; // Import supabase client
+import { showSuccess, showError } from '@/utils/toast'; // Import toast utilities
 
 const AdminLayout = () => {
+  const navigate = useNavigate(); // Initialize useNavigate
+
   const navItems = [
     { name: 'Dashboard', href: '/admin', icon: Home },
     { name: 'Users', href: '/admin/users', icon: Users },
     { name: 'Products', href: '/admin/products', icon: Package },
     { name: 'Orders', href: '/admin/orders', icon: ShoppingCart },
-    { name: 'Demo Orders', href: '/admin/demo-orders', icon: ShoppingCart }, // New item for Demo Orders
+    { name: 'Demo Orders', href: '/admin/demo-orders', icon: ShoppingCart },
   ];
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      showError(`Failed to sign out: ${error.message}`);
+    } else {
+      showSuccess("Logged out successfully!");
+      navigate('/login'); // Redirect to login page after logout
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
@@ -34,6 +48,16 @@ const AdminLayout = () => {
             </Link>
           ))}
         </nav>
+        <div className="mt-auto pt-4"> {/* Added margin-top and padding-top for spacing */}
+          <Button 
+            onClick={handleLogout} 
+            variant="ghost" 
+            className="w-full flex items-center justify-start gap-3 rounded-md px-3 py-2 text-sidebar-foreground dark:text-sidebar-foreground hover:bg-sidebar-accent dark:hover:bg-sidebar-accent hover:text-sidebar-accent-foreground dark:hover:text-sidebar-accent-foreground transition-colors"
+          >
+            <LogOut className="h-5 w-5" />
+            Logout
+          </Button>
+        </div>
       </aside>
 
       {/* Main Content */}
