@@ -90,7 +90,7 @@ const Index = () => {
           {categories.length === 0 ? (
             <p className="text-gray-600 dark:text-gray-300">No categories found. Please add some from the admin panel.</p>
           ) : (
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-4xl mx-auto animate-in fade-in-0 duration-500">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-4xl mx-auto animate-in fade-in-0 duration-500">
               {/* Render categories based on the fetched and sorted 'categories' state */}
               {categories.map((category) => (
                 <React.Fragment key={category.id}>
