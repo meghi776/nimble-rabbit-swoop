@@ -28,7 +28,7 @@ const Header = () => {
 
   return (
     <header className="flex items-center justify-between py-2 px-4 bg-white dark:bg-gray-800 shadow-md">
-      <div className="flex items-center">
+      <div className="flex items-center space-x-4">
         <Link 
           to="/" 
           className="text-3xl font-bold text-transparent bg-clip-text 
@@ -37,12 +37,11 @@ const Header = () => {
         >
           Meghi
         </Link>
+        <Button variant="ghost" onClick={handlePreviewClick}>
+          <Eye className="h-5 w-5" />
+        </Button>
       </div>
       <nav className="flex items-center space-x-2">
-        {/* The Preview button is now always visible */}
-        <Button variant="ghost" onClick={handlePreviewClick}>
-          <Eye className="h-5 w-5" /> {/* Removed "Preview" text */}
-        </Button>
         <Link to="/admin">
           <Button variant="ghost">Admin</Button>
         </Link>

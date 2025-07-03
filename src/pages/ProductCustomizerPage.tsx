@@ -339,7 +339,7 @@ const ProductCustomizerPage = () => {
     if (selectedElementId && lastCaretPosition.current) {
       const element = designElements.find(el => el.id === selectedElementId);
       if (element && element.type === 'text') {
-        const divRef = textElementRefs.current.get(element.id); // FIX: Use element.id instead of el.id
+        const divRef = textElementRefs.current.get(element.id);
         if (divRef) {
           const selection = window.getSelection();
           const range = document.createRange();
@@ -1355,7 +1355,7 @@ const ProductCustomizerPage = () => {
                 ))}
               </div>
 
-              <div className="flex items-center justify-center gap-1 p-1 w-full overflow-x-auto scrollbar-hide">
+              <div className="flex items-center justify-center gap-2 p-1 w-full overflow-x-auto scrollbar-hide">
                   {predefinedColors.map((color) => (
                       <div
                           key={color}
@@ -1368,6 +1368,9 @@ const ProductCustomizerPage = () => {
                           title={color}
                       />
                   ))}
+                  <Button variant="destructive" size="icon" onClick={() => deleteElement(selectedElementId)}>
+                      <Trash2 className="h-4 w-4" />
+                  </Button>
               </div>
             </div>
           ) : isBackColorPaletteOpen ? (
@@ -1420,6 +1423,16 @@ const ProductCustomizerPage = () => {
                 <Palette className="h-5 w-5" />
                 <span className="text-xs">Back Color</span>
               </Button>
+              {selectedElementId && (
+                <Button
+                  variant="destructive"
+                  className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105"
+                  onClick={() => deleteElement(selectedElementId)}
+                >
+                  <Trash2 className="h-5 w-5" />
+                  <span className="text-xs">Delete</span>
+                </Button>
+              )}
               <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={() => setIsSavedDesignsModalOpen(true)}>
                 <Save className="h-5 w-5" />
                 <span className="text-xs">Save/Load</span>
