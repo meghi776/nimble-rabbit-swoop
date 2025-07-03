@@ -1565,6 +1565,8 @@ const MobileCoverCustomizationPage = () => {
           currentSelectedCanvasColor={selectedCanvasColor}
           currentBlurredBackgroundImageUrl={blurredBackgroundImageUrl}
           onLoadDesign={loadDesign}
+          canvasContentRef={canvasContentRef} {/* Pass the ref */}
+          product={product} {/* Pass the product object */}
         />
       )}
     </div>

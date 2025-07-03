@@ -13,6 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Save, FolderOpen, Trash2, Loader2 } from 'lucide-react';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import { format } from 'date-fns';
+import html2canvas from 'html2canvas'; // Import html2canvas
 
 interface DesignElement {
   id: string;
@@ -36,6 +37,7 @@ interface SavedDesign {
   selectedCanvasColor: string | null;
   blurredBackgroundImageUrl: string | null;
   timestamp: number;
+  thumbnailUrl: string | null; // New field for thumbnail
 }
 
 interface SavedDesignsModalProps {
@@ -46,6 +48,8 @@ interface SavedDesignsModalProps {
   currentSelectedCanvasColor: string | null;
   currentBlurredBackgroundImageUrl: string | null;
   onLoadDesign: (design: { elements: DesignElement[]; color: string | null; blurredBg: string | null }) => void;
+  canvasContentRef: React.RefObject<HTMLDivElement>; // Pass ref to canvas content
+  product: { canvas_width: number; canvas_height: number } | null; // Pass product for canvas dimensions
 }
 
 const SavedDesignsModal: React.FC<SavedDesignsModalProps> = ({
@@ -56,6 +60,8 @@ const SavedDesignsModal: React.FC<SavedDesignsModalProps> = ({
   currentSelectedCanvasColor,
   currentBlurredBackgroundImageUrl,
   onLoadDesign,
+  canvasContentRef, // Destructure new prop
+  product, // Destructure new prop
 }) => {
   const [savedDesigns, setSavedDesigns] = useState<SavedDesign[]>([]);
   const [newDesignName, setNewDesignName] = useState('');
@@ -91,7 +97,43 @@ const SavedDesignsModal: React.FC<SavedDesignsModalProps> = ({
     }
   }, [isOpen, fetchSavedDesigns]);
 
-  const handleSaveCurrentDesign = () => {
+  const captureThumbnail = async (): Promise<string | null> => {
+    if (!canvasContentRef.current || !product) {
+      console.error("Cannot capture thumbnail: Canvas ref or product data missing.");
+      return null;
+    }
+
+    const selectedElementDiv = document.querySelector(`[data-element-id="${productId}"]`); // Assuming productId is used to identify the main canvas wrapper
+
+    // Temporarily remove border from selected element for screenshot
+    if (selectedElementDiv) {
+      selectedElementDiv.classList.remove('border-2', 'border-blue-500');
+    }
+
+    try {
+      const canvas = await html2canvas(canvasContentRef.current, {
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: null, // Let CSS handle background
+        scale: 0.5, // Capture at a lower scale for thumbnail quality
+        width: product.canvas_width,
+        height: product.canvas_height,
+        x: 0,
+        y: 0,
+      });
+      return canvas.toDataURL('image/png');
+    } catch (err) {
+      console.error("Error capturing thumbnail:", err);
+      return null;
+    } finally {
+      // Restore original styles
+      if (selectedElementDiv) {
+        selectedElementDiv.classList.add('border-2', 'border-blue-500');
+      }
+    }
+  };
+
+  const handleSaveCurrentDesign = async () => { // Made async
     if (!newDesignName.trim()) {
       showError("Please enter a name for your design.");
       return;
@@ -108,6 +150,8 @@ const SavedDesignsModal: React.FC<SavedDesignsModalProps> = ({
     const toastId = showLoading("Saving design...");
 
     try {
+      const thumbnailUrl = await captureThumbnail(); // Capture thumbnail
+
       const newDesign: SavedDesign = {
         id: `design-${Date.now()}`,
         name: newDesignName.trim(),
@@ -115,6 +159,7 @@ const SavedDesignsModal: React.FC<SavedDesignsModalProps> = ({
         selectedCanvasColor: currentSelectedCanvasColor,
         blurredBackgroundImageUrl: currentBlurredBackgroundImageUrl,
         timestamp: Date.now(),
+        thumbnailUrl: thumbnailUrl, // Save thumbnail
       };
 
       const updatedDesigns = [...savedDesigns, newDesign];
@@ -197,11 +242,20 @@ const SavedDesignsModal: React.FC<SavedDesignsModalProps> = ({
                 <div className="space-y-2">
                   {savedDesigns.map((design) => (
                     <div key={design.id} className="flex items-center justify-between p-3 border rounded-md bg-muted/50">
-                      <div>
-                        <p className="font-medium">{design.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Saved: {format(new Date(design.timestamp), 'MMM d, yyyy HH:mm')}
-                        </p>
+                      <div className="flex items-center space-x-3">
+                        {design.thumbnailUrl && (
+                          <img
+                            src={design.thumbnailUrl}
+                            alt={design.name}
+                            className="w-16 h-16 object-contain border rounded-sm"
+                          />
+                        )}
+                        <div>
+                          <p className="font-medium">{design.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Saved: {format(new Date(design.timestamp), 'MMM d, yyyy HH:mm')}
+                          </p>
+                        </div>
                       </div>
                       <div className="flex space-x-2">
                         <Button variant="outline" size="sm" onClick={() => handleLoadDesign(design)}>
