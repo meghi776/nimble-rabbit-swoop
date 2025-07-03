@@ -138,10 +138,11 @@ const MobileCoverCustomizationPage = () => {
   });
 
   // New ref for resize state
-  const resizeState = useRef<Omit<TouchState, 'initialElementX' | 'initialElementY' | 'initialDistance' | 'initialFontSize' | 'initialMidX' | 'initialMidY'> & {
+  const resizeState = useRef<Omit<TouchState, 'initialElementX' | 'initialElementY' | 'initialDistance' | 'initialMidX' | 'initialMidY'> & {
     handle: 'br'; // Which handle is being dragged (bottom-right for now)
     initialWidth: number;
     initialHeight: number;
+    initialFontSize: number; // Added for text resizing
   }>({
     mode: 'none',
     startX: 0,
@@ -150,6 +151,7 @@ const MobileCoverCustomizationPage = () => {
     handle: 'br', // Default, will be overwritten
     initialWidth: 0,
     initialHeight: 0,
+    initialFontSize: 0, // Initialize
   });
 
   const predefinedColors = [
@@ -515,6 +517,7 @@ const MobileCoverCustomizationPage = () => {
       startY: unscaledClientY,
       initialWidth: element.width,
       initialHeight: element.height,
+      initialFontSize: element.fontSize || 35, // Capture initial font size
       activeElementId: id,
     };
 
@@ -538,6 +541,7 @@ const MobileCoverCustomizationPage = () => {
       startY: unscaledClientY,
       initialWidth: element.width,
       initialHeight: element.height,
+      initialFontSize: element.fontSize || 35, // Capture initial font size
       activeElementId: id,
     };
 
@@ -546,7 +550,7 @@ const MobileCoverCustomizationPage = () => {
   };
 
   const onResizeMouseMove = (moveEvent: MouseEvent) => {
-    const { mode, handle, startX, startY, initialWidth, initialHeight, activeElementId } = resizeState.current;
+    const { mode, handle, startX, startY, initialWidth, initialHeight, initialFontSize, activeElementId } = resizeState.current;
     if (mode !== 'resizing' || !activeElementId || !canvasContentRef.current) return;
 
     const element = designElements.find(el => el.id === activeElementId);
@@ -559,23 +563,31 @@ const MobileCoverCustomizationPage = () => {
 
     let newWidth = initialWidth;
     let newHeight = initialHeight;
+    let newFontSize = initialFontSize;
 
     if (handle === 'br') {
       newWidth = Math.max(20, initialWidth + deltaX);
       newHeight = Math.max(20, initialHeight + deltaY);
+
+      // Scale font size based on height change
+      if (initialHeight > 0) {
+        const heightScaleFactor = newHeight / initialHeight;
+        newFontSize = Math.max(10, Math.min(100, initialFontSize * heightScaleFactor)); // Min 10, Max 100
+      }
     }
     // Add logic for other handles if implemented (tl, tr, bl)
 
     updateElement(activeElementId, {
       width: newWidth,
       height: newHeight,
+      fontSize: newFontSize, // Update font size
     });
   };
 
   const onResizeTouchMove = (moveEvent: TouchEvent) => {
     if (moveEvent.touches.length !== 1) return;
     moveEvent.preventDefault(); // Prevent scrolling
-    const { mode, handle, startX, startY, initialWidth, initialHeight, activeElementId } = resizeState.current;
+    const { mode, handle, startX, startY, initialWidth, initialHeight, initialFontSize, activeElementId } = resizeState.current;
     if (mode !== 'resizing' || !activeElementId || !canvasContentRef.current) return;
 
     const element = designElements.find(el => el.id === activeElementId);
@@ -588,15 +600,23 @@ const MobileCoverCustomizationPage = () => {
 
     let newWidth = initialWidth;
     let newHeight = initialHeight;
+    let newFontSize = initialFontSize;
 
     if (handle === 'br') {
       newWidth = Math.max(20, initialWidth + deltaX);
       newHeight = Math.max(20, initialHeight + deltaY);
+
+      // Scale font size based on height change
+      if (initialHeight > 0) {
+        const heightScaleFactor = newHeight / initialHeight;
+        newFontSize = Math.max(10, Math.min(100, initialFontSize * heightScaleFactor)); // Min 10, Max 100
+      }
     }
 
     updateElement(activeElementId, {
       width: newWidth,
       height: newHeight,
+      fontSize: newFontSize, // Update font size
     });
   };
 
