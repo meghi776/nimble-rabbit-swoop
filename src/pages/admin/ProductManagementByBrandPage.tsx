@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PlusCircle, Edit, Trash2, ArrowLeft, Upload, Download, Search, ListChecks } from 'lucide-react';
-import { useSession } => '@/contexts/SessionContext';
+import { useSession } from '@/contexts/SessionContext';
 import Papa from 'papaparse';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
