@@ -24,7 +24,7 @@ interface Profile {
   id: string;
   first_name: string | null;
   last_name: string | null;
-  role: 'user' | 'admin' | 'demo';
+  role: 'user' | 'admin';
 }
 
 const UserManagementPage = () => {
@@ -36,7 +36,7 @@ const UserManagementPage = () => {
   const [currentProfile, setCurrentProfile] = useState<Profile | null>(null);
   const [editFirstName, setEditFirstName] = useState('');
   const [editLastName, setEditLastName] = useState('');
-  const [editRole, setEditRole] = useState<'user' | 'admin' | 'demo'>('user');
+  const [editRole, setEditRole] = useState<'user' | 'admin'>('user');
   const [newEmail, setNewEmail] = useState(''); // New state for new user email
   const [newPassword, setNewPassword] = useState(''); // New state for new user password
   const [newFirstName, setNewFirstName] = useState(''); // New state for new user first name
@@ -349,14 +349,13 @@ const UserManagementPage = () => {
               <Label htmlFor="edit-role" className="text-right">
                 Role
               </Label>
-              <Select value={editRole} onValueChange={(value: 'user' | 'admin' | 'demo') => setEditRole(value)}>
+              <Select value={editRole} onValueChange={(value: 'user' | 'admin') => setEditRole(value)}>
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="user">User</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="demo">Demo</SelectItem>
                 </SelectContent>
               </Select>
             </div>

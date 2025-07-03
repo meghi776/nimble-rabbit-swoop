@@ -8,7 +8,7 @@ interface CustomUser extends User {
     first_name?: string;
     last_name?: string;
   };
-  role?: 'user' | 'admin' | 'demo';
+  role?: 'user' | 'admin';
 }
 
 interface SessionContextType {
