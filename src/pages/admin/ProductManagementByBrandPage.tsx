@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Edit, Trash2, ArrowLeft, Upload, Download, Search, ListChecks } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ArrowLeft, Upload, Download, Search, ListChecks, MoveVertical } from 'lucide-react';
 import { useSession } from '@/contexts/SessionContext';
 import Papa from 'papaparse';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -53,11 +53,12 @@ const ProductManagementByBrandPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState('');
   const debounceTimeoutRef = useRef<number | null>(null);
   const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
   const { user, session } = useSession(); // Get session for auth token
   const importFileInputRef = useRef<HTMLInputElement>(null);
+  const [isUpdatingAll, setIsUpdatingAll] = useState(false);
 
   // State for Bulk Edit Modal
   const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
@@ -608,6 +609,43 @@ const ProductManagementByBrandPage = () => {
     }
   };
 
+  const handleBulkUpdateY = async () => {
+    if (!window.confirm("Are you sure you want to set Mockup Y to -20 for ALL products? This will affect every mockup in the database.")) {
+      return;
+    }
+
+    if (!session?.access_token) {
+      showError("Authentication required.");
+      return;
+    }
+
+    setIsUpdatingAll(true);
+    const toastId = showLoading("Updating all mockups...");
+
+    try {
+      const { data, error: invokeError } = await supabase.functions.invoke('bulk-update-mockup-y', {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (invokeError) {
+        throw new Error(invokeError.message);
+      }
+
+      showSuccess(`Successfully updated ${data.updatedCount} mockups!`);
+      fetchProducts(); // Refresh the list
+
+    } catch (err: any) {
+      console.error("Error bulk updating mockups:", err);
+      showError(`Failed to update mockups: ${err.message}`);
+    } finally {
+      dismissToast(toastId);
+      setIsUpdatingAll(false);
+    }
+  };
+
   const isAllSelected = products.length > 0 && selectedProductIds.size === products.length;
   const isIndeterminate = selectedProductIds.size > 0 && selectedProductIds.size < products.length;
 
@@ -656,6 +694,9 @@ const ProductManagementByBrandPage = () => {
                 className="pl-9 pr-3 py-2 rounded-md border border-input bg-background shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
             </div>
+            <Button onClick={handleBulkUpdateY} variant="secondary" disabled={loading || isUpdatingAll}>
+              <MoveVertical className="mr-2 h-4 w-4" /> Set All Y to -20
+            </Button>
             <Button onClick={handleExportProducts} variant="outline">
               <Download className="mr-2 h-4 w-4" /> Export CSV
             </Button>
