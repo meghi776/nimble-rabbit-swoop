@@ -12,9 +12,11 @@ import {
 } from "@/components/ui/table";
 import { Loader2, Package, DollarSign, Calendar, MapPin, Phone, User, Image as ImageIcon, ArrowDownWideNarrow, ArrowUpWideNarrow } from 'lucide-react';
 import { format } from 'date-fns';
-import { Button } from '@/components/ui/button';
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useNavigate } from 'react-router-dom'; // Import useNavigate
+import { useNavigate } from 'react-router-dom';
+import { useIsMobile } from '@/hooks/use-mobile';
+import OrderHistoryCard from '@/components/OrderHistoryCard';
 
 interface Order {
   id: string;
@@ -41,6 +43,7 @@ const OrderHistoryPage = () => {
   const [sortColumn, setSortColumn] = useState<keyof Order | 'product_name'>('created_at'); // Added 'product_name' for sorting
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const navigate = useNavigate(); // Initialize useNavigate
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -175,32 +178,41 @@ const OrderHistoryPage = () => {
       <h1 className="text-3xl font-bold mb-6 text-gray-800 dark:text-gray-100">Your Orders</h1>
 
       <Card>
-        <CardHeader className="flex flex-row justify-between items-center">
+        <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <CardTitle>Order History</CardTitle>
           <div className="flex space-x-2">
             <Button
               variant={orderTypeFilter === 'all' ? 'default' : 'outline'}
               onClick={() => setOrderTypeFilter('all')}
+              size="sm"
             >
-              All Orders
+              All
             </Button>
             <Button
               variant={orderTypeFilter === 'normal' ? 'default' : 'outline'}
               onClick={() => setOrderTypeFilter('normal')}
+              size="sm"
             >
-              Normal Orders
+              Normal
             </Button>
             <Button
               variant={orderTypeFilter === 'demo' ? 'default' : 'outline'}
               onClick={() => setOrderTypeFilter('demo')}
+              size="sm"
             >
-              Demo Orders
+              Demo
             </Button>
           </div>
         </CardHeader>
         <CardContent>
           {orders.length === 0 ? (
-            <p className="text-gray-600 dark:text-gray-300">No {orderTypeFilter !== 'all' ? orderTypeFilter : ''} orders found yet.</p>
+            <p className="text-gray-600 dark:text-gray-300 text-center py-8">No {orderTypeFilter !== 'all' ? orderTypeFilter : ''} orders found yet.</p>
+          ) : isMobile ? (
+            <div className="space-y-4">
+              {orders.map((order) => (
+                <OrderHistoryCard key={order.id} order={order} onViewImage={openImageModal} />
+              ))}
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
