@@ -1181,395 +1181,397 @@ const MobileCoverCustomizationPage = () => {
   const isBuyNowDisabled = loading || isPlacingOrder || (product && product.inventory !== null && product.inventory <= 0) || designElements.filter(el => el.type === 'image').length === 0 || designElements.some(el => el.type === 'image' && el.value.startsWith('blob:'));
 
   return (
-    <main className="flex flex-col bg-gray-50 dark:bg-gray-900 flex-1">
-      {loading && (
-        <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
-        </div>
-      )}
-      {error && (
-        <div className="flex-1 flex items-center justify-center text-red-500">
-          <p>Error: {error}</p>
-        </div>
-      )}
+    <>
+      <main className="flex flex-col bg-gray-50 dark:bg-gray-900 flex-1">
+        {loading && (
+          <div className="flex-1 flex items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+          </div>
+        )}
+        {error && (
+          <div className="flex-1 flex items-center justify-center text-red-500">
+            <p>Error: {error}</p>
+          </div>
+        )}
 
-      {!loading && !error && product && (
-        <div className="flex-1 flex flex-col md:flex-row overflow-y-auto pb-65">
-          {/* Removed Header section for the customization page */}
-          <div
-            ref={designAreaRef}
-            className="flex-1 flex items-center justify-center relative overflow-hidden px-4"
-            style={{
-              backgroundSize: 'contain',
-              backgroundRepeat: 'no-repeat',
-              backgroundPosition: 'center',
-              touchAction: 'none',
-            }}
-            onClick={handleCanvasClick}
-          >
+        {!loading && !error && product && (
+          <div className="flex-1 flex flex-col md:flex-row overflow-y-auto pb-65">
+            {/* Removed Header section for the customization page */}
             <div
-              ref={canvasContentRef}
-              className="relative shadow-lg overflow-hidden w-full h-full"
+              ref={designAreaRef}
+              className="flex-1 flex items-center justify-center relative overflow-hidden px-4"
               style={{
-                aspectRatio: `${product.canvas_width} / ${product.canvas_height}`,
-                backgroundSize: 'cover',
+                backgroundSize: 'contain',
                 backgroundRepeat: 'no-repeat',
                 backgroundPosition: 'center',
                 touchAction: 'none',
-                backgroundColor: selectedCanvasColor || '#FFFFFF',
-                backgroundImage: blurredBackgroundImageUrl ? `url(${blurredBackgroundImageUrl})` : 'none',
               }}
               onClick={handleCanvasClick}
             >
-              {designElements.map(el => (
-                <div
-                  key={el.id}
-                  data-element-id={el.id}
-                  className={`absolute cursor-grab ${selectedElementId === el.id ? 'border-2 border-blue-500' : ''}`}
-                  style={{
-                    left: el.x * scaleFactor,
-                    top: el.y * scaleFactor,
-                    transform: `rotate(${el.rotation || 0}deg)`,
-                    transformOrigin: 'center center',
-                    width: `${el.width * scaleFactor}px`,
-                    height: `${el.height * scaleFactor}px`,
-                    zIndex: 5,
-                    touchAction: 'none',
-                  }}
-                  onMouseDown={(e) => handleMouseDown(e, el.id)}
-                  onTouchStart={(e) => handleTouchStart(e, el.id)}
-                  onTouchMove={handleTouchMove}
-                  onTouchEnd={handleTouchEnd}
-                >
-                  {el.type === 'text' ? (
-                    <>
-                      <div
-                        ref={node => {
-                          if (node) textElementRefs.current.set(el.id, node);
-                          else textElementRefs.current.delete(el.id);
-                        }}
-                        contentEditable={selectedElementId === el.id}
-                        onInput={(e) => handleTextContentInput(e, el.id)}
-                        onBlur={() => {
-                        }}
-                        suppressContentEditableWarning={true}
-                        className="outline-none w-full h-full flex items-center justify-center"
-                        style={{
-                          fontSize: `${(el.fontSize || 35) * scaleFactor}px`,
-                          color: el.color,
-                          fontFamily: el.fontFamily,
-                          textShadow: el.textShadow ? '2px 2px 4px rgba(0,0,0,0.5)' : 'none',
-                          wordBreak: 'break-word',
-                          overflow: 'hidden', // Keep hidden for display in editor
-                        }}
-                      >
-                        {el.value}
-                      </div>
-                      {selectedElementId === el.id && (
-                        <>
-                          {/* Delete Button */}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 text-white hover:bg-red-600 z-20"
-                            onClick={(e) => {
-                              e.stopPropagation(); // Prevent selecting the element again
-                              deleteElement(el.id);
-                            }}
-                          >
-                            <XCircle className="h-4 w-4" />
-                          </Button>
+              <div
+                ref={canvasContentRef}
+                className="relative shadow-lg overflow-hidden w-full h-full"
+                style={{
+                  aspectRatio: `${product.canvas_width} / ${product.canvas_height}`,
+                  backgroundSize: 'cover',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'center',
+                  touchAction: 'none',
+                  backgroundColor: selectedCanvasColor || '#FFFFFF',
+                  backgroundImage: blurredBackgroundImageUrl ? `url(${blurredBackgroundImageUrl})` : 'none',
+                }}
+                onClick={handleCanvasClick}
+              >
+                {designElements.map(el => (
+                  <div
+                    key={el.id}
+                    data-element-id={el.id}
+                    className={`absolute cursor-grab ${selectedElementId === el.id ? 'border-2 border-blue-500' : ''}`}
+                    style={{
+                      left: el.x * scaleFactor,
+                      top: el.y * scaleFactor,
+                      transform: `rotate(${el.rotation || 0}deg)`,
+                      transformOrigin: 'center center',
+                      width: `${el.width * scaleFactor}px`,
+                      height: `${el.height * scaleFactor}px`,
+                      zIndex: 5,
+                      touchAction: 'none',
+                    }}
+                    onMouseDown={(e) => handleMouseDown(e, el.id)}
+                    onTouchStart={(e) => handleTouchStart(e, el.id)}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                  >
+                    {el.type === 'text' ? (
+                      <>
+                        <div
+                          ref={node => {
+                            if (node) textElementRefs.current.set(el.id, node);
+                            else textElementRefs.current.delete(el.id);
+                          }}
+                          contentEditable={selectedElementId === el.id}
+                          onInput={(e) => handleTextContentInput(e, el.id)}
+                          onBlur={() => {
+                          }}
+                          suppressContentEditableWarning={true}
+                          className="outline-none w-full h-full flex items-center justify-center"
+                          style={{
+                            fontSize: `${(el.fontSize || 35) * scaleFactor}px`,
+                            color: el.color,
+                            fontFamily: el.fontFamily,
+                            textShadow: el.textShadow ? '2px 2px 4px rgba(0,0,0,0.5)' : 'none',
+                            wordBreak: 'break-word',
+                            overflow: 'hidden', // Keep hidden for display in editor
+                          }}
+                        >
+                          {el.value}
+                        </div>
+                        {selectedElementId === el.id && (
+                          <>
+                            {/* Delete Button */}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 text-white hover:bg-red-600 z-20"
+                              onClick={(e) => {
+                                e.stopPropagation(); // Prevent selecting the element again
+                                deleteElement(el.id);
+                              }}
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </Button>
 
-                          {/* Resize Handle (Bottom-Right) */}
-                          <div
-                            className="absolute -bottom-2 -right-2 w-4 h-4 bg-blue-500 rounded-full cursor-nwse-resize z-20"
-                            onMouseDown={(e) => handleResizeMouseDown(e, el.id, 'br')}
-                            onTouchStart={(e) => handleResizeTouchStart(e, el.id, 'br')}
-                          />
-                        </>
-                      )}
-                    </>
-                  ) : (
-                    <img
-                      src={proxyImageUrl(el.value)}
-                      alt="design element"
-                      className="w-full h-full object-contain"
-                      crossOrigin="anonymous"
-                    />
-                  )}
-                </div>
-              ))}
-
-              {mockupOverlayData?.image_url && (
-                <img
-                  key={mockupOverlayData.image_url}
-                  src={mockupOverlayData.image_url}
-                  alt="Phone Mockup Overlay"
-                  className="absolute object-contain pointer-events-none"
-                  style={{
-                    left: (mockupOverlayData.mockup_x ?? 0) * scaleFactor,
-                    top: (mockupOverlayData.mockup_y ?? 0) * scaleFactor,
-                    width: `${(mockupOverlayData.mockup_width ?? product.canvas_width) * scaleFactor}px`,
-                    height: `${(mockupOverlayData.mockup_height ?? product.canvas_height) * scaleFactor}px`,
-                    transform: `rotate(${mockupOverlayData.mockup_rotation || 0}deg)`,
-                    transformOrigin: 'center center',
-                    zIndex: 10,
-                  }}
-                  crossOrigin="anonymous"
-                />
-              )}
-
-              {!designElements.length && (
-                <div
-                  className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 cursor-pointer"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <PlusCircle className="h-12 w-12 mb-2" />
-                  <p className="text-lg font-medium">Add Your Photo</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleImageFileSelect}
-        accept="image/*"
-        className="hidden"
-      />
-
-      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-lg p-1 flex flex-wrap justify-around items-center border-t border-gray-200 dark:border-gray-700 z-10">
-        {selectedElementId && designElements.find(el => el.id === selectedElementId)?.type === 'text' ? (
-          <div className="flex flex-col w-full items-center">
-            <div className="flex items-center justify-center w-full overflow-x-auto py-1 px-4 scrollbar-hide">
-              {fontFamilies.map((font) => (
-                <Button
-                  key={font}
-                  variant={currentFontFamily === font ? 'default' : 'ghost'}
-                  size="sm"
-                  className={`flex-shrink-0 mx-1 h-8 text-xs ${currentFontFamily === font ? 'bg-blue-500 text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-                  style={{ fontFamily: font }}
-                  onClick={() => {
-                    setCurrentFontFamily(font);
-                    updateElement(selectedElementId, { fontFamily: font });
-                  }}
-                >
-                  {font}
-                </Button>
-              ))}
-            </div>
-
-            <div className="flex items-center justify-center gap-1 p-1 w-full overflow-x-auto scrollbar-hide">
-                {predefinedColors.map((color) => (
-                    <div
-                        key={color}
-                        className={`w-6 h-6 rounded-full cursor-pointer border-2 flex-shrink-0 ${currentTextColor === color ? 'border-blue-500' : 'border-gray-300 dark:border-gray-600'}`}
-                        style={{ backgroundColor: color }}
-                        onClick={() => {
-                            setCurrentTextColor(color);
-                            updateElement(selectedElementId, { color: color });
-                        }}
-                        title={color}
-                    />
+                            {/* Resize Handle (Bottom-Right) */}
+                            <div
+                              className="absolute -bottom-2 -right-2 w-4 h-4 bg-blue-500 rounded-full cursor-nwse-resize z-20"
+                              onMouseDown={(e) => handleResizeMouseDown(e, el.id, 'br')}
+                              onTouchStart={(e) => handleResizeTouchStart(e, el.id, 'br')}
+                            />
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      <img
+                        src={proxyImageUrl(el.value)}
+                        alt="design element"
+                        className="w-full h-full object-contain"
+                        crossOrigin="anonymous"
+                      />
+                    )}
+                  </div>
                 ))}
-            </div>
-          </div>
-        ) : isBackColorPaletteOpen ? (
-          <div className="flex flex-col w-full items-center">
-            {/* Color circles with padding */}
-            <div className="flex items-center justify-center gap-1 px-4 py-1 w-full overflow-x-auto scrollbar-hide">
-              {predefinedColors.map((color) => (
-                <div
-                  key={color}
-                  className={`w-8 h-8 rounded-full cursor-pointer border-2 flex-shrink-0 ${selectedCanvasColor === color ? 'border-blue-500' : 'border-gray-300 dark:border-gray-600'}`}
-                  style={{ backgroundColor: color }}
-                  onClick={() => handleSelectCanvasColor(color)}
-                  title={color}
-                />
-              ))}
-            </div>
-            {/* Blur, Clear, Close buttons on a single line */}
-            <div className="flex items-center justify-center w-full py-1 px-4 space-x-2"> {/* Use space-x-2 for spacing */}
-              <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={handleBlurBackground}>
-                <Palette className="h-5 w-5" />
-                <span className="text-xs">Blur Background</span>
-              </Button>
-              {blurredBackgroundImageUrl && (
-                <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={handleClearBlur}>
-                  <XCircle className="h-5 w-5" />
-                  <span className="text-xs">Clear Blur</span>
-                </Button>
-              )}
-              <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={handleClearBackground}>
-                <XCircle className="h-5 w-5" />
-                  <span className="text-xs">Clear All</span>
-              </Button>
-              <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={() => setIsBackColorPaletteOpen(false)}>
-                <XCircle className="h-5 w-5" />
-                <span className="text-xs">Close</span>
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <>
-            <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={handleAddTextElement}>
-              <Text className="h-5 w-5" />
-              <span className="text-xs">Add Text</span>
-            </Button>
-            <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={() => fileInputRef.current?.click()}>
-              <Image className="h-5 w-5" />
-              <span className="text-xs">Your Photo</span>
-            </Button>
-            <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={() => { setSelectedElementId(null); setIsBackColorPaletteOpen(true); }}>
-              <Palette className="h-5 w-5" />
-              <span className="text-xs">Back Color</span>
-            </Button>
-            <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={() => setIsSavedDesignsModalOpen(true)}>
-              <Save className="h-5 w-5" />
-              <span className="text-xs">Save/Load</span>
-            </Button>
-            <Button variant="default" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105 animate-pulse-highlight" onClick={handleBuyNowClick} disabled={isBuyNowDisabled}>
-              <ShoppingCart className="h-5 w-5" />
-              <span className="text-xs">Buy Now</span>
-            </Button>
-          </>
-        )}
-      </div>
 
-      <Dialog open={isCheckoutModalOpen} onOpenChange={setIsCheckoutModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Checkout</DialogTitle>
-            <DialogDescription>Please provide your details to complete the order.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="customer-name" className="text-right">
-                Name
-              </Label>
-              <Input
-                id="customer-name"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                className="col-span-3"
-                required
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="customer-address" className="text-right">
-                Address
-              </Label>
-              <Textarea
-                id="customer-address"
-                value={customerAddress}
-                onChange={(e) => setCustomerAddress(e.target.value)}
-                className="col-span-3"
-                required
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="customer-phone" className="text-right">
-                Phone
-              </Label>
-              <Input
-                id="customer-phone"
-                type="tel"
-                value={customerPhone}
-                onChange={(e) => setCustomerPhone(e.target.value)}
-                className="col-span-3"
-                required
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="payment-method" className="text-right">
-                Payment
-              </Label>
-              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select payment method" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="COD">Cash on Delivery</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {product && (
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right font-bold">Total Price</Label>
-                <span className="col-span-3 text-lg font-bold">₹{product.price?.toFixed(2)}</span>
+                {mockupOverlayData?.image_url && (
+                  <img
+                    key={mockupOverlayData.image_url}
+                    src={mockupOverlayData.image_url}
+                    alt="Phone Mockup Overlay"
+                    className="absolute object-contain pointer-events-none"
+                    style={{
+                      left: (mockupOverlayData.mockup_x ?? 0) * scaleFactor,
+                      top: (mockupOverlayData.mockup_y ?? 0) * scaleFactor,
+                      width: `${(mockupOverlayData.mockup_width ?? product.canvas_width) * scaleFactor}px`,
+                      height: `${(mockupOverlayData.mockup_height ?? product.canvas_height) * scaleFactor}px`,
+                      transform: `rotate(${mockupOverlayData.mockup_rotation || 0}deg)`,
+                      transformOrigin: 'center center',
+                      zIndex: 10,
+                    }}
+                    crossOrigin="anonymous"
+                  />
+                )}
+
+                {!designElements.length && (
+                  <div
+                    className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 cursor-pointer"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <PlusCircle className="h-12 w-12 mb-2" />
+                    <p className="text-lg font-medium">Add Your Photo</p>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCheckoutModalOpen(false)}>Cancel</Button>
-            <Button onClick={() => handlePlaceOrder(false)} disabled={isPlacingOrder}>
-              {isPlacingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Place Order
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isDemoOrderModalOpen} onOpenChange={setIsDemoOrderModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Place Demo Order</DialogTitle>
-            <DialogDescription>Enter details for your demo order. This will not be a real purchase.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="demo-price" className="text-right">
-                Price
-              </Label>
-              <Input
-                id="demo-price"
-                type="number"
-                value={demoOrderPrice}
-                onChange={(e) => setDemoOrderDetails(e.target.value, demoOrderAddress)}
-                className="col-span-3"
-                placeholder="e.g., 19.99"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="demo-address" className="text-right">
-                Address
-              </Label>
-              <Textarea
-                id="demo-address"
-                value={demoOrderAddress}
-                onChange={(e) => setDemoOrderDetails(demoOrderPrice, e.target.value)}
-                className="col-span-3"
-                placeholder="e.g., 123 Demo St, Demo City"
-              />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDemoOrderModalOpen(false)}>Cancel</Button>
-            <Button onClick={() => handlePlaceOrder(true)} disabled={isPlacingOrder}>
-              {isPlacingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Confirm Demo Order
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        )}
 
-      {product && (
-        <SavedDesignsModal
-          productId={product.id}
-          isOpen={isSavedDesignsModalOpen}
-          onOpenChange={setIsSavedDesignsModalOpen}
-          currentDesignElements={designElements}
-          currentSelectedCanvasColor={selectedCanvasColor}
-          currentBlurredBackgroundImageUrl={blurredBackgroundImageUrl}
-          onLoadDesign={loadDesign}
-          canvasContentRef={canvasContentRef} {/* Pass the ref */}
-          product={product} {/* Pass the product object */}
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleImageFileSelect}
+          accept="image/*"
+          className="hidden"
         />
-      )}
-    </main>
+
+        <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-lg p-1 flex flex-wrap justify-around items-center border-t border-gray-200 dark:border-gray-700 z-10">
+          {selectedElementId && designElements.find(el => el.id === selectedElementId)?.type === 'text' ? (
+            <div className="flex flex-col w-full items-center">
+              <div className="flex items-center justify-center w-full overflow-x-auto py-1 px-4 scrollbar-hide">
+                {fontFamilies.map((font) => (
+                  <Button
+                    key={font}
+                    variant={currentFontFamily === font ? 'default' : 'ghost'}
+                    size="sm"
+                    className={`flex-shrink-0 mx-1 h-8 text-xs ${currentFontFamily === font ? 'bg-blue-500 text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                    style={{ fontFamily: font }}
+                    onClick={() => {
+                      setCurrentFontFamily(font);
+                      updateElement(selectedElementId, { fontFamily: font });
+                    }}
+                  >
+                    {font}
+                  </Button>
+                ))}
+              </div>
+
+              <div className="flex items-center justify-center gap-1 p-1 w-full overflow-x-auto scrollbar-hide">
+                  {predefinedColors.map((color) => (
+                      <div
+                          key={color}
+                          className={`w-6 h-6 rounded-full cursor-pointer border-2 flex-shrink-0 ${currentTextColor === color ? 'border-blue-500' : 'border-gray-300 dark:border-gray-600'}`}
+                          style={{ backgroundColor: color }}
+                          onClick={() => {
+                              setCurrentTextColor(color);
+                              updateElement(selectedElementId, { color: color });
+                          }}
+                          title={color}
+                      />
+                  ))}
+              </div>
+            </div>
+          ) : isBackColorPaletteOpen ? (
+            <div className="flex flex-col w-full items-center">
+              {/* Color circles with padding */}
+              <div className="flex items-center justify-center gap-1 px-4 py-1 w-full overflow-x-auto scrollbar-hide">
+                {predefinedColors.map((color) => (
+                  <div
+                    key={color}
+                    className={`w-8 h-8 rounded-full cursor-pointer border-2 flex-shrink-0 ${selectedCanvasColor === color ? 'border-blue-500' : 'border-gray-300 dark:border-gray-600'}`}
+                    style={{ backgroundColor: color }}
+                    onClick={() => handleSelectCanvasColor(color)}
+                    title={color}
+                  />
+                ))}
+              </div>
+              {/* Blur, Clear, Close buttons on a single line */}
+              <div className="flex items-center justify-center w-full py-1 px-4 space-x-2"> {/* Use space-x-2 for spacing */}
+                <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={handleBlurBackground}>
+                  <Palette className="h-5 w-5" />
+                  <span className="text-xs">Blur Background</span>
+                </Button>
+                {blurredBackgroundImageUrl && (
+                  <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={handleClearBlur}>
+                    <XCircle className="h-5 w-5" />
+                    <span className="text-xs">Clear Blur</span>
+                  </Button>
+                )}
+                <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={handleClearBackground}>
+                  <XCircle className="h-5 w-5" />
+                    <span className="text-xs">Clear All</span>
+                </Button>
+                <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={() => setIsBackColorPaletteOpen(false)}>
+                  <XCircle className="h-5 w-5" />
+                  <span className="text-xs">Close</span>
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={handleAddTextElement}>
+                <Text className="h-5 w-5" />
+                <span className="text-xs">Add Text</span>
+              </Button>
+              <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={() => fileInputRef.current?.click()}>
+                <Image className="h-5 w-5" />
+                <span className="text-xs">Your Photo</span>
+              </Button>
+              <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={() => { setSelectedElementId(null); setIsBackColorPaletteOpen(true); }}>
+                <Palette className="h-5 w-5" />
+                <span className="text-xs">Back Color</span>
+              </Button>
+              <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={() => setIsSavedDesignsModalOpen(true)}>
+                <Save className="h-5 w-5" />
+                <span className="text-xs">Save/Load</span>
+              </Button>
+              <Button variant="default" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105 animate-pulse-highlight" onClick={handleBuyNowClick} disabled={isBuyNowDisabled}>
+                <ShoppingCart className="h-5 w-5" />
+                <span className="text-xs">Buy Now</span>
+              </Button>
+            </>
+          )}
+        </div>
+
+        <Dialog open={isCheckoutModalOpen} onOpenChange={setIsCheckoutModalOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Checkout</DialogTitle>
+              <DialogDescription>Please provide your details to complete the order.</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="customer-name" className="text-right">
+                  Name
+                </Label>
+                <Input
+                  id="customer-name"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  className="col-span-3"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="customer-address" className="text-right">
+                  Address
+                </Label>
+                <Textarea
+                  id="customer-address"
+                  value={customerAddress}
+                  onChange={(e) => setCustomerAddress(e.target.value)}
+                  className="col-span-3"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="customer-phone" className="text-right">
+                  Phone
+                </Label>
+                <Input
+                  id="customer-phone"
+                  type="tel"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  className="col-span-3"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="payment-method" className="text-right">
+                  Payment
+                </Label>
+                <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select payment method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="COD">Cash on Delivery</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {product && (
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right font-bold">Total Price</Label>
+                  <span className="col-span-3 text-lg font-bold">₹{product.price?.toFixed(2)}</span>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsCheckoutModalOpen(false)}>Cancel</Button>
+              <Button onClick={() => handlePlaceOrder(false)} disabled={isPlacingOrder}>
+                {isPlacingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Place Order
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isDemoOrderModalOpen} onOpenChange={setIsDemoOrderModalOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Place Demo Order</DialogTitle>
+              <DialogDescription>Enter details for your demo order. This will not be a real purchase.</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="demo-price" className="text-right">
+                  Price
+                </Label>
+                <Input
+                  id="demo-price"
+                  type="number"
+                  value={demoOrderPrice}
+                  onChange={(e) => setDemoOrderDetails(e.target.value, demoOrderAddress)}
+                  className="col-span-3"
+                  placeholder="e.g., 19.99"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="demo-address" className="text-right">
+                  Address
+                </Label>
+                <Textarea
+                  id="demo-address"
+                  value={demoOrderAddress}
+                  onChange={(e) => setDemoOrderDetails(demoOrderPrice, e.target.value)}
+                  className="col-span-3"
+                  placeholder="e.g., 123 Demo St, Demo City"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDemoOrderModalOpen(false)}>Cancel</Button>
+              <Button onClick={() => handlePlaceOrder(true)} disabled={isPlacingOrder}>
+                {isPlacingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Confirm Demo Order
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {product && (
+          <SavedDesignsModal
+            productId={product.id}
+            isOpen={isSavedDesignsModalOpen}
+            onOpenChange={setIsSavedDesignsModalOpen}
+            currentDesignElements={designElements}
+            currentSelectedCanvasColor={selectedCanvasColor}
+            currentBlurredBackgroundImageUrl={blurredBackgroundImageUrl}
+            onLoadDesign={loadDesign}
+            canvasContentRef={canvasContentRef} {/* Pass the ref */}
+            product={product} {/* Pass the product object */}
+          />
+        )}
+      </main>
+    </>
   );
 };
 
