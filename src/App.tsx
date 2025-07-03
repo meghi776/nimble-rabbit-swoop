@@ -14,7 +14,7 @@ import UserManagementPage from "./pages/admin/UserManagementPage"; // Import Use
 import UserOrderListingPage from "./pages/admin/UserOrderListingPage"; // Import UserOrderListingPage
 import UserOrdersPage from "./pages/admin/UserOrdersPage"; // Import UserOrdersPage
 import DemoOrderListingPage from "./pages/admin/DemoOrderListingPage"; // Import DemoOrderListingPage
-import MobileCoverCustomizationPage from "./pages/MobileCoverCustomizationPage"; // Import MobileCoverCustomizationPage
+import ProductCustomizerPage from "./pages/ProductCustomizerPage"; // Renamed import
 import OrderHistoryPage from "./pages/OrderHistoryPage"; // Import OrderHistoryPage
 import PublicLayout from "./components/PublicLayout"; // Import PublicLayout
 import NotFound from "./pages/NotFound"; // Import NotFound
@@ -35,7 +35,7 @@ function App() {
                 <Route path="/login" element={<Login />} />
                 <Route path="/categories/:categoryId/brands" element={<BrandsPage />} />
                 <Route path="/categories/:categoryId/brands/:brandId/products" element={<ProductListingPage />} />
-                <Route path="/customize-cover/:productId" element={<MobileCoverCustomizationPage />} />
+                <Route path="/customize-cover/:productId" element={<ProductCustomizerPage />} /> {/* Renamed component */}
                 <Route path="/orders" element={<OrderHistoryPage />} />
               </Route>
 
