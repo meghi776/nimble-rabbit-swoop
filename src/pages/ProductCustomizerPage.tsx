@@ -339,7 +339,7 @@ const ProductCustomizerPage = () => {
     if (selectedElementId && lastCaretPosition.current) {
       const element = designElements.find(el => el.id === selectedElementId);
       if (element && element.type === 'text') {
-        const divRef = textElementRefs.current.get(el.id);
+        const divRef = textElementRefs.current.get(element.id); // FIX: Use element.id instead of el.id
         if (divRef) {
           const selection = window.getSelection();
           const range = document.createRange();
