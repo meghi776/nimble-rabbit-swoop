@@ -137,6 +137,21 @@ const MobileCoverCustomizationPage = () => {
     activeElementId: null,
   });
 
+  // New ref for resize state
+  const resizeState = useRef<Omit<TouchState, 'initialElementX' | 'initialElementY' | 'initialDistance' | 'initialFontSize' | 'initialMidX' | 'initialMidY'> & {
+    handle: 'br'; // Which handle is being dragged (bottom-right for now)
+    initialWidth: number;
+    initialHeight: number;
+  }>({
+    mode: 'none',
+    startX: 0,
+    startY: 0,
+    activeElementId: null,
+    handle: 'br', // Default, will be overwritten
+    initialWidth: 0,
+    initialHeight: 0,
+  });
+
   const predefinedColors = [
     '#000000', '#FFFFFF', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF',
     '#FFA500', '#800080', '#008000', '#800000', '#000080', '#808000', '#800080', '#008080'
@@ -482,6 +497,121 @@ const MobileCoverCustomizationPage = () => {
       initialElementY: 0,
       activeElementId: null,
     };
+  };
+
+  // New resize handlers
+  const handleResizeMouseDown = (e: React.MouseEvent, id: string, handle: 'br') => {
+    e.stopPropagation(); // Prevent dragging the element itself
+    setSelectedElementId(id); // Ensure element is selected
+    const element = designElements.find(el => el.id === id);
+    if (!element || !canvasContentRef.current) return;
+
+    const { x: unscaledClientX, y: unscaledClientY } = getUnscaledCoords(e.clientX, e.clientY);
+
+    resizeState.current = {
+      mode: 'resizing',
+      handle: handle,
+      startX: unscaledClientX,
+      startY: unscaledClientY,
+      initialWidth: element.width,
+      initialHeight: element.height,
+      activeElementId: id,
+    };
+
+    document.addEventListener('mousemove', onResizeMouseMove);
+    document.addEventListener('mouseup', onResizeMouseUp);
+  };
+
+  const handleResizeTouchStart = (e: React.TouchEvent, id: string, handle: 'br') => {
+    if (!isMobile || e.touches.length !== 1) return;
+    e.stopPropagation();
+    setSelectedElementId(id);
+    const element = designElements.find(el => el.id === id);
+    if (!element || !canvasContentRef.current) return;
+
+    const { x: unscaledClientX, y: unscaledClientY } = getUnscaledCoords(e.touches[0].clientX, e.touches[0].clientY);
+
+    resizeState.current = {
+      mode: 'resizing',
+      handle: handle,
+      startX: unscaledClientX,
+      startY: unscaledClientY,
+      initialWidth: element.width,
+      initialHeight: element.height,
+      activeElementId: id,
+    };
+
+    document.addEventListener('touchmove', onResizeTouchMove, { passive: false });
+    document.addEventListener('touchend', onResizeTouchEnd);
+  };
+
+  const onResizeMouseMove = (moveEvent: MouseEvent) => {
+    const { mode, handle, startX, startY, initialWidth, initialHeight, activeElementId } = resizeState.current;
+    if (mode !== 'resizing' || !activeElementId || !canvasContentRef.current) return;
+
+    const element = designElements.find(el => el.id === activeElementId);
+    if (!element) return;
+
+    const { x: currentUnscaledX, y: currentUnscaledY } = getUnscaledCoords(moveEvent.clientX, moveEvent.clientY);
+
+    const deltaX = currentUnscaledX - startX;
+    const deltaY = currentUnscaledY - startY;
+
+    let newWidth = initialWidth;
+    let newHeight = initialHeight;
+
+    if (handle === 'br') {
+      newWidth = Math.max(20, initialWidth + deltaX);
+      newHeight = Math.max(20, initialHeight + deltaY);
+    }
+    // Add logic for other handles if implemented (tl, tr, bl)
+
+    updateElement(activeElementId, {
+      width: newWidth,
+      height: newHeight,
+    });
+  };
+
+  const onResizeTouchMove = (moveEvent: TouchEvent) => {
+    if (moveEvent.touches.length !== 1) return;
+    moveEvent.preventDefault(); // Prevent scrolling
+    const { mode, handle, startX, startY, initialWidth, initialHeight, activeElementId } = resizeState.current;
+    if (mode !== 'resizing' || !activeElementId || !canvasContentRef.current) return;
+
+    const element = designElements.find(el => el.id === activeElementId);
+    if (!element) return;
+
+    const { x: currentUnscaledX, y: currentUnscaledY } = getUnscaledCoords(moveEvent.touches[0].clientX, moveEvent.touches[0].clientY);
+
+    const deltaX = currentUnscaledX - startX;
+    const deltaY = currentUnscaledY - startY;
+
+    let newWidth = initialWidth;
+    let newHeight = initialHeight;
+
+    if (handle === 'br') {
+      newWidth = Math.max(20, initialWidth + deltaX);
+      newHeight = Math.max(20, initialHeight + deltaY);
+    }
+
+    updateElement(activeElementId, {
+      width: newWidth,
+      height: newHeight,
+    });
+  };
+
+  const onResizeMouseUp = () => {
+    document.removeEventListener('mousemove', onResizeMouseMove);
+    document.removeEventListener('mouseup', onResizeMouseUp);
+    resizeState.current.mode = 'none';
+    resizeState.current.activeElementId = null;
+  };
+
+  const onResizeTouchEnd = () => {
+    document.removeEventListener('touchmove', onResizeTouchMove);
+    document.removeEventListener('touchend', onResizeTouchEnd);
+    resizeState.current.mode = 'none';
+    resizeState.current.activeElementId = null;
   };
 
   const captureDesignForOrder = async () => { // Renamed function
@@ -1056,28 +1186,53 @@ const MobileCoverCustomizationPage = () => {
                   onTouchEnd={handleTouchEnd}
                 >
                   {el.type === 'text' ? (
-                    <div
-                      ref={node => {
-                        if (node) textElementRefs.current.set(el.id, node);
-                        else textElementRefs.current.delete(el.id);
-                      }}
-                      contentEditable={selectedElementId === el.id}
-                      onInput={(e) => handleTextContentInput(e, el.id)}
-                      onBlur={() => {
-                      }}
-                      suppressContentEditableWarning={true}
-                      className="outline-none w-full h-full flex items-center justify-center"
-                      style={{
-                        fontSize: `${(el.fontSize || 35) * scaleFactor}px`,
-                        color: el.color,
-                        fontFamily: el.fontFamily,
-                        textShadow: el.textShadow ? '2px 2px 4px rgba(0,0,0,0.5)' : 'none',
-                        wordBreak: 'break-word',
-                        overflow: 'hidden', // Keep hidden for display in editor
-                      }}
-                    >
-                      {el.value}
-                    </div>
+                    <>
+                      <div
+                        ref={node => {
+                          if (node) textElementRefs.current.set(el.id, node);
+                          else textElementRefs.current.delete(el.id);
+                        }}
+                        contentEditable={selectedElementId === el.id}
+                        onInput={(e) => handleTextContentInput(e, el.id)}
+                        onBlur={() => {
+                        }}
+                        suppressContentEditableWarning={true}
+                        className="outline-none w-full h-full flex items-center justify-center"
+                        style={{
+                          fontSize: `${(el.fontSize || 35) * scaleFactor}px`,
+                          color: el.color,
+                          fontFamily: el.fontFamily,
+                          textShadow: el.textShadow ? '2px 2px 4px rgba(0,0,0,0.5)' : 'none',
+                          wordBreak: 'break-word',
+                          overflow: 'hidden', // Keep hidden for display in editor
+                        }}
+                      >
+                        {el.value}
+                      </div>
+                      {selectedElementId === el.id && (
+                        <>
+                          {/* Delete Button */}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 text-white hover:bg-red-600 z-20"
+                            onClick={(e) => {
+                              e.stopPropagation(); // Prevent selecting the element again
+                              deleteElement(el.id);
+                            }}
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+
+                          {/* Resize Handle (Bottom-Right) */}
+                          <div
+                            className="absolute -bottom-2 -right-2 w-4 h-4 bg-blue-500 rounded-full cursor-nwse-resize z-20"
+                            onMouseDown={(e) => handleResizeMouseDown(e, el.id, 'br')}
+                            onTouchStart={(e) => handleResizeTouchStart(e, el.id, 'br')}
+                          />
+                        </>
+                      )}
+                    </>
                   ) : (
                     <img
                       src={proxyImageUrl(el.value)}
@@ -1086,7 +1241,6 @@ const MobileCoverCustomizationPage = () => {
                       crossOrigin="anonymous"
                     />
                   )}
-                  {/* Removed resize, delete, and rotate handles */}
                 </div>
               ))}
 
