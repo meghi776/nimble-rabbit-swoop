@@ -62,7 +62,7 @@ interface MockupData {
 interface DesignElement {
   id: string;
   type: 'text' | 'image';
-  value: string;
+  value: string; // This will be a Blob URL initially, then a permanent URL
   x: number;
   y: number;
   width: number; // Made mandatory
@@ -265,10 +265,16 @@ const MobileCoverCustomizationPage = () => {
     }
   }, [productId, setDemoOrderDetails]); // Add setDemoOrderDetails to dependencies
 
+  // Cleanup for temporary Blob URLs
   useEffect(() => {
-    // No need for URL.revokeObjectURL cleanup here anymore as blob URLs are not stored in state
-    // after the new image upload flow.
-  }, []);
+    return () => {
+      designElements.forEach(el => {
+        if (el.type === 'image' && el.value.startsWith('blob:')) {
+          URL.revokeObjectURL(el.value);
+        }
+      });
+    };
+  }, [designElements]); // Run cleanup when designElements change
 
   useEffect(() => {
     if (selectedTextElement) {
@@ -318,7 +324,10 @@ const MobileCoverCustomizationPage = () => {
 
   const deleteElement = (id: string) => {
     setDesignElements(prev => {
-      // No need to revokeObjectURL here as blob URLs are no longer stored in state
+      const elementToDelete = prev.find(el => el.id === id);
+      if (elementToDelete && elementToDelete.type === 'image' && elementToDelete.value.startsWith('blob:')) {
+        URL.revokeObjectURL(elementToDelete.value); // Revoke temporary URL
+      }
       return prev.filter(el => el.id !== id);
     });
     if (selectedElementId === id) {
@@ -588,72 +597,81 @@ const MobileCoverCustomizationPage = () => {
     }
 
     const newElementId = `image-${Date.now()}`;
-    const toastId = showLoading("Uploading image...");
+    const tempUrl = URL.createObjectURL(file); // Create temporary URL immediately
 
-    try {
-      const uploadedUrl = await uploadFileToSupabase(file, 'order-mockups', 'user-uploads');
-      if (uploadedUrl) {
-        const img = new window.Image();
-        img.src = uploadedUrl; // Use the uploaded URL directly
+    // Add the element to state with the temporary URL
+    const img = new window.Image();
+    img.src = tempUrl;
 
-        img.onload = () => {
-          const originalWidth = img.naturalWidth;
-          const originalHeight = img.naturalHeight;
+    img.onload = () => {
+      const originalWidth = img.naturalWidth;
+      const originalHeight = img.naturalHeight;
 
-          // Calculate dimensions to cover the entire canvas while maintaining aspect ratio
-          const canvasAspectRatio = product.canvas_width / product.canvas_height;
-          const imageAspectRatio = originalWidth / originalHeight;
+      const canvasAspectRatio = product.canvas_width / product.canvas_height;
+      const imageAspectRatio = originalWidth / originalHeight;
 
-          let newWidth, newHeight;
+      let newWidth, newHeight;
 
-          if (imageAspectRatio > canvasAspectRatio) {
-            // Image is wider than canvas, scale by height to cover
-            newHeight = product.canvas_height;
-            newWidth = newHeight * imageAspectRatio;
-          } else {
-            // Image is taller than canvas, scale by width to cover
-            newWidth = product.canvas_width;
-            newHeight = newWidth / imageAspectRatio;
-          }
-
-          // Center the image
-          const newX = (product.canvas_width - newWidth) / 2;
-          const newY = (product.canvas_height - newHeight) / 2;
-
-          const newElement: DesignElement = {
-            id: newElementId,
-            type: 'image',
-            value: uploadedUrl, // Use permanent URL
-            x: newX,
-            y: newY,
-            width: newWidth,
-            height: newHeight,
-            rotation: 0,
-          };
-          setDesignElements(prev => [...prev, newElement]);
-          setSelectedElementId(newElement.id);
-          showSuccess("Image uploaded and added to design!");
-          dismissToast(toastId);
-        };
-
-        img.onerror = () => {
-          showError("Failed to load uploaded image for preview.");
-          dismissToast(toastId);
-        };
+      if (imageAspectRatio > canvasAspectRatio) {
+        newHeight = product.canvas_height;
+        newWidth = newHeight * imageAspectRatio;
       } else {
-        showError("Could not upload image to server. Please try again.");
-        dismissToast(toastId);
+        newWidth = product.canvas_width;
+        newHeight = newWidth / imageAspectRatio;
       }
-    } catch (err: any) {
-      console.error("Error during image upload:", err);
-      showError(`An error occurred during upload: ${err.message}`);
-      dismissToast(toastId);
-    } finally {
-      // Clear the file input immediately
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
+
+      const newX = (product.canvas_width - newWidth) / 2;
+      const newY = (product.canvas_height - newHeight) / 2;
+
+      const newElement: DesignElement = {
+        id: newElementId,
+        type: 'image',
+        value: tempUrl, // Use temporary URL for immediate display
+        x: newX,
+        y: newY,
+        width: newWidth,
+        height: newHeight,
+        rotation: 0,
+      };
+      setDesignElements(prev => [...prev, newElement]);
+      setSelectedElementId(newElement.id);
+    };
+
+    img.onerror = () => {
+      showError("Failed to load selected image for preview.");
+      URL.revokeObjectURL(tempUrl); // Clean up if preview fails
+    };
+
+    // Start the upload in the background
+    uploadFileToSupabase(file, 'order-mockups', 'user-uploads')
+      .then(uploadedUrl => {
+        if (uploadedUrl) {
+          setDesignElements(prev =>
+            prev.map(el =>
+              el.id === newElementId ? { ...el, value: uploadedUrl } : el
+            )
+          );
+          URL.revokeObjectURL(tempUrl); // Revoke temporary URL after successful upload
+          showSuccess("Image uploaded successfully!");
+        } else {
+          // If upload fails, remove the element from the canvas
+          setDesignElements(prev => prev.filter(el => el.id !== newElementId));
+          URL.revokeObjectURL(tempUrl); // Revoke temporary URL
+          showError("Failed to upload image. Please try again.");
+        }
+      })
+      .catch(err => {
+        console.error("Error during background image upload:", err);
+        setDesignElements(prev => prev.filter(el => el.id !== newElementId)); // Remove on error
+        URL.revokeObjectURL(tempUrl); // Revoke temporary URL
+        showError(`An error occurred during upload: ${err.message}`);
+      })
+      .finally(() => {
+        // Clear the file input immediately
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      });
   };
 
   const handlePlaceOrder = useCallback(async (isDemo: boolean) => {
@@ -666,6 +684,13 @@ const MobileCoverCustomizationPage = () => {
     const hasImageElement = designElements.some(el => el.type === 'image');
     if (!hasImageElement) {
       showError("Please add at least one image to your design before placing an order.");
+      return;
+    }
+
+    // Check if all images are fully uploaded (no blob: URLs)
+    const imagesStillUploading = designElements.some(el => el.type === 'image' && el.value.startsWith('blob:'));
+    if (imagesStillUploading) {
+      showError("Please wait for all images to finish uploading before placing your order.");
       return;
     }
 
@@ -831,6 +856,12 @@ const MobileCoverCustomizationPage = () => {
       showError("Please add at least one image to your design before placing an order.");
       return;
     }
+    // Check if all images are fully uploaded (no blob: URLs)
+    const imagesStillUploading = designElements.some(el => el.type === 'image' && el.value.startsWith('blob:'));
+    if (imagesStillUploading) {
+      showError("Please wait for all images to finish uploading before placing your order.");
+      return;
+    }
     setIsCheckoutModalOpen(true);
   }, [user, product, navigate, designElements]);
 
@@ -961,7 +992,7 @@ const MobileCoverCustomizationPage = () => {
     showSuccess("Canvas background cleared.");
   };
 
-  const isBuyNowDisabled = loading || isPlacingOrder || (product && product.inventory !== null && product.inventory <= 0) || designElements.filter(el => el.type === 'image').length === 0;
+  const isBuyNowDisabled = loading || isPlacingOrder || (product && product.inventory !== null && product.inventory <= 0) || designElements.filter(el => el.type === 'image').length === 0 || designElements.some(el => el.type === 'image' && el.value.startsWith('blob:'));
 
   return (
     <div className="flex flex-col bg-gray-50 dark:bg-gray-900 flex-1">
