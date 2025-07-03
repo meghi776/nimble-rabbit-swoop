@@ -1181,7 +1181,7 @@ const MobileCoverCustomizationPage = () => {
   const isBuyNowDisabled = loading || isPlacingOrder || (product && product.inventory !== null && product.inventory <= 0) || designElements.filter(el => el.type === 'image').length === 0 || designElements.some(el => el.type === 'image' && el.value.startsWith('blob:'));
 
   return (
-    <div className="flex flex-col bg-gray-50 dark:bg-gray-900 flex-1">
+    <main className="flex flex-col bg-gray-50 dark:bg-gray-900 flex-1">
       {loading && (
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
@@ -1569,7 +1569,7 @@ const MobileCoverCustomizationPage = () => {
           product={product} {/* Pass the product object */}
         />
       )}
-    </div>
+    </main>
   );
 };
 
