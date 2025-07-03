@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { format } from 'date-fns';
-import { Eye, Image as ImageIcon } from 'lucide-react';
+import { Eye, Image as ImageIcon, XCircle } from 'lucide-react';
 
 interface Order {
   id: string;
@@ -22,9 +22,10 @@ interface Order {
 interface OrderHistoryCardProps {
   order: Order;
   onViewImage: (imageUrl: string | null) => void;
+  onCancelOrder: (orderId: string) => void;
 }
 
-const OrderHistoryCard: React.FC<OrderHistoryCardProps> = ({ order, onViewImage }) => {
+const OrderHistoryCard: React.FC<OrderHistoryCardProps> = ({ order, onViewImage, onCancelOrder }) => {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   return (
@@ -50,10 +51,19 @@ const OrderHistoryCard: React.FC<OrderHistoryCardProps> = ({ order, onViewImage 
             )}
           </div>
         </CardContent>
-        <CardFooter>
-          <Button className="w-full" onClick={() => setIsDetailsOpen(true)}>
+        <CardFooter className="flex justify-between items-center gap-2">
+          <Button className="flex-1" onClick={() => setIsDetailsOpen(true)}>
             <Eye className="mr-2 h-4 w-4" /> View Details
           </Button>
+          {order.status === 'Pending' && (
+            <Button
+              variant="destructive"
+              className="flex-1"
+              onClick={() => onCancelOrder(order.id)}
+            >
+              <XCircle className="mr-2 h-4 w-4" /> Cancel Order
+            </Button>
+          )}
         </CardFooter>
       </Card>
 

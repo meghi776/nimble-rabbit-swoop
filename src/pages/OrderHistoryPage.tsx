@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, Image as ImageIcon, ArrowDownWideNarrow, ArrowUpWideNarrow, Calendar as CalendarIcon } from 'lucide-react';
+import { Loader2, Image as ImageIcon, ArrowDownWideNarrow, ArrowUpWideNarrow, Calendar as CalendarIcon, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -19,6 +19,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import OrderHistoryCard from '@/components/OrderHistoryCard';
+import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 
 interface Order {
   id: string;
@@ -135,6 +136,34 @@ const OrderHistoryPage = () => {
     if (imageUrl) {
       setCurrentImageUrl(imageUrl);
       setIsImageModalOpen(true);
+    }
+  };
+
+  const handleCancelOrder = async (orderId: string) => {
+    if (!window.confirm("Are you sure you want to cancel this order? This action cannot be undone.")) {
+      return;
+    }
+
+    const toastId = showLoading("Cancelling order...");
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: 'Cancelled' })
+        .eq('id', orderId)
+        .eq('user_id', user?.id); // Double-check ownership on client-side too
+
+      if (error) {
+        throw error;
+      }
+
+      showSuccess("Order cancelled successfully.");
+      // Refresh the orders list by updating the state
+      setOrders(prevOrders => prevOrders.map(o => o.id === orderId ? { ...o, status: 'Cancelled' } : o));
+    } catch (err: any) {
+      console.error("Error cancelling order:", err);
+      showError(`Failed to cancel order: ${err.message}`);
+    } finally {
+      dismissToast(toastId);
     }
   };
 
@@ -261,7 +290,7 @@ const OrderHistoryPage = () => {
           ) : isMobile ? (
             <div className="space-y-4">
               {orders.map((order) => (
-                <OrderHistoryCard key={order.id} order={order} onViewImage={openImageModal} />
+                <OrderHistoryCard key={order.id} order={order} onViewImage={openImageModal} onCancelOrder={handleCancelOrder} />
               ))}
             </div>
           ) : (
@@ -290,6 +319,7 @@ const OrderHistoryPage = () => {
                     <TableHead className="text-right cursor-pointer hover:text-primary" onClick={() => handleSort('total_price')}>
                       <div className="flex items-center justify-end">Total {getSortIcon('total_price')}</div>
                     </TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -314,6 +344,17 @@ const OrderHistoryPage = () => {
                       <TableCell>{order.payment_method}</TableCell>
                       <TableCell>{order.status}</TableCell>
                       <TableCell className="text-right">₹{order.total_price?.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">
+                        {order.status === 'Pending' && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleCancelOrder(order.id)}
+                          >
+                            <XCircle className="mr-1 h-4 w-4" /> Cancel
+                          </Button>
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
