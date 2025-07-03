@@ -99,7 +99,7 @@ const Index = () => {
                       to={`/categories/${category.id}/brands`}
                       className="block"
                     >
-                      <Card className="h-full flex flex-col justify-between p-6 bg-white dark:bg-gray-800 shadow-md rounded-xl border-2 border-blue-500 hover:border-blue-700 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 hover:shadow-xl cursor-pointer">
+                      <Card className="h-full flex flex-col justify-between p-6 rounded-2xl border border-white/30 bg-white/20 dark:bg-black/20 backdrop-blur-lg shadow-lg transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 hover:bg-white/30 dark:hover:bg-black/30 cursor-pointer">
                         <CardHeader className="pb-4 flex flex-col items-center text-center">
                           <Smartphone className="h-12 w-12 text-blue-600 dark:text-blue-400 mb-3" />
                           <CardTitle className="text-2xl font-bold text-gray-900 dark:text-gray-50">{category.name}</CardTitle>
@@ -113,7 +113,7 @@ const Index = () => {
                       </Card>
                     </Link>
                   ) : (
-                    <Card className="h-full flex flex-col justify-between p-6 bg-gray-200 dark:bg-gray-700 shadow-md rounded-xl border-2 border-gray-300 dark:border-gray-600 opacity-80 cursor-not-allowed">
+                    <Card className="h-full flex flex-col justify-between p-6 rounded-2xl border border-white/20 bg-gray-500/10 dark:bg-gray-700/20 backdrop-blur-md shadow-md cursor-not-allowed">
                       <CardHeader className="pb-4 flex flex-col items-center text-center">
                         <Package className="h-12 w-12 text-gray-500 dark:text-gray-400 mb-3" />
                         <CardTitle className="text-2xl font-bold text-gray-700 dark:text-gray-200">{category.name}</CardTitle>
