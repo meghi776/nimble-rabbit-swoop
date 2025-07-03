@@ -86,7 +86,7 @@ const BrandListingPage = () => {
             {brands.length === 0 ? (
               <p className="text-gray-600 dark:text-gray-300">No brands found for this category.</p>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
                 {brands.map((brand) => (
                   <Link key={brand.id} to={`/categories/${categoryId}/brands/${brand.id}/products`}>
                     <Card className="h-full flex flex-col justify-between p-6 bg-white dark:bg-gray-800 shadow-xl rounded-xl border-2 border-indigo-500 hover:border-indigo-700 transition-all duration-300 transform hover:scale-105 cursor-pointer">
