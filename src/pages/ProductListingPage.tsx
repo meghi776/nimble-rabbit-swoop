@@ -175,10 +175,7 @@ const ProductListingPage = () => {
                       <span>{product.name}</span>
                       {product.sku && <span className="text-sm text-gray-400 ml-2">({product.sku})</span>} {/* Display SKU */}
                       {product.inventory !== null && product.inventory <= 0 && (
-                        <span className="text-red-500 text-sm ml-2">Out of Stock</span>
-                      )}
-                      {product.price !== null && (
-                        <span className="text-sm font-bold ml-auto">₹{product.price.toFixed(2)}</span>
+                        <span className="text-red-500 text-sm ml-auto">Out of Stock</span>
                       )}
                     </Link>
                   </div>
