@@ -20,7 +20,7 @@ import { Link } from 'react-router-dom';
 import JSZip from 'jszip'; // Import JSZip
 import { saveAs } from 'file-saver'; // Import saveAs
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast'; // Import toast utilities
-import { useSession } => '@/contexts/SessionContext'; // Import useSession
+import { useSession } from '@/contexts/SessionContext'; // Corrected import statement
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 

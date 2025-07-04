@@ -20,6 +20,8 @@ interface Product {
   id: string;
   name: string;
   price: number;
+  canvas_width: number; // Added
+  canvas_height: number; // Added
 }
 
 interface DesignElement {

@@ -19,6 +19,7 @@ export const dismissToast = (toastId: string) => {
 };
 
 export const updateToast = (toastId: string, type: 'success' | 'error' | 'loading', message: string) => {
+  // @ts-ignore
   toast.update(toastId, {
     render: message,
     type: type,

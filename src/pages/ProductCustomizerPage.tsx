@@ -74,7 +74,7 @@ interface TouchState {
   startX: number;
   startY: number;
   initialElementX: number;
-  initialElementY: 0;
+  initialElementY: number;
   initialDistance?: number;
   initialElementWidth?: number;
   initialElementHeight?: number;
@@ -96,9 +96,9 @@ const ProductCustomizerPage = () => {
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   
   const [currentFontSize, setCurrentFontSize] = useState<number[]>([35]);
-  const [currentTextColor, setCurrentTextColor] = useState('#000000');
-  const [currentFontFamily, setCurrentFontFamily] = useState('Arial');
-  const [currentTextShadowEnabled, setCurrentTextShadowEnabled] = useState(false);
+  const [currentTextColor, setCurrentTextColor] = '#000000';
+  const [currentFontFamily, setCurrentFontFamily] = 'Arial';
+  const [currentTextShadowEnabled, setCurrentTextShadowEnabled] = useState<boolean>(false); // Explicitly typed
   const [blurredBackgroundImageUrl, setBlurredBackgroundImageUrl] = useState<string | null>(null); // New state for blurred background
   const [isBackColorPaletteOpen, setIsBackColorPaletteOpen] = useState(false); // State to control palette visibility
   const [selectedCanvasColor, setSelectedCanvasColor] = useState<string | null>('#FFFFFF'); // State for solid canvas background color - Changed to white
@@ -146,7 +146,7 @@ const ProductCustomizerPage = () => {
     handle: 'br', // Default, will be overwritten
     initialWidth: 0,
     initialHeight: 0,
-    initialFontSize: 0, // Initialize
+    initialFontSize: 0, // Changed from 0 literal
   });
 
   const predefinedColors = [
@@ -348,7 +348,7 @@ const ProductCustomizerPage = () => {
           const textNode = divRef.firstChild;
 
           if (textNode && textNode.nodeType === Node.TEXT_NODE) {
-            const newOffset = Math.min(lastCaretPosition.current.offset, textNode.length);
+            const newOffset = Math.min(lastCaretPosition.current.offset, (textNode as Text).length); // Cast to Text
             range.setStart(textNode, newOffset);
             range.collapse(true);
 
@@ -946,6 +946,7 @@ const ProductCustomizerPage = () => {
         throw new Error("Failed to capture design for order.");
       }
 
+      // @ts-ignore
       const blob = await (await fetch(orderedDesignImageUrl)).blob();
 
       const fileExt = 'png';

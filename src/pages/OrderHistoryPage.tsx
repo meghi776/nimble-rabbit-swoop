@@ -31,7 +31,7 @@ interface Order {
   status: string;
   total_price: number;
   ordered_design_image_url: string | null;
-  products: { name: string } | null; // Nested product data
+  products: { name: string }[] | null; // Changed to array
   type: string; // Added type to Order interface
 }
 
@@ -103,8 +103,8 @@ const OrderHistoryPage = () => {
           let valB: any;
 
           if (sortColumn === 'product_name') {
-            valA = a.products?.name || '';
-            valB = b.products?.name || '';
+            valA = a.products?.[0]?.name || ''; // Access first element of products array
+            valB = b.products?.[0]?.name || ''; // Access first element of products array
           } else {
             valA = a[sortColumn];
             valB = b[sortColumn];
@@ -327,7 +327,7 @@ const OrderHistoryPage = () => {
                     <TableRow key={order.id}>
                       <TableCell className="font-medium text-xs">{order.id.substring(0, 8)}...</TableCell>
                       <TableCell>{format(new Date(order.created_at), 'PPP')}</TableCell>
-                      <TableCell>{order.products?.name || 'N/A'}</TableCell>
+                      <TableCell>{order.products?.[0]?.name || 'N/A'}</TableCell>
                       <TableCell>
                         {order.ordered_design_image_url ? (
                           <Button variant="outline" size="sm" onClick={() => openImageModal(order.ordered_design_image_url)}>

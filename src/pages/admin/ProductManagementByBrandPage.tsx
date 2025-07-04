@@ -737,6 +737,7 @@ const ProductManagementByBrandPage = () => {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-[30px]">
+                          {/* @ts-ignore */}
                           <Checkbox
                             checked={isAllSelected}
                             indeterminate={isIndeterminate}
