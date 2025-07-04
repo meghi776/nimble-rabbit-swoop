@@ -67,15 +67,14 @@ export const SessionContextProvider: React.FC<SessionContextProviderProps> = ({ 
       console.log(`SessionContext: Auth state changed to ${event}. Loading set to false.`);
 
       if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-        if (location.pathname === '/login') {
-          console.log("SessionContext: Signed in/updated, redirecting from /login to /.");
-          navigate('/');
-        }
+        // Removed the explicit redirect to '/' from here.
+        // The Auth component's redirectTo prop in Login.tsx will handle the redirect.
       } else if (event === 'SIGNED_OUT') {
         console.log("SessionContext: Signed out event detected.");
         if (location.pathname.startsWith('/admin')) {
           console.log("SessionContext: Signed out from admin path, redirecting to /login.");
-          navigate('/login');
+          // Redirect to login with current path as redirect_to parameter
+          navigate(`/login?redirect_to=${encodeURIComponent(location.pathname)}`);
         }
       }
     });
@@ -113,7 +112,8 @@ export const SessionContextProvider: React.FC<SessionContextProviderProps> = ({ 
       console.log("SessionContext: Initial getSession completed. Loading set to false.");
       if (!initialSession && location.pathname.startsWith('/admin')) {
         console.log("SessionContext: No initial session and on admin path, redirecting to /login.");
-        navigate('/login');
+        // Redirect to login with current path as redirect_to parameter
+        navigate(`/login?redirect_to=${encodeURIComponent(location.pathname)}`);
       }
     });
 

@@ -10,6 +10,9 @@ const Login = () => {
   const type = searchParams.get('type');
   const initialView = type === 'recovery' ? 'update_password' : 'sign_in';
 
+  // Get the 'redirect_to' parameter from the URL, default to the homepage if not present
+  const redirectTo = searchParams.get('redirect_to') || window.location.origin;
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900">
       <Card className="w-full max-w-md mx-auto shadow-lg rounded-lg">
@@ -36,7 +39,7 @@ const Login = () => {
             }}
             theme="light" // Use light theme by default, can be made dynamic
             view={initialView} // Set the view based on URL parameter
-            redirectTo={window.location.origin} // Redirect to home after login/password update
+            redirectTo={redirectTo} // Redirect to the page specified in the URL or home
           />
         </CardContent>
       </Card>
