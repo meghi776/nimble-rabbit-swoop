@@ -96,8 +96,8 @@ const ProductCustomizerPage = () => {
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   
   const [currentFontSize, setCurrentFontSize] = useState<number[]>([35]);
-  const [currentTextColor, setCurrentTextColor] = '#000000';
-  const [currentFontFamily, setCurrentFontFamily] = 'Arial';
+  const [currentTextColor, setCurrentTextColor] = useState<string>('#000000');
+  const [currentFontFamily, setCurrentFontFamily] = useState<string>('Arial');
   const [currentTextShadowEnabled, setCurrentTextShadowEnabled] = useState<boolean>(false); // Explicitly typed
   const [blurredBackgroundImageUrl, setBlurredBackgroundImageUrl] = useState<string | null>(null); // New state for blurred background
   const [isBackColorPaletteOpen, setIsBackColorPaletteOpen] = useState(false); // State to control palette visibility
