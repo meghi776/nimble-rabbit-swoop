@@ -110,7 +110,7 @@ const ProductCustomizerPage = () => {
   const { user } = useSession();
   const { isDemoOrderModalOpen, setIsDemoOrderModalOpen, demoOrderPrice, setDemoOrderDetails, demoOrderAddress } = useDemoOrderModal(); // Use context
 
-  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
+  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState<boolean>(false); // Explicitly typed
   const [customerName, setCustomerName] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
   const [customerPhone, setCustomerPhone] = useState(''); // Changed to useState
@@ -922,11 +922,11 @@ const ProductCustomizerPage = () => {
                 errorMessage = parsedErrorBody.error;
               } else {
                 // If data exists but isn't a simple { error: "message" }
-                errorMessage = `Edge Function responded with status ${decrementError.context?.status || 'unknown'}. Raw response: ${JSON.stringify(parsedErrorBody)}`;
+                errorMessage = `Edge Function responded with status ${decrementError.context?.status || 'unknown'}. Raw response: ${String(parsedErrorBody)}`; // @ts-ignore
               }
             } catch (parseErr) {
               console.error("Failed to parse error response body from Edge Function:", parseErr);
-              errorMessage = `Edge Function responded with status ${decrementError.context?.status || 'unknown'}. Raw response: ${decrementError.context.data}`;
+              errorMessage = `Edge Function responded with status ${decrementError.context?.status || 'unknown'}. Raw response: ${String(decrementError.context.data)}`; // @ts-ignore
             }
           } else if (decrementError.context?.status) {
             errorMessage = `Edge Function returned status code: ${decrementError.context.status}`;
