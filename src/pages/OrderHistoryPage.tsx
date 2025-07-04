@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, Image as ImageIcon, ArrowDownWideNarrow, ArrowUpWideNarrow, Calendar as CalendarIcon, XCircle } from 'lucide-react';
+import { Loader2, Image as ImageIcon, ArrowDownWideNarrow, ArrowUpWideNarrow, Calendar as CalendarIcon, XCircle, LogOut } from 'lucide-react'; // Import LogOut icon
 import { format } from 'date-fns';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -183,6 +183,18 @@ const OrderHistoryPage = () => {
     return null;
   };
 
+  const handleSignOut = async () => {
+    const toastId = showLoading("Signing out...");
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      showError(`Failed to sign out: ${error.message}`);
+    } else {
+      showSuccess("Signed out successfully!");
+      navigate('/login'); // Redirect to login page
+    }
+    dismissToast(toastId);
+  };
+
   if (sessionLoading || loading) {
     return (
       <div className="flex items-center justify-center bg-gray-50 dark:bg-gray-900">
@@ -217,7 +229,12 @@ const OrderHistoryPage = () => {
 
   return (
     <div className="p-4 bg-gray-50 dark:bg-gray-900">
-      <h1 className="text-3xl font-bold mb-6 text-gray-800 dark:text-gray-100">Your Orders</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Your Orders</h1>
+        <Button onClick={handleSignOut} variant="outline">
+          <LogOut className="mr-2 h-4 w-4" /> Sign Out
+        </Button>
+      </div>
 
       <Card>
         <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
