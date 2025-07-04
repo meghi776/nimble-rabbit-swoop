@@ -3,7 +3,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import ProductListingPage from "./pages/ProductListingPage";
 import BrandsPage from "./pages/BrandsPage";
-import { SessionContextProvider } from "./contexts/SessionContext";
+import { SessionContextProvider } from "@/contexts/SessionContext";
 import { Toaster } from "react-hot-toast";
 import AdminDashboard from "./pages/admin/AdminDashboard"; // Import AdminDashboard
 import AdminLayout from "./components/AdminLayout"; // Import AdminLayout
