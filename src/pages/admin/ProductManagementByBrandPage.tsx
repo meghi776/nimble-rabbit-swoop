@@ -19,11 +19,11 @@ import Papa from 'papaparse';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
-import { deleteFileFromSupabase } from '@/utils/supabaseStorage'; // Import deleteFileFromSupabase
-import ImportMobileProductsButton from '@/components/admin/ImportMobileProductsButton'; // Import the new component
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"; // Import Dialog components
-import { Textarea } from '@/components/ui/textarea'; // Import Textarea
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Import Select
+import { deleteFileFromSupabase } from '@/utils/supabaseStorage';
+import ImportMobileProductsButton from '@/components/admin/ImportMobileProductsButton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Product {
   id: string;
@@ -34,8 +34,8 @@ interface Product {
   price: number | null;
   canvas_width: number | null;
   canvas_height: number | null;
-  mockup_id: string | null; // ID of the associated mockup
-  mockup_image_url: string | null; // URL of the associated mockup image
+  mockup_id: string | null;
+  mockup_image_url: string | null;
   is_disabled: boolean;
   inventory: number | null;
   sku: string | null;
@@ -56,11 +56,10 @@ const ProductManagementByBrandPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const debounceTimeoutRef = useRef<number | null>(null);
   const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
-  const { user, session } = useSession(); // Get session for auth token
+  const { user, session } = useSession();
   const importFileInputRef = useRef<HTMLInputElement>(null);
   const [isUpdatingAll, setIsUpdatingAll] = useState(false);
 
-  // State for Bulk Edit Modal
   const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
   const [bulkEditFields, setBulkEditFields] = useState({
     price: false,
@@ -68,20 +67,19 @@ const ProductManagementByBrandPage = () => {
     is_disabled: false,
     description: false,
     sku: false,
-    mockup_x: false, // New field
-    mockup_y: false, // New field
+    mockup_x: false,
+    mockup_y: false,
   });
   const [bulkEditValues, setBulkEditValues] = useState({
     price: '',
     inventory: '',
-    is_disabled: 'false', // Use string for select
+    is_disabled: 'false',
     description: '',
     sku: '',
-    mockup_x: '', // New field
-    mockup_y: '', // New field
+    mockup_x: '',
+    mockup_y: '',
   });
 
-  // Helper to check if a URL is from Supabase storage
   const isSupabaseStorageUrl = (url: string | null, bucketName: string) => {
     if (!url) return false;
     const supabaseStorageBaseUrl = `https://smpjbedvyqensurarrym.supabase.co/storage/v1/object/public/${bucketName}/`;
@@ -91,9 +89,8 @@ const ProductManagementByBrandPage = () => {
   const fetchProducts = async () => {
     setLoading(true);
     setError(null);
-    setSelectedProductIds(new Set()); // Clear selection on re-fetch
+    setSelectedProductIds(new Set());
 
-    // Fetch category name
     const { data: categoryData, error: categoryError } = await supabase
       .from('categories')
       .select('name')
@@ -108,7 +105,6 @@ const ProductManagementByBrandPage = () => {
     }
     setCategoryName(categoryData?.name || 'Unknown Category');
 
-    // Fetch brand name
     const { data: brandData, error: brandError } = await supabase
       .from('brands')
       .select('name')
@@ -123,7 +119,6 @@ const ProductManagementByBrandPage = () => {
     }
     setBrandName(brandData?.name || 'Unknown Brand');
 
-    // Fetch products and their associated mockups
     let query = supabase
       .from('products')
       .select(`
@@ -143,7 +138,6 @@ const ProductManagementByBrandPage = () => {
       .eq('category_id', categoryId)
       .eq('brand_id', brandId);
 
-    // Apply search filter if searchQuery is not empty
     if (searchQuery) {
       query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
     }
@@ -171,13 +165,12 @@ const ProductManagementByBrandPage = () => {
 
   useEffect(() => {
     if (categoryId && brandId) {
-      // Debounce the fetchProducts call
       if (debounceTimeoutRef.current) {
         clearTimeout(debounceTimeoutRef.current);
       }
       debounceTimeoutRef.current = setTimeout(() => {
         fetchProducts();
-      }, 300) as unknown as number; // Cast to number for clearTimeout
+      }, 300) as unknown as number;
     }
 
     return () => {
@@ -188,7 +181,6 @@ const ProductManagementByBrandPage = () => {
   }, [categoryId, brandId, searchQuery]);
 
   const deleteSingleProduct = async (id: string, mockupId: string | null, mockupImageUrl: string | null) => {
-    // 1. Delete mockup image from storage if it exists and is a Supabase URL
     if (mockupImageUrl && isSupabaseStorageUrl(mockupImageUrl, 'order-mockups')) {
       const fileName = mockupImageUrl.split('/').pop();
       if (fileName) {
@@ -196,7 +188,6 @@ const ProductManagementByBrandPage = () => {
       }
     }
 
-    // 2. Delete mockup entry from mockups table
     if (mockupId) {
       const { error: deleteMockupError } = await supabase
         .from('mockups')
@@ -209,7 +200,6 @@ const ProductManagementByBrandPage = () => {
       }
     }
 
-    // 3. Delete product from products table
     const { error } = await supabase
       .from('products')
       .delete()
@@ -253,7 +243,7 @@ const ProductManagementByBrandPage = () => {
       showError(`Failed to change product status: ${error.message}`);
     } else {
       showSuccess(`Product ${currentStatus ? 'disabled' : 'enabled'} successfully!`);
-      fetchProducts(); // Re-fetch to update the UI
+      fetchProducts();
     }
     dismissToast(toastId);
     setLoading(false);
@@ -292,7 +282,7 @@ const ProductManagementByBrandPage = () => {
     showSuccess("Products exported successfully!");
   };
 
-  const handleImportProducts = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportProducts = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) {
       showError("No file selected. Please select a CSV file to import.");
@@ -304,8 +294,19 @@ const ProductManagementByBrandPage = () => {
       return;
     }
 
-    if (!user?.id) {
-      showError("User not authenticated. Please log in to import products.");
+    // Explicitly get the latest session before invoking
+    const { data: { session: currentSession }, error: getSessionError } = await supabase.auth.getSession();
+
+    if (getSessionError) {
+      console.error("ProductManagementByBrandPage: Error getting session before import invoke:", getSessionError);
+      showError("Failed to get current session. Please try logging in again.");
+      setLoading(false);
+      return;
+    }
+
+    if (!currentSession || !currentSession.access_token || !user?.id) {
+      showError("User not authenticated or session invalid. Please log in to import products.");
+      setLoading(false);
       return;
     }
 
@@ -323,7 +324,7 @@ const ProductManagementByBrandPage = () => {
           return;
         }
 
-        const rowsToProcess = results.data.filter((row: any) => row.name); // Filter out rows with missing names
+        const rowsToProcess = results.data.filter((row: any) => row.name);
         if (rowsToProcess.length === 0) {
           showError("No valid products found in the CSV to import.");
           dismissToast(toastId);
@@ -336,9 +337,8 @@ const ProductManagementByBrandPage = () => {
 
         for (const row of rowsToProcess) {
           try {
-            // 1. Prepare Product Data
             const productPayload = {
-              id: row.id || undefined, // Use undefined for new inserts, existing ID for updates
+              id: row.id || undefined,
               category_id: categoryId,
               brand_id: brandId,
               name: row.name,
@@ -351,7 +351,6 @@ const ProductManagementByBrandPage = () => {
               sku: row.sku || null,
             };
 
-            // 2. Upsert Product
             const { data: upsertedProduct, error: productUpsertError } = await supabase
               .from('products')
               .upsert(productPayload, { onConflict: 'id' })
@@ -361,37 +360,33 @@ const ProductManagementByBrandPage = () => {
             if (productUpsertError) {
               console.error(`Error upserting product ${row.name}:`, productUpsertError);
               failedImports++;
-              continue; // Skip to next row
+              continue;
             }
 
             const productId = upsertedProduct.id;
 
-            // 3. Prepare Mockup Data (if available in CSV)
             if (row.mockup_image_url) {
               const mockupPayload = {
-                id: row.mockup_id || undefined, // Use existing mockup_id or undefined for new
+                id: row.mockup_id || undefined,
                 product_id: productId,
-                user_id: user.id, // Current admin user's ID
+                user_id: user.id,
                 image_url: row.mockup_image_url,
-                name: `${row.name} Mockup`, // Default mockup name
-                designer: 'Admin', // Default designer
+                name: `${row.name} Mockup`,
+                designer: 'Admin',
                 mockup_x: row.mockup_x ? parseFloat(row.mockup_x) : 0,
                 mockup_y: row.mockup_y ? parseFloat(row.mockup_y) : 0,
                 mockup_width: row.mockup_width ? parseFloat(row.mockup_width) : null,
                 mockup_height: row.mockup_height ? parseFloat(row.mockup_height) : null,
                 mockup_rotation: row.mockup_rotation ? parseFloat(row.mockup_rotation) : 0,
-                design_data: null, // Not importing design_data via CSV
+                design_data: null,
               };
 
-              // 4. Upsert Mockup
               const { error: mockupUpsertError } = await supabase
                 .from('mockups')
                 .upsert(mockupPayload, { onConflict: 'id' });
 
               if (mockupUpsertError) {
                 console.error(`Error upserting mockup for product ${row.name}:`, mockupUpsertError);
-                // This is a partial failure, product was imported, but mockup failed.
-                // We can still count it as a successful product import, but log the mockup error.
               }
             }
             successfulImports++;
@@ -402,7 +397,6 @@ const ProductManagementByBrandPage = () => {
           }
         }
 
-        // Final feedback
         if (failedImports === 0) {
           showSuccess(`Successfully imported ${successfulImports} products!`);
         } else if (successfulImports > 0) {
@@ -411,11 +405,11 @@ const ProductManagementByBrandPage = () => {
           showError("Failed to import any products.");
         }
 
-        fetchProducts(); // Re-fetch products to update the list
+        fetchProducts();
         dismissToast(toastId);
         setLoading(false);
         if (importFileInputRef.current) {
-          importFileInputRef.current.value = ''; // Clear the file input
+          importFileInputRef.current.value = '';
         }
       },
       error: (err) => {
@@ -475,7 +469,7 @@ const ProductManagementByBrandPage = () => {
       }
     }
 
-    fetchProducts(); // Re-fetch products to update the list
+    fetchProducts();
     dismissToast(toastId);
     setLoading(false);
     if (failedDeletions === 0) {
@@ -519,7 +513,6 @@ const ProductManagementByBrandPage = () => {
     if (bulkEditFields.sku) {
       updates.sku = bulkEditValues.sku.trim() === '' ? null : bulkEditValues.sku;
     }
-    // Add mockup_x and mockup_y to updates
     if (bulkEditFields.mockup_x) {
       const parsedMockupX = parseFloat(bulkEditValues.mockup_x);
       if (isNaN(parsedMockupX)) {
@@ -542,8 +535,19 @@ const ProductManagementByBrandPage = () => {
       return;
     }
 
-    if (!session?.access_token) {
-      showError("Authentication required for bulk edit.");
+    // Explicitly get the latest session before invoking
+    const { data: { session: currentSession }, error: getSessionError } = await supabase.auth.getSession();
+
+    if (getSessionError) {
+      console.error("ProductManagementByBrandPage: Error getting session before bulk edit invoke:", getSessionError);
+      showError("Failed to get current session. Please try logging in again.");
+      setLoading(false);
+      return;
+    }
+
+    if (!currentSession || !currentSession.access_token) {
+      showError("Authentication required for bulk edit. Please log in again.");
+      setLoading(false);
       return;
     }
 
@@ -555,7 +559,7 @@ const ProductManagementByBrandPage = () => {
         body: JSON.stringify({ productIds: Array.from(selectedProductIds), updates }),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${currentSession.access_token}`,
         },
       });
 
@@ -563,7 +567,7 @@ const ProductManagementByBrandPage = () => {
         console.error("Edge Function Invoke Error (bulk-update-products):", invokeError);
         console.error("Invoke Error Context:", invokeError.context);
 
-        let errorMessage = invokeError.message; // Default to generic message
+        let errorMessage = invokeError.message;
 
         if (invokeError.context?.data) {
           try {
@@ -574,7 +578,6 @@ const ProductManagementByBrandPage = () => {
             if (parsedErrorBody && typeof parsedErrorBody === 'object' && 'error' in parsedErrorBody) {
               errorMessage = parsedErrorBody.error;
             } else {
-              // If data exists but isn't a simple { error: "message" }
               errorMessage = `Edge Function responded with status ${invokeError.context?.status || 'unknown'}. Raw response: ${JSON.stringify(parsedErrorBody)}`;
             }
           } catch (parseErr) {
@@ -590,13 +593,13 @@ const ProductManagementByBrandPage = () => {
         setIsBulkEditModalOpen(false);
         setBulkEditFields({
           price: false, inventory: false, is_disabled: false, description: false, sku: false,
-          mockup_x: false, mockup_y: false, // Reset new fields
+          mockup_x: false, mockup_y: false,
         });
         setBulkEditValues({
           price: '', inventory: '', is_disabled: 'false', description: '', sku: '',
-          mockup_x: '', mockup_y: '', // Reset new fields
+          mockup_x: '', mockup_y: '',
         });
-        fetchProducts(); // Re-fetch products to update the list
+        fetchProducts();
       } else {
         showError("Unexpected response from server during bulk update.");
       }
@@ -614,8 +617,17 @@ const ProductManagementByBrandPage = () => {
       return;
     }
 
-    if (!session?.access_token) {
-      showError("Authentication required.");
+    // Explicitly get the latest session before invoking
+    const { data: { session: currentSession }, error: getSessionError } = await supabase.auth.getSession();
+
+    if (getSessionError) {
+      console.error("ProductManagementByBrandPage: Error getting session before bulk update Y invoke:", getSessionError);
+      showError("Failed to get current session. Please try logging in again.");
+      return;
+    }
+
+    if (!currentSession || !currentSession.access_token) {
+      showError("Authentication required. Please log in again.");
       return;
     }
 
@@ -626,7 +638,7 @@ const ProductManagementByBrandPage = () => {
       const { data, error: invokeError } = await supabase.functions.invoke('bulk-update-mockup-y', {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${currentSession.access_token}`,
         },
       });
 
@@ -635,7 +647,7 @@ const ProductManagementByBrandPage = () => {
       }
 
       showSuccess(`Successfully updated ${data.updatedCount} mockups!`);
-      fetchProducts(); // Refresh the list
+      fetchProducts();
 
     } catch (err: any) {
       console.error("Error bulk updating mockups:", err);
@@ -652,7 +664,7 @@ const ProductManagementByBrandPage = () => {
   return (
     <div className="p-4">
       <div className="flex items-center mb-6">
-        <Link to={`/admin/products`} className="mr-4"> {/* Link back to Category Management */}
+        <Link to={`/admin/products`} className="mr-4">
           <Button variant="outline" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -710,7 +722,7 @@ const ProductManagementByBrandPage = () => {
             <Button onClick={() => importFileInputRef.current?.click()} variant="outline">
               <Upload className="mr-2 h-4 w-4" /> Import CSV
             </Button>
-            <ImportMobileProductsButton onImportComplete={fetchProducts} /> {/* New button */}
+            <ImportMobileProductsButton onImportComplete={fetchProducts} />
             <Link to={`/admin/categories/${categoryId}/brands/${brandId}/products/new`}>
               <Button>
                 <PlusCircle className="mr-2 h-4 w-4" /> Add Product
@@ -818,9 +830,7 @@ const ProductManagementByBrandPage = () => {
             </>
           )}
         </CardContent>
-      </Card>
 
-      {/* Bulk Edit Dialog */}
       <Dialog open={isBulkEditModalOpen} onOpenChange={setIsBulkEditModalOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
@@ -829,7 +839,6 @@ const ProductManagementByBrandPage = () => {
           <div className="grid gap-4 py-4">
             <p className="text-sm text-muted-foreground">Select fields to update and enter new values. Only selected fields will be applied.</p>
 
-            {/* Price */}
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="bulk-edit-price"
@@ -847,7 +856,6 @@ const ProductManagementByBrandPage = () => {
               />
             </div>
 
-            {/* Inventory */}
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="bulk-edit-inventory"
@@ -865,7 +873,6 @@ const ProductManagementByBrandPage = () => {
               />
             </div>
 
-            {/* Status (is_disabled) */}
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="bulk-edit-status"
@@ -888,7 +895,6 @@ const ProductManagementByBrandPage = () => {
               </Select>
             </div>
 
-            {/* Description */}
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="bulk-edit-description"
@@ -905,7 +911,6 @@ const ProductManagementByBrandPage = () => {
               />
             </div>
 
-            {/* SKU */}
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="bulk-edit-sku"
@@ -923,7 +928,6 @@ const ProductManagementByBrandPage = () => {
               />
             </div>
 
-            {/* Mockup X */}
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="bulk-edit-mockup-x"
@@ -941,7 +945,6 @@ const ProductManagementByBrandPage = () => {
               />
             </div>
 
-            {/* Mockup Y */}
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="bulk-edit-mockup-y"

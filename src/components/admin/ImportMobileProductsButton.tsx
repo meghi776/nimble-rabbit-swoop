@@ -6,7 +6,7 @@ import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast
 import { useSession } from '@/contexts/SessionContext';
 
 interface ImportMobileProductsButtonProps {
-  onImportComplete: () => void; // Callback to refresh product list after import
+  onImportComplete: () => void;
 }
 
 const ImportMobileProductsButton: React.FC<ImportMobileProductsButtonProps> = ({ onImportComplete }) => {
@@ -14,7 +14,16 @@ const ImportMobileProductsButton: React.FC<ImportMobileProductsButtonProps> = ({
   const { session } = useSession();
 
   const handleImport = async () => {
-    if (!session?.access_token) {
+    // Explicitly get the latest session before invoking
+    const { data: { session: currentSession }, error: getSessionError } = await supabase.auth.getSession();
+
+    if (getSessionError) {
+      console.error("ImportMobileProductsButton: Error getting session before invoke:", getSessionError);
+      showError("Failed to get current session. Please try logging in again.");
+      return;
+    }
+
+    if (!currentSession || !currentSession.access_token) {
       showError("You must be logged in to import products.");
       return;
     }
@@ -26,7 +35,7 @@ const ImportMobileProductsButton: React.FC<ImportMobileProductsButtonProps> = ({
       const { data, error: invokeError } = await supabase.functions.invoke('upsert-mobile-products', {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${currentSession.access_token}`, // Use the fresh token
         },
       });
 
@@ -46,7 +55,7 @@ const ImportMobileProductsButton: React.FC<ImportMobileProductsButtonProps> = ({
         showError(`Failed to import products: ${errorMessage}`);
       } else if (data) {
         showSuccess(`Import complete! Successfully added/updated ${data.successfulUpserts} products. Failed: ${data.failedUpserts}.`);
-        onImportComplete(); // Trigger refresh of product list
+        onImportComplete();
       } else {
         showError("Unexpected response from server during product import.");
       }

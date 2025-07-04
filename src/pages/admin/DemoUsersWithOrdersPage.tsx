@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, User, ArrowLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom'; // Import useNavigate
 import { showError } from '@/utils/toast';
 import { useSession } from '@/contexts/SessionContext';
 
@@ -16,21 +16,31 @@ interface DemoUser {
 }
 
 const DemoUsersWithOrdersPage = () => {
-  const { session, loading: sessionLoading } = useSession(); // Get sessionLoading state
+  const { session, loading: sessionLoading } = useSession();
+  const navigate = useNavigate(); // Initialize useNavigate
   const [users, setUsers] = useState<DemoUser[]>([]);
-  const [loading, setLoading] = useState(true); // Local loading state for data fetch
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDemoUsers = async () => {
-      setLoading(true); // Start local loading
+      setLoading(true);
       setError(null);
 
-      // Only proceed if session is not loading and access_token is available
-      if (!session?.access_token) {
-        // This case should ideally be handled by SessionContext redirecting to login
-        // but as a fallback, set an error here.
-        setError("You must be logged in as an administrator to view demo users.");
+      // Explicitly get the latest session before invoking
+      const { data: { session: currentSession }, error: getSessionError } = await supabase.auth.getSession();
+
+      if (getSessionError) {
+        console.error("DemoUsersWithOrdersPage: Error getting session before invoke:", getSessionError);
+        showError("Failed to get current session. Please try logging in again.");
+        setLoading(false);
+        return;
+      }
+
+      if (!currentSession || !currentSession.access_token) {
+        console.log("DemoUsersWithOrdersPage: No active session found, redirecting to login.");
+        showError("Your session has expired or is invalid. Please log in again.");
+        navigate('/login');
         setLoading(false);
         return;
       }
@@ -39,7 +49,7 @@ const DemoUsersWithOrdersPage = () => {
         const { data, error: invokeError } = await supabase.functions.invoke('get-demo-users', {
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
+            'Authorization': `Bearer ${currentSession.access_token}`, // Use the fresh token
           },
         });
 
@@ -69,17 +79,15 @@ const DemoUsersWithOrdersPage = () => {
         showError(err.message || "An unexpected error occurred while fetching demo users.");
         setError(err.message || "An unexpected error occurred.");
       } finally {
-        setLoading(false); // End local loading
+        setLoading(false);
       }
     };
 
-    // Only trigger fetch when session is not loading and session.access_token is available
     if (!sessionLoading) {
       fetchDemoUsers();
     }
-  }, [session?.access_token, sessionLoading]); // Depend on session.access_token and sessionLoading
+  }, [sessionLoading, navigate]); // Depend on sessionLoading and navigate
 
-  // Display loading spinner if either session is loading or local data is loading
   if (loading || sessionLoading) {
     return (
       <div className="flex items-center justify-center py-8">

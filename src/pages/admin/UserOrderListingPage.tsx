@@ -17,10 +17,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, Eye, Trash2, Image as ImageIcon, ArrowDownWideNarrow, ArrowUpWideNarrow, Download, ShoppingCart, Calendar as CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
-import JSZip from 'jszip'; // Import JSZip
-import { saveAs } from 'file-saver'; // Import saveAs
-import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast'; // Import toast utilities
-import { useSession } from '@/contexts/SessionContext'; // Corrected import statement
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
+import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
+import { useSession } from '@/contexts/SessionContext';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 
@@ -49,7 +49,7 @@ interface UserListItem {
 }
 
 const OrderManagementPage = () => {
-  const { session } = useSession(); // Get session for auth token
+  const { session, loading: sessionLoading } = useSession();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -64,30 +64,39 @@ const OrderManagementPage = () => {
   const [selectedUserIdFilter, setSelectedUserIdFilter] = useState<string>('all');
   const [userList, setUserList] = useState<UserListItem[]>([]);
   const [selectedOrderIds, setSelectedOrderIds] = new useState<Set<string>>(new Set());
-  const [normalOrderCount, setNormalOrderCount] = useState<number | null>(null); // New state for normal order count
-  const [demoOrderCount, setDemoOrderCount] = useState<number | null>(null); // New state for demo order count
+  const [normalOrderCount, setNormalOrderCount] = useState<number | null>(null);
+  const [demoOrderCount, setDemoOrderCount] = useState<number | null>(null);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
 
-  const orderStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Demo']; // Added 'Demo' status
+  const orderStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Demo'];
 
   const fetchOrdersAndCounts = async () => {
     setLoading(true);
     setError(null);
-    setSelectedOrderIds(new Set()); // Clear selection on re-fetch
+    setSelectedOrderIds(new Set());
 
-    if (!session?.access_token) {
+    // Explicitly get the latest session before invoking
+    const { data: { session: currentSession }, error: getSessionError } = await supabase.auth.getSession();
+
+    if (getSessionError) {
+      console.error("OrderManagementPage: Error getting session before invoke:", getSessionError);
+      showError("Failed to get current session. Please try logging in again.");
+      setLoading(false);
+      return;
+    }
+
+    if (!currentSession || !currentSession.access_token) {
       showError("Authentication required to fetch orders.");
       setLoading(false);
       return;
     }
 
     try {
-      // Fetch order counts
       const { data: countsData, error: countsInvokeError } = await supabase.functions.invoke('get-order-counts', {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${currentSession.access_token}`, // Use the fresh token
         },
       });
 
@@ -101,7 +110,6 @@ const OrderManagementPage = () => {
         setDemoOrderCount(countsData.demoOrders);
       }
 
-      // Fetch orders list
       const payload = {
         orderType: orderTypeFilter,
         userId: selectedUserIdFilter === 'all' ? null : selectedUserIdFilter,
@@ -113,7 +121,7 @@ const OrderManagementPage = () => {
         body: JSON.stringify(payload),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`, // Pass token for this function too
+          'Authorization': `Bearer ${currentSession.access_token}`, // Use the fresh token
         },
       });
 
@@ -134,7 +142,6 @@ const OrderManagementPage = () => {
         setError(errorMessage);
       } else if (data && data.orders) {
         let sortedData = data.orders || [];
-        // Client-side sorting
         sortedData.sort((a: Order, b: Order) => {
           let valA: any;
           let valB: any;
@@ -183,8 +190,10 @@ const OrderManagementPage = () => {
   };
 
   useEffect(() => {
-    fetchOrdersAndCounts();
-  }, [sortColumn, sortDirection, orderTypeFilter, selectedUserIdFilter, session?.access_token, startDate, endDate]); // Re-fetch when session token or filters change
+    if (!sessionLoading) { // Only fetch when session is not loading
+      fetchOrdersAndCounts();
+    }
+  }, [sortColumn, sortDirection, orderTypeFilter, selectedUserIdFilter, sessionLoading, startDate, endDate]);
 
   const openImageModal = (imageUrl: string | null) => {
     if (imageUrl) {
@@ -416,8 +425,8 @@ const OrderManagementPage = () => {
             <p className="text-xs text-muted-foreground">Total non-demo orders</p>
           </CardContent>
         </Card>
-        <Link to="/admin/demo-users" className="block"> {/* Added Link here */}
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow"> {/* Added hover effect */}
+        <Link to="/admin/demo-users" className="block">
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Demo Orders</CardTitle>
               <ShoppingCart className="h-4 w-4 text-muted-foreground" />
@@ -604,7 +613,7 @@ const OrderManagementPage = () => {
                             )}
                           </TableCell>
                           <TableCell>{order.type}</TableCell>
-                          <TableCell>{order.payment_method}</TableCell> {/* Display payment method */}
+                          <TableCell>{order.payment_method}</TableCell>
                           <TableCell>{order.status}</TableCell>
                           <TableCell className="text-right">₹{order.total_price?.toFixed(2)}</TableCell>
                           <TableCell className="text-right">
@@ -635,7 +644,6 @@ const OrderManagementPage = () => {
         </CardContent>
       </Card>
 
-      {/* Image Preview Dialog */}
       <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
@@ -651,7 +659,6 @@ const OrderManagementPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Status Dialog */}
       <Dialog open={isEditStatusModalOpen} onOpenChange={setIsEditStatusModalOpen}>
         <DialogContent>
           <DialogHeader>

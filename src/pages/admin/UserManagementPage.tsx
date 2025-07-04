@@ -16,9 +16,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch"; // Import Switch component
+import { Switch } from "@/components/ui/switch";
 import { useSession } from '@/contexts/SessionContext';
-import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast'; // Import toast utilities
+import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 
 interface Profile {
   id: string;
@@ -32,16 +32,16 @@ const UserManagementPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false); // New state for add user modal
+  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [currentProfile, setCurrentProfile] = useState<Profile | null>(null);
   const [editFirstName, setEditFirstName] = useState('');
   const [editLastName, setEditLastName] = useState('');
   const [editRole, setEditRole] = useState<'user' | 'admin'>('user');
-  const [newEmail, setNewEmail] = useState(''); // New state for new user email
-  const [newPassword, setNewPassword] = useState(''); // New state for new user password
-  const [newFirstName, setNewFirstName] = useState(''); // New state for new user first name
-  const [newLastName, setNewLastName] = useState(''); // New state for new user last name
-  const { user: currentUser, session } = useSession(); // Get the current user and session
+  const [newEmail, setNewEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [newFirstName, setNewFirstName] = useState('');
+  const [newLastName, setNewLastName] = useState('');
+  const { user: currentUser, session } = useSession();
   const [isAdmin, setIsAdmin] = useState(false);
 
   const fetchProfiles = async () => {
@@ -111,7 +111,7 @@ const UserManagementPage = () => {
       showError(`Failed to delete profile: ${error.message}`);
     } else {
       showSuccess("User profile deleted successfully!");
-      fetchProfiles(); // Re-fetch profiles to update the list
+      fetchProfiles();
     }
     dismissToast(toastId);
     setLoading(false);
@@ -137,7 +137,7 @@ const UserManagementPage = () => {
     } else {
       showSuccess("Profile updated successfully!");
       setIsEditModalOpen(false);
-      fetchProfiles(); // Re-fetch profiles to update the list
+      fetchProfiles();
     }
     dismissToast(toastId);
     setLoading(false);
@@ -145,7 +145,7 @@ const UserManagementPage = () => {
 
   const handleAddUserClick = () => {
     setNewEmail('');
-    setNewPassword(''); // Clear password field
+    setNewPassword('');
     setNewFirstName('');
     setNewLastName('');
     setIsAddUserModalOpen(true);
@@ -157,7 +157,17 @@ const UserManagementPage = () => {
       return;
     }
 
-    if (!session || !session.access_token) {
+    // Explicitly get the latest session before invoking
+    const { data: { session: currentSession }, error: getSessionError } = await supabase.auth.getSession();
+
+    if (getSessionError) {
+      console.error("UserManagementPage: Error getting session before create user invoke:", getSessionError);
+      showError("Failed to get current session. Please try logging in again.");
+      setLoading(false);
+      return;
+    }
+
+    if (!currentSession || !currentSession.access_token) {
       showError("You must be logged in to create users. Please log in again.");
       setLoading(false);
       return;
@@ -173,12 +183,13 @@ const UserManagementPage = () => {
         last_name: newLastName,
       };
 
-      console.log("Attempting to invoke create-user-admin with token (relying on auto-attach):", session.access_token);
+      console.log("Attempting to invoke create-user-admin with token (relying on auto-attach):", currentSession.access_token);
 
       const { data, error: invokeError } = await supabase.functions.invoke('create-user-admin', {
         body: JSON.stringify(requestBody),
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${currentSession.access_token}`, // Use the fresh token
         },
       });
 
@@ -191,7 +202,7 @@ const UserManagementPage = () => {
         console.error("invokeError.context?.status:", invokeError.context?.status);
         console.error("----------------------------------------");
 
-        let errorMessage = "An unexpected error occurred while creating the user."; // Default fallback message
+        let errorMessage = "An unexpected error occurred while creating the user.";
 
         if (invokeError.context?.data) {
           try {

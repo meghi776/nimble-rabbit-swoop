@@ -1,15 +1,15 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Tag, ShoppingCart, Loader2, RefreshCw, LogOut } from 'lucide-react'; // Import LogOut icon
+import { Users, Tag, ShoppingCart, Loader2, RefreshCw, LogOut } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { supabase } from '@/integrations/supabase/client';
 import { showError, showSuccess } from '@/utils/toast';
 import { useSession } from '@/contexts/SessionContext';
-import { useNavigate } from 'react-router-dom'; // Import useNavigate
+import { useNavigate } from 'react-router-dom';
 
 const AdminDashboard = () => {
   const { user, session, loading: sessionLoading } = useSession();
-  const navigate = useNavigate(); // Initialize useNavigate
+  const navigate = useNavigate();
   const [totalUsers, setTotalUsers] = useState<number | null>(null);
   const [totalBrands, setTotalBrands] = useState<number | null>(null);
   const [totalOrders, setTotalOrders] = useState<number | null>(null);
@@ -18,27 +18,35 @@ const AdminDashboard = () => {
 
   const fetchData = useCallback(async () => {
     console.log("AdminDashboard: fetchData initiated.");
-    if (sessionLoading) {
-      console.log("AdminDashboard: Session is still loading. Waiting...");
-      return;
-    }
-    if (!user || !session) {
-      console.log("AdminDashboard: User or session not available. User:", user, "Session:", session);
+    setLoading(true);
+    setError(null);
+
+    // Explicitly get the latest session before invoking
+    const { data: { session: currentSession }, error: getSessionError } = await supabase.auth.getSession();
+
+    if (getSessionError) {
+      console.error("AdminDashboard: Error getting session before invoke:", getSessionError);
+      showError("Failed to get current session. Please try logging in again.");
       setLoading(false);
       return;
     }
 
-    setLoading(true);
-    setError(null);
+    if (!currentSession || !currentSession.access_token) {
+      console.log("AdminDashboard: No active session found, redirecting to login.");
+      showError("Your session has expired or is invalid. Please log in again.");
+      navigate('/login');
+      setLoading(false);
+      return;
+    }
 
     try {
       console.log("AdminDashboard: Attempting to invoke 'get-admin-dashboard-data' Edge Function.");
-      console.log("AdminDashboard: Session access token length:", session.access_token?.length);
+      console.log("AdminDashboard: Session access token length:", currentSession.access_token?.length);
 
       const { data, error: invokeError } = await supabase.functions.invoke('get-admin-dashboard-data', {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${currentSession.access_token}`, // Use the fresh token
         },
       });
 
@@ -76,11 +84,14 @@ const AdminDashboard = () => {
       setLoading(false);
       console.log("AdminDashboard: fetchData completed. Loading set to false.");
     }
-  }, [user, session, sessionLoading]);
+  }, [navigate]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    // Only fetch data if session is not loading, to prevent premature calls
+    if (!sessionLoading) {
+      fetchData();
+    }
+  }, [fetchData, sessionLoading]); // Add sessionLoading to dependencies
 
   const handleRefreshClick = () => {
     fetchData();
@@ -93,7 +104,7 @@ const AdminDashboard = () => {
       showError(`Failed to sign out: ${error.message}`);
     } else {
       showSuccess("Session cleared. Redirecting to login.");
-      navigate('/login'); // Redirect to login after sign out
+      navigate('/login');
     }
     // dismissToast(toastId); // Dismiss toast after a short delay or immediately
   };
