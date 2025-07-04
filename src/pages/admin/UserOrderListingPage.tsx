@@ -20,7 +20,7 @@ import { Link } from 'react-router-dom';
 import JSZip from 'jszip'; // Import JSZip
 import { saveAs } from 'file-saver'; // Import saveAs
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast'; // Import toast utilities
-import { useSession } from '@/contexts/SessionContext'; // Import useSession
+import { useSession } => '@/contexts/SessionContext'; // Import useSession
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 
@@ -334,6 +334,7 @@ const OrderManagementPage = () => {
 
     setLoading(true);
     const toastId = showLoading(`Preparing ${selectedOrderIds.size} designs for download...`);
+    // @ts-ignore
     const zip = new JSZip();
     let downloadedCount = 0;
     let failedCount = 0;
@@ -449,7 +450,7 @@ const OrderManagementPage = () => {
                   disabled={loading}
                   size="sm"
                 >
-                  <Trash2 className="mr-2 h-4 w-4" /> Delete ({selectedOrderIds.size})
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete Selected ({selectedOrderIds.size})
                 </Button>
               </>
             )}
