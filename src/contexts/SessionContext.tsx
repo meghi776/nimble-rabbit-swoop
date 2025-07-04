@@ -1,14 +1,13 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate, useLocation } from 'react-router-dom';
+// Removed direct import of useNavigate and useLocation
 
 interface CustomUser extends User {
   user_metadata: {
     first_name?: string;
     last_name?: string;
   };
-  role?: 'user' | 'admin';
 }
 
 interface SessionContextType {
@@ -19,13 +18,18 @@ interface SessionContextType {
 
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
 
-export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+interface SessionContextProviderProps {
+  children: React.ReactNode;
+  navigate: (path: string) => void; // Type for navigate function
+  location: { pathname: string }; // Simplified type for location object
+}
+
+export const SessionContextProvider: React.FC<SessionContextProviderProps> = ({ children, navigate, location }) => {
   console.log("SessionContext: Component is rendering.");
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<CustomUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
-  const location = useLocation();
+  // navigate and location are now received as props
 
   useEffect(() => {
     console.log("SessionContext: onAuthStateChange listener setup.");
@@ -46,22 +50,14 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       });
 
       if (currentSession?.user) {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', currentSession.user.id)
-          .single();
-
         setUser(prevUser => {
-          const newRole = profileData?.role || 'user';
           const isSameUserId = prevUser?.id === currentSession.user.id;
-          const isSameRole = prevUser?.role === newRole;
-          console.log(`SessionContext: setUser check - isSameUserId: ${isSameUserId}, isSameRole: ${isSameRole}`);
-          if (isSameUserId && isSameRole) {
+          console.log(`SessionContext: setUser check - isSameUserId: ${isSameUserId}`);
+          if (isSameUserId) {
             return prevUser;
           }
           console.log("SessionContext: User object changed, updating state.");
-          return { ...currentSession.user, role: newRole };
+          return { ...currentSession.user };
         });
       } else {
         console.log("SessionContext: No current user, setting user to null.");
@@ -100,22 +96,14 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       });
 
       if (initialSession?.user) {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', initialSession.user.id)
-          .single();
-
         setUser(prevUser => {
-          const newRole = profileData?.role || 'user';
           const isSameUserId = prevUser?.id === initialSession.user.id;
-          const isSameRole = prevUser?.role === newRole;
-          console.log(`SessionContext: Initial setUser check - isSameUserId: ${isSameUserId}, isSameRole: ${isSameRole}`);
-          if (isSameUserId && isSameRole) {
+          console.log(`SessionContext: Initial setUser check - isSameUserId: ${isSameUserId}`);
+          if (isSameUserId) {
             return prevUser;
           }
           console.log("SessionContext: Initial user object changed, updating state.");
-          return { ...initialSession.user, role: newRole };
+          return { ...initialSession.user };
         });
       } else {
         console.log("SessionContext: No initial user, setting user to null.");
@@ -135,7 +123,6 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     };
   }, [navigate, location.pathname]);
 
-  // Memoize the context value to prevent unnecessary re-renders of consumers
   const contextValue = useMemo(() => ({
     session,
     user,

@@ -3,7 +3,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import ProductListingPage from "./pages/ProductListingPage";
 import BrandsPage from "./pages/BrandsPage";
-import { SessionContextProvider } from "@/contexts/SessionContext";
+import SessionContextWrapper from "./components/SessionContextWrapper"; // Import the new wrapper
 import { Toaster } from "react-hot-toast";
 import AdminDashboard from "./pages/admin/AdminDashboard"; // Import AdminDashboard
 import AdminLayout from "./components/AdminLayout"; // Import AdminLayout
@@ -27,15 +27,15 @@ function App() {
     <>
       <Toaster />
       <Router>
-        <SessionContextProvider>
-          <DemoOrderModalProvider> {/* Wrap with DemoOrderModalProvider */}
+        <SessionContextWrapper> {/* Use the new wrapper here */}
+          <DemoOrderModalProvider>
             <Routes>
               <Route path="/" element={<PublicLayout />}>
                 <Route index element={<Index />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/categories/:categoryId/brands" element={<BrandsPage />} />
                 <Route path="/categories/:categoryId/brands/:brandId/products" element={<ProductListingPage />} />
-                <Route path="/customize-cover/:productId" element={<ProductCustomizerPage />} /> {/* Renamed component */}
+                <Route path="/customize-cover/:productId" element={<ProductCustomizerPage />} />
                 <Route path="/orders" element={<OrderHistoryPage />} />
               </Route>
 
@@ -43,11 +43,11 @@ function App() {
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<AdminDashboard />} />
                 <Route path="users" element={<UserManagementPage />} />
-                <Route path="products" element={<CategoryManagementPage />} /> {/* This will show categories */}
+                <Route path="products" element={<CategoryManagementPage />} />
                 <Route path="categories/:categoryId/brands" element={<BrandManagementPage />} />
                 <Route path="categories/:categoryId/brands/:brandId/products" element={<ProductManagementByBrandPage />} />
-                <Route path="categories/:categoryId/brands/:brandId/products/new" element={<ProductEditPage />} /> {/* New product route */}
-                <Route path="categories/:categoryId/brands/:brandId/products/:productId" element={<ProductEditPage />} /> {/* Edit product route */}
+                <Route path="categories/:categoryId/brands/:brandId/products/new" element={<ProductEditPage />} />
+                <Route path="categories/:categoryId/brands/:brandId/products/:productId" element={<ProductEditPage />} />
                 <Route path="orders" element={<UserOrderListingPage />} />
                 <Route path="orders/:userId" element={<UserOrdersPage />} />
                 <Route path="demo-orders" element={<DemoOrderListingPage />} />
@@ -58,7 +58,7 @@ function App() {
               <Route path="*" element={<NotFound />} />
             </Routes>
           </DemoOrderModalProvider>
-        </SessionContextProvider>
+        </SessionContextWrapper>
       </Router>
     </>
   );
