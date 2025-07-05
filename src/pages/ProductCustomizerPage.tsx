@@ -25,7 +25,7 @@ import {
   Wand2,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
-import { useIsMobile } from '@/hooks/use-is-mobile';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useSession } from '@/contexts/SessionContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -1436,7 +1436,7 @@ const ProductCustomizerPage = () => {
           setIsSavedDesignsModalOpen={setIsSavedDesignsModalOpen}
           currentDesignElements={designElements}
           currentSelectedCanvasColor={selectedCanvasColor}
-          currentBlurredBackgroundImageUrl={blurredBackgroundImageUrl}
+          currentBlurredBackgroundImageUrl={currentBlurredBackgroundImageUrl}
           onLoadDesign={loadDesign}
           canvasContentRef={canvasContentRef}
         />
