@@ -253,27 +253,7 @@ const ProductCustomizerPage = () => {
         });
 
         try {
-          const localStorageKey = `product-${productId}-designs`;
-          const storedDesigns = localStorage.getItem(localStorageKey);
-          if (storedDesigns) {
-            const parsedDesigns = JSON.parse(storedDesigns);
-            if (parsedDesigns.length > 0) {
-              const mostRecentDesign = parsedDesigns.sort((a: any, b: any) => b.timestamp - a.timestamp)[0];
-              loadDesign({
-                elements: mostRecentDesign.designElements,
-                color: mostRecentDesign.selectedCanvasColor,
-                blurredBg: mostRecentDesign.blurredBackgroundImageUrl,
-              });
-              showSuccess("Previously saved design loaded automatically!");
-            } else if (mockup?.design_data) {
-              const loadedElements: DesignElement[] = JSON.parse(mockup.design_data as string).map((el: any) => ({
-                ...el,
-                width: el.width || (el.type === 'text' ? 200 : productData.canvas_width || 300),
-                height: el.height || (el.type === 'text' ? 40 : productData.canvas_height || 600),
-              }));
-              setDesignElements(loadedElements);
-            }
-          } else if (mockup?.design_data) {
+          if (mockup?.design_data) {
             const loadedElements: DesignElement[] = JSON.parse(mockup.design_data as string).map((el: any) => ({
               ...el,
               width: el.width || (el.type === 'text' ? 200 : productData.canvas_width || 300),
@@ -282,8 +262,8 @@ const ProductCustomizerPage = () => {
             setDesignElements(loadedElements);
           }
         } catch (parseError) {
-          console.error("Error parsing local or database design data:", parseError);
-          showError("Failed to load existing design data. It might be corrupted.");
+          console.error("Error parsing database design data:", parseError);
+          showError("Failed to load default design data. It might be corrupted.");
         }
         setDemoOrderDetails('Demo User', productData.price?.toFixed(2) || '0.00', 'Demo Address, Demo City, Demo State, 00000');
       }
@@ -293,7 +273,7 @@ const ProductCustomizerPage = () => {
     if (productId) {
       fetchProductAndMockup();
     }
-  }, [productId, setDemoOrderDetails, loadDesign]);
+  }, [productId, setDemoOrderDetails]);
 
   useEffect(() => {
     return () => {
