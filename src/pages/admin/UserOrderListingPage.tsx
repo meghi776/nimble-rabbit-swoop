@@ -568,7 +568,6 @@ const OrderManagementPage = () => {
                           <div className="flex items-center">User Email {getSortIcon('user_email')}</div>
                         </TableHead>
                         <TableHead>Product</TableHead>
-                        <TableHead>Product ID (Debug)</TableHead>
                         <TableHead>Design</TableHead>
                         <TableHead className="cursor-pointer hover:text-primary" onClick={() => handleSort('type')}>
                           <div className="flex items-center">Type {getSortIcon('type')}</div>
@@ -604,7 +603,6 @@ const OrderManagementPage = () => {
                           </TableCell>
                           <TableCell>{order.user_email || 'N/A'}</TableCell>
                           <TableCell>{order.products?.name || 'N/A'}</TableCell>
-                          <TableCell className="text-xs">{order.product_id || 'NULL'}</TableCell>
                           <TableCell>
                             {order.ordered_design_image_url ? (
                               <Button variant="outline" size="sm" onClick={() => openImageModal(order.ordered_design_image_url)}>

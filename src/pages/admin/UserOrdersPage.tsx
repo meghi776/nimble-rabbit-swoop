@@ -362,7 +362,6 @@ const UserOrdersPage = () => {
                         <TableHead>Order ID</TableHead>
                         <TableHead>Date</TableHead>
                         <TableHead>Product</TableHead>
-                        <TableHead>Product ID (Debug)</TableHead>
                         <TableHead>Design</TableHead>
                         <TableHead>Type</TableHead>
                         <TableHead>Payment Method</TableHead>
@@ -384,7 +383,6 @@ const UserOrdersPage = () => {
                           <TableCell className="font-medium text-xs">{order.display_id || `${order.id.substring(0, 8)}...`}</TableCell>
                           <TableCell>{format(new Date(order.created_at), 'PPP')}</TableCell>
                           <TableCell>{order.products?.name || 'N/A'}</TableCell>
-                          <TableCell className="text-xs">{order.product_id || 'NULL'}</TableCell>
                           <TableCell>
                             {order.ordered_design_image_url ? (
                               <Button variant="outline" size="sm" onClick={() => openImageModal(order.ordered_design_image_url)}>

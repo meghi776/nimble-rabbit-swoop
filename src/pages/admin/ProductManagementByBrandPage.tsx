@@ -80,12 +80,6 @@ const ProductManagementByBrandPage = () => {
     mockup_y: '',
   });
 
-  const isSupabaseStorageUrl = (url: string | null, bucketName: string) => {
-    if (!url) return false;
-    const supabaseStorageBaseUrl = `https://smpjbedvyqensurarrym.supabase.co/storage/v1/object/public/${bucketName}/`;
-    return url.startsWith(supabaseStorageBaseUrl);
-  };
-
   const fetchProducts = async () => {
     setLoading(true);
     setError(null);
@@ -180,51 +174,24 @@ const ProductManagementByBrandPage = () => {
     };
   }, [categoryId, brandId, searchQuery]);
 
-  const deleteSingleProduct = async (id: string, mockupId: string | null, mockupImageUrl: string | null) => {
-    if (mockupImageUrl && isSupabaseStorageUrl(mockupImageUrl, 'order-mockups')) {
-      const fileName = mockupImageUrl.split('/').pop();
-      if (fileName) {
-        await deleteFileFromSupabase(`mockups/${fileName}`, 'order-mockups');
-      }
-    }
-
-    if (mockupId) {
-      const { error: deleteMockupError } = await supabase
-        .from('mockups')
-        .delete()
-        .eq('id', mockupId);
-      if (deleteMockupError) {
-        console.error("Error deleting mockup entry:", deleteMockupError);
-        showError(`Failed to delete mockup entry: ${deleteMockupError.message}`);
-        return false;
-      }
-    }
-
-    const { error } = await supabase
-      .from('products')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      console.error("Error deleting product:", error);
-      showError(`Failed to delete product: ${error.message}`);
-      return false;
-    }
-    return true;
-  };
-
-  const handleDeleteProduct = async (id: string, mockupId: string | null, mockupImageUrl: string | null) => {
-    if (!window.confirm("Are you sure you want to delete this product and its associated mockup? This action cannot be undone.")) {
+  const handleDeleteProduct = async (id: string) => {
+    if (!window.confirm("Are you sure you want to disable this product? It will be hidden from customers but preserved for existing orders.")) {
       return;
     }
     setLoading(true);
-    const toastId = showLoading("Deleting product...");
-    const success = await deleteSingleProduct(id, mockupId, mockupImageUrl);
-    if (success) {
-      showSuccess("Product deleted successfully!");
-      fetchProducts();
+    const toastId = showLoading("Disabling product...");
+    
+    const { error } = await supabase
+      .from('products')
+      .update({ is_disabled: true })
+      .eq('id', id);
+
+    if (error) {
+      console.error("Error disabling product:", error);
+      showError(`Failed to disable product: ${error.message}`);
     } else {
-      showError("Failed to delete product.");
+      showSuccess("Product disabled successfully!");
+      fetchProducts();
     }
     dismissToast(toastId);
     setLoading(false);
@@ -442,43 +409,34 @@ const ProductManagementByBrandPage = () => {
     }
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDisable = async () => {
     if (selectedProductIds.size === 0) {
-      showError("No products selected. Please select at least one product to delete.");
+      showError("No products selected. Please select at least one product to disable.");
       return;
     }
 
-    if (!window.confirm(`Are you sure you want to delete ${selectedProductIds.size} selected products? This action cannot be undone.`)) {
+    if (!window.confirm(`Are you sure you want to disable ${selectedProductIds.size} selected products? They will be hidden from customers but preserved for existing orders.`)) {
       return;
     }
 
     setLoading(true);
-    const toastId = showLoading(`Deleting ${selectedProductIds.size} products...`);
-    let successfulDeletions = 0;
-    let failedDeletions = 0;
+    const toastId = showLoading(`Disabling ${selectedProductIds.size} products...`);
+    
+    const { error } = await supabase
+      .from('products')
+      .update({ is_disabled: true })
+      .in('id', Array.from(selectedProductIds));
 
-    for (const productId of selectedProductIds) {
-      const productToDelete = products.find(p => p.id === productId);
-      if (productToDelete) {
-        const success = await deleteSingleProduct(productId, productToDelete.mockup_id, productToDelete.mockup_image_url);
-        if (success) {
-          successfulDeletions++;
-        } else {
-          failedDeletions++;
-        }
-      }
+    if (error) {
+      console.error("Error bulk disabling products:", error);
+      showError(`Failed to disable products: ${error.message}`);
+    } else {
+      showSuccess(`${selectedProductIds.size} products disabled successfully!`);
+      fetchProducts();
     }
-
-    fetchProducts();
+    
     dismissToast(toastId);
     setLoading(false);
-    if (failedDeletions === 0) {
-      showSuccess(`${successfulDeletions} products deleted successfully!`);
-    } else if (successfulDeletions > 0) {
-      showError(`${successfulDeletions} products deleted, but ${failedDeletions} failed.`);
-    } else {
-      showError("Failed to delete any selected products.");
-    }
   };
 
   const handleBulkEditSubmit = async () => {
@@ -689,10 +647,10 @@ const ProductManagementByBrandPage = () => {
                 </Button>
                 <Button
                   variant="destructive"
-                  onClick={handleBulkDelete}
+                  onClick={handleBulkDisable}
                   disabled={loading}
                 >
-                  <Trash2 className="mr-2 h-4 w-4" /> Delete Selected ({selectedProductIds.size})
+                  <Trash2 className="mr-2 h-4 w-4" /> Disable Selected ({selectedProductIds.size})
                 </Button>
               </>
             )}
@@ -816,7 +774,7 @@ const ProductManagementByBrandPage = () => {
                             <Button
                               variant="destructive"
                               size="sm"
-                              onClick={() => handleDeleteProduct(product.id, product.mockup_id, product.mockup_image_url)}
+                              onClick={() => handleDeleteProduct(product.id)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
