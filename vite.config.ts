@@ -17,5 +17,6 @@ export default defineConfig(() => ({
   base: '/', // Explicitly set the base path for the application
   optimizeDeps: {
     exclude: ['qrcode.react'], // Exclude qrcode.react from pre-bundling
+    include: ['fabric'],
   },
 }));
