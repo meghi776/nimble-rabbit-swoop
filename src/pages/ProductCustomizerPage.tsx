@@ -1429,7 +1429,7 @@ const ProductCustomizerPage = () => {
           setIsSavedDesignsModalOpen={setIsSavedDesignsModalOpen}
           currentDesignElements={designElements}
           currentSelectedCanvasColor={selectedCanvasColor}
-          currentBlurredBackgroundImageUrl={currentBlurredBackgroundImageUrl}
+          currentBlurredBackgroundImageUrl={blurredBackgroundImageUrl}
           onLoadDesign={loadDesign}
           canvasContentRef={canvasContentRef}
         />
