@@ -1156,7 +1156,7 @@ const ProductCustomizerPage = () => {
           <div className="flex-1 flex flex-col md:flex-row overflow-y-auto pb-65">
             <div
               ref={designAreaRef}
-              className="flex-1 flex items-center justify-center relative overflow-hidden p-8"
+              className="flex-1 flex items-center justify-center relative overflow-hidden px-4"
               style={{
                 backgroundSize: 'contain',
                 backgroundRepeat: 'no-repeat',
