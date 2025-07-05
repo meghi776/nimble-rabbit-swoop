@@ -21,6 +21,7 @@ import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import Papa from 'papaparse';
+import { addTextToImage } from '@/utils/imageUtils';
 
 interface Order {
   id: string;
@@ -33,8 +34,8 @@ interface Order {
   status: string;
   total_price: number;
   ordered_design_image_url: string | null;
-  products: { name: string }[] | null;
-  profiles: { first_name: string | null; last_name: string | null; }[] | null;
+  products: { name: string } | null;
+  profiles: { first_name: string | null; last_name: string | null; } | null;
   type: string;
 }
 
@@ -225,11 +226,10 @@ const UserOrdersPage = () => {
     const downloadPromises = selectedOrders.map(async (order) => {
       if (order.ordered_design_image_url) {
         try {
-          const response = await fetch(order.ordered_design_image_url);
-          if (!response.ok) throw new Error(`Failed to fetch image for order ${order.id}`);
-          const blob = await response.blob();
-          const fileName = `${order.products?.[0]?.name || 'design'}_${order.id.substring(0, 8)}.png`;
-          zip.file(fileName, blob);
+          const productName = order.products?.name || 'Unknown Product';
+          const blobWithText = await addTextToImage(order.ordered_design_image_url, productName);
+          const fileName = `${productName}_${order.id.substring(0, 8)}.png`;
+          zip.file(fileName, blobWithText);
           downloadedCount++;
         } catch (err) {
           console.error(`Failed to download design for order ${order.id}:`, err);
@@ -263,7 +263,7 @@ const UserOrdersPage = () => {
         'Customer Name': order.customer_name,
         'Customer Address': order.customer_address,
         'Customer Phone': order.customer_phone,
-        'Product Name': order.products?.[0]?.name || 'N/A',
+        'Product Name': order.products?.name || 'N/A',
         'Order Date': format(new Date(order.created_at), 'yyyy-MM-dd'),
       }));
 
@@ -381,7 +381,7 @@ const UserOrdersPage = () => {
                           </TableCell>
                           <TableCell className="font-medium text-xs">{order.display_id || `${order.id.substring(0, 8)}...`}</TableCell>
                           <TableCell>{format(new Date(order.created_at), 'PPP')}</TableCell>
-                          <TableCell>{order.products?.[0]?.name || 'N/A'}</TableCell>
+                          <TableCell>{order.products?.name || 'N/A'}</TableCell>
                           <TableCell>
                             {order.ordered_design_image_url ? (
                               <Button variant="outline" size="sm" onClick={() => openImageModal(order.ordered_design_image_url)}>

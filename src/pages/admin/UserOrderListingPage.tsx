@@ -23,6 +23,7 @@ import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast
 import { useSession } from '@/contexts/SessionContext';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { addTextToImage } from '@/utils/imageUtils';
 
 interface Order {
   id: string;
@@ -64,7 +65,7 @@ const OrderManagementPage = () => {
   const [orderTypeFilter, setOrderTypeFilter] = useState<string>('all');
   const [selectedUserIdFilter, setSelectedUserIdFilter] = useState<string>('all');
   const [userList, setUserList] = useState<UserListItem[]>([]);
-  const [selectedOrderIds, setSelectedOrderIds] = new useState<Set<string>>(new Set());
+  const [selectedOrderIds, newSetSelectedOrderIds] = useState<Set<string>>(new Set());
   const [normalOrderCount, setNormalOrderCount] = useState<number | null>(null);
   const [demoOrderCount, setDemoOrderCount] = useState<number | null>(null);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
@@ -75,7 +76,7 @@ const OrderManagementPage = () => {
   const fetchOrdersAndCounts = async () => {
     setLoading(true);
     setError(null);
-    setSelectedOrderIds(new Set());
+    newSetSelectedOrderIds(new Set());
 
     // Explicitly get the latest session before invoking
     const { data: { session: currentSession }, error: getSessionError } = await supabase.auth.getSession();
@@ -277,7 +278,7 @@ const OrderManagementPage = () => {
   };
 
   const handleSelectOrder = (orderId: string, isChecked: boolean) => {
-    setSelectedOrderIds(prev => {
+    newSetSelectedOrderIds(prev => {
       const newSelection = new Set(prev);
       if (isChecked) {
         newSelection.add(orderId);
@@ -291,9 +292,9 @@ const OrderManagementPage = () => {
   const handleSelectAllOrders = (isChecked: boolean) => {
     if (isChecked) {
       const allOrderIds = new Set(orders.map(order => order.id));
-      setSelectedOrderIds(allOrderIds);
+      newSetSelectedOrderIds(allOrderIds);
     } else {
-      setSelectedOrderIds(new Set());
+      newSetSelectedOrderIds(new Set());
     }
   };
 
@@ -344,7 +345,6 @@ const OrderManagementPage = () => {
 
     setLoading(true);
     const toastId = showLoading(`Preparing ${selectedOrderIds.size} designs for download...`);
-    // @ts-ignore
     const zip = new JSZip();
     let downloadedCount = 0;
     let failedCount = 0;
@@ -353,16 +353,14 @@ const OrderManagementPage = () => {
       const order = orders.find(o => o.id === orderId);
       if (order && order.ordered_design_image_url) {
         try {
-          const response = await fetch(order.ordered_design_image_url);
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          const blob = await response.blob();
-          const fileName = `${order.products?.name || 'design'}_${order.id.substring(0, 8)}_${format(new Date(order.created_at), 'yyyyMMdd')}.png`;
-          zip.file(fileName, blob);
+          const productName = order.products?.name || 'Unknown Product';
+          const blobWithText = await addTextToImage(order.ordered_design_image_url, productName);
+          
+          const fileName = `${productName}_${order.id.substring(0, 8)}_${format(new Date(order.created_at), 'yyyyMMdd')}.png`;
+          zip.file(fileName, blobWithText);
           downloadedCount++;
         } catch (err) {
-          console.error(`Failed to download design for order ${order.id}:`, err);
+          console.error(`Failed to process design for order ${order.id}:`, err);
           failedCount++;
         }
       } else {

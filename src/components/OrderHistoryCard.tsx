@@ -16,7 +16,7 @@ interface Order {
   status: string;
   total_price: number;
   ordered_design_image_url: string | null;
-  products: { name: string }[] | null; // Changed to array
+  products: { name: string } | null;
   type: string;
 }
 
@@ -34,7 +34,7 @@ const OrderHistoryCard: React.FC<OrderHistoryCardProps> = ({ order, onViewImage,
       <Card className="w-full">
         <CardHeader>
           <CardTitle className="flex justify-between items-center text-lg">
-            <span>{order.products?.[0]?.name || 'N/A'}</span> {/* Access first element */}
+            <span>{order.products?.name || 'N/A'}</span>
             <span className="text-base font-bold">₹{order.total_price?.toFixed(2)}</span>
           </CardTitle>
           <p className="text-sm text-muted-foreground">{format(new Date(order.created_at), 'PPP')}</p>
@@ -75,7 +75,7 @@ const OrderHistoryCard: React.FC<OrderHistoryCardProps> = ({ order, onViewImage,
             <DialogDescription>Order ID: {order.display_id || `${order.id.substring(0, 8)}...`}</DialogDescription>
           </DialogHeader>
           <div className="space-y-2 py-4 text-sm">
-            <p><strong>Product:</strong> {order.products?.[0]?.name || 'N/A'}</p> {/* Access first element */}
+            <p><strong>Product:</strong> {order.products?.name || 'N/A'}</p>
             <p><strong>Date:</strong> {format(new Date(order.created_at), 'PPP')}</p>
             <p><strong>Total:</strong> ₹{order.total_price?.toFixed(2)}</p>
             <p><strong>Status:</strong> {order.status}</p>

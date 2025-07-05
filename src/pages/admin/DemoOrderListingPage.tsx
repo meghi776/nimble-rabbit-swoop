@@ -21,6 +21,7 @@ import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { useSession } from '@/contexts/SessionContext';
+import { addTextToImage } from '@/utils/imageUtils';
 
 interface Order {
   id: string;
@@ -305,16 +306,14 @@ const DemoOrderListingPage = () => {
       const order = orders.find(o => o.id === orderId);
       if (order && order.ordered_design_image_url) {
         try {
-          const response = await fetch(order.ordered_design_image_url);
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          const blob = await response.blob();
-          const fileName = `${order.products?.name || 'design'}_${order.id.substring(0, 8)}_${format(new Date(order.created_at), 'yyyyMMdd')}.png`;
-          zip.file(fileName, blob);
+          const productName = order.products?.name || 'Unknown Product';
+          const blobWithText = await addTextToImage(order.ordered_design_image_url, productName);
+          
+          const fileName = `${productName}_${order.id.substring(0, 8)}_${format(new Date(order.created_at), 'yyyyMMdd')}.png`;
+          zip.file(fileName, blobWithText);
           downloadedCount++;
         } catch (err) {
-          console.error(`Failed to download design for order ${order.id}:`, err);
+          console.error(`Failed to process design for order ${order.id}:`, err);
           failedCount++;
         }
       } else {
