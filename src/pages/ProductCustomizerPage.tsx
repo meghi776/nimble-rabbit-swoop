@@ -1183,7 +1183,7 @@ const ProductCustomizerPage = () => {
                   <div
                     key={el.id}
                     data-element-id={el.id}
-                    className={`absolute cursor-grab ${selectedElementId === el.id ? 'border-2 border-blue-500' : ''}`}
+                    className={`absolute cursor-grab ${selectedElementId === el.id && el.type === 'text' ? 'border-2 border-blue-500' : ''}`}
                     style={{
                       left: el.x * scaleFactor,
                       top: el.y * scaleFactor,
