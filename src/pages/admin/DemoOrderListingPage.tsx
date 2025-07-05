@@ -20,6 +20,7 @@ import { Link } from 'react-router-dom';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
+import { useSession } from '@/contexts/SessionContext';
 
 interface Order {
   id: string;
@@ -39,6 +40,8 @@ interface Order {
 }
 
 const DemoOrderListingPage = () => {
+  const { session, loading: sessionLoading } = useSession();
+  const [rawOrders, setRawOrders] = useState<Order[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,52 +56,99 @@ const DemoOrderListingPage = () => {
 
   const orderStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Demo'];
 
-  const fetchOrders = async () => {
-    setLoading(true);
-    setError(null);
-    setSelectedOrderIds(new Set());
+  useEffect(() => {
+    const fetchOrders = async () => {
+      if (sessionLoading) return;
 
-    try {
-      const { data, error: invokeError } = await supabase.functions.invoke('get-orders-with-user-email', {
-        body: JSON.stringify({ sortColumn, sortDirection, orderType: 'demo' }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      setLoading(true);
+      setError(null);
+      setSelectedOrderIds(new Set());
 
-      if (invokeError) {
-        console.error("Edge Function Invoke Error:", invokeError);
-        let errorMessage = invokeError.message;
-        if (invokeError.context?.data) {
-          try {
-            const parsedError = JSON.parse(invokeError.context.data);
-            if (parsedError.error) {
-              errorMessage = parsedError.error;
-            }
-          } catch (e) {
-            // Fallback if context.data is not JSON
-          }
-        }
-        showError(`Failed to load demo orders: ${errorMessage}`);
-        setError(errorMessage);
-      } else if (data && data.orders) {
-        setOrders(data.orders || []);
-      } else {
-        showError("Unexpected response from server when fetching demo orders.");
-        setError("Unexpected response from server.");
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (!currentSession) {
+        showError("Authentication required to fetch demo orders.");
+        setLoading(false);
+        return;
       }
-    } catch (err: any) {
-      console.error("Network or unexpected error:", err);
-      showError(err.message || "An unexpected error occurred while fetching demo orders.");
-      setError(err.message || "An unexpected error occurred.");
-    } finally {
-      setLoading(false);
-    }
-  };
+
+      try {
+        const { data, error: invokeError } = await supabase.functions.invoke('get-orders-with-user-email', {
+          body: { orderType: 'demo' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${currentSession.access_token}`,
+          },
+        });
+
+        if (invokeError) {
+          console.error("Edge Function Invoke Error:", invokeError);
+          let errorMessage = invokeError.message;
+          if (invokeError.context?.data) {
+            try {
+              const parsedError = JSON.parse(invokeError.context.data);
+              if (parsedError.error) {
+                errorMessage = parsedError.error;
+              }
+            } catch (e) {
+              // Fallback
+            }
+          }
+          showError(`Failed to load demo orders: ${errorMessage}`);
+          setError(errorMessage);
+        } else if (data && data.orders) {
+          setRawOrders(data.orders || []);
+        } else {
+          showError("Unexpected response from server when fetching demo orders.");
+          setError("Unexpected response from server.");
+        }
+      } catch (err: any) {
+        console.error("Network or unexpected error:", err);
+        showError(err.message || "An unexpected error occurred while fetching demo orders.");
+        setError(err.message || "An unexpected error occurred.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, [sessionLoading]);
 
   useEffect(() => {
-    fetchOrders();
-  }, [sortColumn, sortDirection]);
+    let sortedData = [...rawOrders];
+    sortedData.sort((a, b) => {
+      let valA: any;
+      let valB: any;
+
+      if (sortColumn === 'user_email') {
+        valA = a.user_email || '';
+        valB = b.user_email || '';
+      } else if (sortColumn === 'customer_name') {
+        valA = `${a.profiles?.first_name || ''} ${a.profiles?.last_name || ''}`.trim() || a.customer_name;
+        valB = `${b.profiles?.first_name || ''} ${b.profiles?.last_name || ''}`.trim() || b.customer_name;
+      } else {
+        valA = a[sortColumn as keyof Order];
+        valB = b[sortColumn as keyof Order];
+      }
+
+      if (valA === null || valA === undefined) return 1;
+      if (valB === null || valB === undefined) return -1;
+
+      if (typeof valA === 'number' && typeof valB === 'number') {
+        return sortDirection === 'asc' ? valA - valB : valB - valA;
+      }
+      
+      if (sortColumn === 'created_at') {
+         const dateA = new Date(valA as string);
+         const dateB = new Date(valB as string);
+         return sortDirection === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
+      }
+
+      return sortDirection === 'asc' 
+        ? String(valA).localeCompare(String(valB)) 
+        : String(valB).localeCompare(String(valA));
+    });
+    setOrders(sortedData);
+  }, [rawOrders, sortColumn, sortDirection]);
 
   const openImageModal = (imageUrl: string | null) => {
     if (imageUrl) {
@@ -129,7 +179,7 @@ const DemoOrderListingPage = () => {
     } else {
       showSuccess("Demo order status updated successfully!");
       setIsEditStatusModalOpen(false);
-      fetchOrders();
+      setRawOrders(prev => prev.map(o => o.id === currentOrder.id ? { ...o, status: newStatus } : o));
     }
     dismissToast(toastId);
     setLoading(false);
@@ -172,7 +222,7 @@ const DemoOrderListingPage = () => {
     const success = await deleteSingleOrder(id, imageUrl);
     if (success) {
       showSuccess("Demo order deleted successfully!");
-      fetchOrders();
+      setRawOrders(prev => prev.filter(o => o.id !== id));
     }
     dismissToast(toastId);
     setLoading(false);
@@ -226,7 +276,7 @@ const DemoOrderListingPage = () => {
       }
     }
 
-    fetchOrders();
+    setRawOrders(prev => prev.filter(o => !selectedOrderIds.has(o.id)));
     dismissToast(toastId);
     setLoading(false);
     if (failedDeletions === 0) {
@@ -290,6 +340,22 @@ const DemoOrderListingPage = () => {
     setLoading(false);
   };
 
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortIcon = (column: string) => {
+    if (sortColumn === column) {
+      return sortDirection === 'asc' ? <ArrowUpWideNarrow className="ml-1 h-3 w-3" /> : <ArrowDownWideNarrow className="ml-1 h-3 w-3" />;
+    }
+    return null;
+  };
+
   const isAllSelected = orders.length > 0 && selectedOrderIds.size === orders.length;
   const isIndeterminate = selectedOrderIds.size > 0 && selectedOrderIds.size < orders.length;
 
@@ -322,7 +388,7 @@ const DemoOrderListingPage = () => {
               </>
             )}
             <Label htmlFor="sort-by">Sort by:</Label>
-            <Select value={sortColumn} onValueChange={(value) => setSortColumn(value)}>
+            <Select value={sortColumn} onValueChange={handleSort}>
               <SelectTrigger id="sort-by" className="w-[180px]">
                 <SelectValue placeholder="Select column" />
               </SelectTrigger>
