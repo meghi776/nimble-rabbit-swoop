@@ -792,7 +792,7 @@ const ProductCustomizerPage = () => {
           throw new Error("Product is out of stock.");
         }
         const { data: decrementData, error: decrementError } = await supabase.functions.invoke('decrement-product-inventory', {
-          body: { productId: product.id, quantity: 1 },
+          body: JSON.stringify({ productId: product.id, quantity: 1 }),
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${currentSession.access_token}`, // Use the fresh token
