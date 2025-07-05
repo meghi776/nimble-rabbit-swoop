@@ -19,7 +19,8 @@ type DesignElement = {
 const ProductCustomizerPage = () => {
   const { productId } = useParams();
   const [product, setProduct] = useState(null);
-  const canvasRef = useRef(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [canvas, setCanvas] = useState<fabric.Canvas | null>(null);
   const [designElements, setDesignElements] = useState<DesignElement[]>([]);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
@@ -34,34 +35,90 @@ const ProductCustomizerPage = () => {
   const [isUnderline, setIsUnderline] = useState(false);
   const [color, setColor] = useState('#000000');
 
+  const logicalWidth = 400;
+  const logicalHeight = 600;
+
   useEffect(() => {
     // Fetch product data or something
   }, [productId]);
 
+  // Effect to initialize the canvas
   useEffect(() => {
     if (canvasRef.current) {
-      const newCanvas = new fabric.Canvas(canvasRef.current);
+      const newCanvas = new fabric.Canvas(canvasRef.current, {
+        width: logicalWidth,
+        height: logicalHeight,
+      });
       setCanvas(newCanvas);
 
-      newCanvas.on('selection:created', (e) => {
-        if (e.selected && e.selected.length > 0) {
-          const selectedObj = e.selected[0];
-          const element = designElements.find(el => el.fabricObject === selectedObj);
-          if (element) {
-            setSelectedElementId(element.id);
-          }
-        }
-      });
-
-      newCanvas.on('selection:cleared', () => {
-        setSelectedElementId(null);
-      });
-
       return () => {
-        newCanvas.dispose();
+        if (newCanvas) {
+            newCanvas.dispose();
+        }
+        setCanvas(null);
       };
     }
-  }, [designElements]);
+  }, []); // Runs only once on mount
+
+  // Effect for canvas event listeners
+  useEffect(() => {
+    if (!canvas) return;
+
+    const onSelectionCreated = (e: fabric.IEvent) => {
+      if (e.selected && e.selected.length > 0) {
+        const selectedObj = e.selected[0];
+        const element = designElements.find(el => el.fabricObject === selectedObj);
+        if (element) {
+          setSelectedElementId(element.id);
+        }
+      }
+    };
+
+    const onSelectionCleared = () => {
+      setSelectedElementId(null);
+    };
+
+    canvas.on('selection:created', onSelectionCreated);
+    canvas.on('selection:cleared', onSelectionCleared);
+
+    return () => {
+      canvas.off('selection:created', onSelectionCreated);
+      canvas.off('selection:cleared', onSelectionCleared);
+    };
+  }, [canvas, designElements]);
+
+  // Effect for making the canvas responsive
+  useEffect(() => {
+    if (!canvas || !containerRef.current) return;
+
+    const container = containerRef.current;
+
+    const resizeObserver = new ResizeObserver(entries => {
+      for (let entry of entries) {
+        const { width } = entry.contentRect;
+        const scale = width / logicalWidth;
+        const height = logicalHeight * scale;
+
+        canvas.setDimensions({ width, height });
+        canvas.setZoom(scale);
+        canvas.renderAll();
+      }
+    });
+
+    resizeObserver.observe(container);
+
+    // Initial resize
+    const initialWidth = container.clientWidth;
+    const initialScale = initialWidth / logicalWidth;
+    const initialHeight = logicalHeight * initialScale;
+    canvas.setDimensions({ width: initialWidth, height: initialHeight });
+    canvas.setZoom(initialScale);
+    canvas.renderAll();
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [canvas]);
 
   const selectedElement = designElements.find(el => el.id === selectedElementId);
 
@@ -73,10 +130,10 @@ const ProductCustomizerPage = () => {
       </header>
 
       <main className="flex-grow flex items-center justify-center p-4">
-        <div className="relative">
+        <div ref={containerRef} className="relative w-full max-w-[400px]">
           {/* Dummy product image */}
-          <img src="https://placehold.co/400x600" alt="Product" className="rounded-lg shadow-lg" />
-          <canvas ref={canvasRef} width={400} height={600} className="absolute top-0 left-0" />
+          <img src="https://placehold.co/400x600" alt="Product" className="w-full h-auto rounded-lg shadow-lg" />
+          <canvas ref={canvasRef} className="absolute top-0 left-0" />
         </div>
       </main>
 
