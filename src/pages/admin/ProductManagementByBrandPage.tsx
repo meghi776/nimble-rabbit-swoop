@@ -830,6 +830,7 @@ const ProductManagementByBrandPage = () => {
             </>
           )}
         </CardContent>
+      </Card>
 
       <Dialog open={isBulkEditModalOpen} onOpenChange={setIsBulkEditModalOpen}>
         <DialogContent className="sm:max-w-[600px]">
