@@ -12,23 +12,41 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  console.log("--- decrement-product-inventory: Request received ---");
+  console.log("Request method:", req.method);
+  console.log("Request headers:", Object.fromEntries(req.headers.entries()));
+
+  let rawBody;
+  try {
+    rawBody = await req.text();
+    console.log(`Raw request body (length: ${rawBody.length}): "${rawBody}"`);
+  } catch (e) {
+    console.error("Error reading request body as text:", e);
+    return new Response(JSON.stringify({ error: 'Could not read request body' }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400,
+    });
+  }
+
   let requestBody;
   try {
-    requestBody = await req.json();
+    if (!rawBody) {
+      throw new Error("Request body is empty");
+    }
+    requestBody = JSON.parse(rawBody);
+    console.log("Successfully parsed JSON body:", requestBody);
   } catch (e) {
-    console.error("Error parsing JSON body:", e);
-    return new Response(JSON.stringify({ error: 'Invalid or empty JSON body' }), {
+    console.error("Error parsing JSON body:", e.message);
+    return new Response(JSON.stringify({ error: `Invalid JSON body: ${e.message}` }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
     });
   }
 
   const productId = requestBody.productId;
-  const quantity = requestBody.quantity ?? 1; // Default to 1 if not provided
+  const quantity = requestBody.quantity ?? 1;
 
-  // Log environment variable lengths for debugging
-  console.log("Edge Function: SUPABASE_URL length:", (Deno.env.get('SUPABASE_URL') ?? '').length);
-  console.log("Edge Function: SUPABASE_SERVICE_ROLE_KEY length:", (Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '').length);
+  console.log(`Extracted productId: ${productId}, quantity: ${quantity}`);
 
   try {
     if (!productId || typeof quantity !== 'number' || quantity <= 0) {
@@ -38,13 +56,11 @@ serve(async (req) => {
       });
     }
 
-    // Create a Supabase client with the service role key
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Get the user's ID from the request's Authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Authorization header missing.' }), {
@@ -64,7 +80,6 @@ serve(async (req) => {
       });
     }
 
-    // Fetch current inventory and update in a transaction-like manner
     const { data: productData, error: fetchError } = await supabaseAdmin
       .from('products')
       .select('inventory')
@@ -104,6 +119,7 @@ serve(async (req) => {
       });
     }
 
+    console.log("--- decrement-product-inventory: Request successful ---");
     return new Response(JSON.stringify({ message: 'Inventory updated successfully!', new_inventory: data.inventory }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,

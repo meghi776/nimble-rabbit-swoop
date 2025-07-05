@@ -791,8 +791,13 @@ const ProductCustomizerPage = () => {
         if (product.inventory !== null && product.inventory <= 0) {
           throw new Error("Product is out of stock.");
         }
+        
+        const bodyPayload = { productId: product.id, quantity: 1 };
+        console.log("Client: Invoking 'decrement-product-inventory' with payload:", bodyPayload);
+        console.log("Client: Stringified body:", JSON.stringify(bodyPayload));
+
         const { data: decrementData, error: decrementError } = await supabase.functions.invoke('decrement-product-inventory', {
-          body: JSON.stringify({ productId: product.id, quantity: 1 }),
+          body: JSON.stringify(bodyPayload),
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${currentSession.access_token}`, // Use the fresh token
