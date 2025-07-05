@@ -11,8 +11,7 @@ export const addTextToImage = (imageUrl: string, productName: string, orderDispl
         return reject(new Error('Could not get canvas context'));
       }
 
-      const whitespaceHeight = 80; // Increased height for two lines of text
-      const productNameFontSize = 24;
+      const whitespaceHeight = 40; // Height for one line of text
       const orderIdFontSize = 20;
 
       // New canvas dimensions
@@ -31,16 +30,10 @@ export const addTextToImage = (imageUrl: string, productName: string, orderDispl
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
-      // Draw Product Name
-      ctx.font = `bold ${productNameFontSize}px Arial`;
-      const productNameX = canvas.width / 2;
-      const productNameY = img.height + (whitespaceHeight / 2) - (productNameFontSize / 2) - 5; // Position upper line
-      ctx.fillText(productName, productNameX, productNameY);
-
       // Draw Order Display ID
       ctx.font = `normal ${orderIdFontSize}px Arial`;
       const orderIdX = canvas.width / 2;
-      const orderIdY = img.height + (whitespaceHeight / 2) + (orderIdFontSize / 2) + 5; // Position lower line
+      const orderIdY = img.height + (whitespaceHeight / 2); // Center vertically
       ctx.fillText(orderDisplayId, orderIdX, orderIdY);
 
       canvas.toBlob((blob) => {
