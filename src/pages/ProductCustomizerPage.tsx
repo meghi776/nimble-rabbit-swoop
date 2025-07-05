@@ -766,26 +766,6 @@ const ProductCustomizerPage = () => {
     const toastId = showLoading(isDemo ? "Placing demo order..." : "Placing your order...");
     let orderedDesignImageUrl: string | null = null;
     
-    // Explicitly get the latest session before invoking
-    const { data: { session: currentSession }, error: getSessionError } = await supabase.auth.getSession();
-
-    if (getSessionError) {
-      console.error("ProductCustomizerPage: Error getting session before invoke:", getSessionError);
-      showError("Failed to get current session. Please try logging in again.");
-      setIsPlacingOrder(false);
-      dismissToast(toastId);
-      return;
-    }
-
-    if (!currentSession || !currentSession.access_token) {
-      console.log("ProductCustomizerPage: No active session found, redirecting to login.");
-      showError("Your session has expired or is invalid. Please log in again.");
-      navigate('/login');
-      setIsPlacingOrder(false);
-      dismissToast(toastId);
-      return;
-    }
-
     try {
       if (!isDemo) {
         if (product.inventory !== null && product.inventory <= 0) {
@@ -793,15 +773,10 @@ const ProductCustomizerPage = () => {
         }
         
         const bodyPayload = { productId: product.id, quantity: 1 };
-        console.log("Client: Invoking 'decrement-product-inventory' with payload:", bodyPayload);
-        console.log("Client: Stringified body:", JSON.stringify(bodyPayload));
+        console.log("Client: Invoking 'decrement-product-inventory' with payload object:", bodyPayload);
 
         const { data: decrementData, error: decrementError } = await supabase.functions.invoke('decrement-product-inventory', {
-          body: JSON.stringify(bodyPayload),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${currentSession.access_token}`, // Use the fresh token
-          },
+          body: bodyPayload,
         });
 
         if (decrementError) {
