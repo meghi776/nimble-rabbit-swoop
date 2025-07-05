@@ -34,6 +34,7 @@ interface Order {
   status: string;
   total_price: number;
   ordered_design_image_url: string | null;
+  product_id: string | null;
   products: { name: string } | null;
   profiles: { first_name: string | null; last_name: string | null; } | null;
   type: string;
@@ -91,7 +92,7 @@ const UserOrdersPage = () => {
       .select(`
         id, display_id, created_at, customer_name, customer_address, customer_phone,
         payment_method, status, total_price, ordered_design_image_url,
-        products (name), profiles (first_name, last_name), type
+        product_id, products (name), profiles (first_name, last_name), type
       `)
       .eq('user_id', userId);
     
@@ -361,6 +362,7 @@ const UserOrdersPage = () => {
                         <TableHead>Order ID</TableHead>
                         <TableHead>Date</TableHead>
                         <TableHead>Product</TableHead>
+                        <TableHead>Product ID (Debug)</TableHead>
                         <TableHead>Design</TableHead>
                         <TableHead>Type</TableHead>
                         <TableHead>Payment Method</TableHead>
@@ -382,6 +384,7 @@ const UserOrdersPage = () => {
                           <TableCell className="font-medium text-xs">{order.display_id || `${order.id.substring(0, 8)}...`}</TableCell>
                           <TableCell>{format(new Date(order.created_at), 'PPP')}</TableCell>
                           <TableCell>{order.products?.name || 'N/A'}</TableCell>
+                          <TableCell className="text-xs">{order.product_id || 'NULL'}</TableCell>
                           <TableCell>
                             {order.ordered_design_image_url ? (
                               <Button variant="outline" size="sm" onClick={() => openImageModal(order.ordered_design_image_url)}>
