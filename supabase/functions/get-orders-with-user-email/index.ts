@@ -65,7 +65,7 @@ serve(async (req) => {
     let query = supabaseAdmin
       .from('orders')
       .select(`
-        id, created_at, customer_name, customer_address, customer_phone,
+        id, display_id, created_at, customer_name, customer_address, customer_phone,
         payment_method, status, total_price, ordered_design_image_url,
         products (name), profiles (first_name, last_name), user_id, type
       `);

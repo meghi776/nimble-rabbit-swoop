@@ -7,6 +7,7 @@ import { Eye, Image as ImageIcon, XCircle } from 'lucide-react';
 
 interface Order {
   id: string;
+  display_id: string | null;
   created_at: string;
   customer_name: string;
   customer_address: string;
@@ -71,7 +72,7 @@ const OrderHistoryCard: React.FC<OrderHistoryCardProps> = ({ order, onViewImage,
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Order Details</DialogTitle>
-            <DialogDescription>Order ID: {order.id.substring(0, 8)}...</DialogDescription>
+            <DialogDescription>Order ID: {order.display_id || `${order.id.substring(0, 8)}...`}</DialogDescription>
           </DialogHeader>
           <div className="space-y-2 py-4 text-sm">
             <p><strong>Product:</strong> {order.products?.[0]?.name || 'N/A'}</p> {/* Access first element */}

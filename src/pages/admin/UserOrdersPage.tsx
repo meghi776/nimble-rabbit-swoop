@@ -24,6 +24,7 @@ import Papa from 'papaparse';
 
 interface Order {
   id: string;
+  display_id: string | null;
   created_at: string;
   customer_name: string;
   customer_address: string;
@@ -87,7 +88,7 @@ const UserOrdersPage = () => {
     let query = supabase
       .from('orders')
       .select(`
-        id, created_at, customer_name, customer_address, customer_phone,
+        id, display_id, created_at, customer_name, customer_address, customer_phone,
         payment_method, status, total_price, ordered_design_image_url,
         products (name), profiles (first_name, last_name), type
       `)
@@ -258,7 +259,7 @@ const UserOrdersPage = () => {
     const dataToExport = orders
       .filter(o => selectedOrderIds.has(o.id))
       .map(order => ({
-        'Order ID': order.id,
+        'Order ID': order.display_id || order.id,
         'Customer Name': order.customer_name,
         'Customer Address': order.customer_address,
         'Customer Phone': order.customer_phone,
@@ -378,7 +379,7 @@ const UserOrdersPage = () => {
                               aria-label={`Select order ${order.id}`}
                             />
                           </TableCell>
-                          <TableCell className="font-medium text-xs">{order.id.substring(0, 8)}...</TableCell>
+                          <TableCell className="font-medium text-xs">{order.display_id || `${order.id.substring(0, 8)}...`}</TableCell>
                           <TableCell>{format(new Date(order.created_at), 'PPP')}</TableCell>
                           <TableCell>{order.products?.[0]?.name || 'N/A'}</TableCell>
                           <TableCell>
@@ -447,7 +448,7 @@ const UserOrdersPage = () => {
               <Label htmlFor="order-id" className="text-right">
                 Order ID
               </Label>
-              <p id="order-id" className="col-span-3 font-medium">{currentOrder?.id.substring(0, 8)}...</p>
+              <p id="order-id" className="col-span-3 font-medium">{currentOrder?.display_id || `${currentOrder?.id.substring(0, 8)}...`}</p>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="current-status" className="text-right">

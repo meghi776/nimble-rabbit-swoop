@@ -23,6 +23,7 @@ import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast
 
 interface Order {
   id: string;
+  display_id: string | null;
   created_at: string;
   customer_name: string;
   customer_address: string;
@@ -64,6 +65,7 @@ const OrderHistoryPage = () => {
         .from('orders')
         .select(`
           id,
+          display_id,
           created_at,
           customer_name,
           customer_address,
@@ -342,7 +344,7 @@ const OrderHistoryPage = () => {
                 <TableBody>
                   {orders.map((order) => (
                     <TableRow key={order.id}>
-                      <TableCell className="font-medium text-xs">{order.id.substring(0, 8)}...</TableCell>
+                      <TableCell className="font-medium text-xs">{order.display_id || `${order.id.substring(0, 8)}...`}</TableCell>
                       <TableCell>{format(new Date(order.created_at), 'PPP')}</TableCell>
                       <TableCell>{order.products?.[0]?.name || 'N/A'}</TableCell>
                       <TableCell>

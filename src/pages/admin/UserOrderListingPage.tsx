@@ -26,6 +26,7 @@ import { Calendar } from "@/components/ui/calendar";
 
 interface Order {
   id: string;
+  display_id: string | null;
   created_at: string;
   customer_name: string;
   customer_address: string;
@@ -555,8 +556,8 @@ const OrderManagementPage = () => {
                             aria-label="Select all"
                           />
                         </TableHead>
-                        <TableHead className="cursor-pointer hover:text-primary" onClick={() => handleSort('id')}>
-                          <div className="flex items-center">Order ID {getSortIcon('id')}</div>
+                        <TableHead className="cursor-pointer hover:text-primary" onClick={() => handleSort('display_id')}>
+                          <div className="flex items-center">Order ID {getSortIcon('display_id')}</div>
                         </TableHead>
                         <TableHead className="cursor-pointer hover:text-primary" onClick={() => handleSort('created_at')}>
                           <div className="flex items-center">Date {getSortIcon('created_at')}</div>
@@ -594,7 +595,7 @@ const OrderManagementPage = () => {
                               aria-label={`Select order ${order.id}`}
                             />
                           </TableCell>
-                          <TableCell className="font-medium text-xs">{order.id.substring(0, 8)}...</TableCell>
+                          <TableCell className="font-medium text-xs">{order.display_id || `${order.id.substring(0, 8)}...`}</TableCell>
                           <TableCell>{format(new Date(order.created_at), 'PPP')}</TableCell>
                           <TableCell>
                             <Link to={`/admin/orders/${order.user_id}`} className="text-blue-600 hover:underline">
@@ -669,7 +670,7 @@ const OrderManagementPage = () => {
               <Label htmlFor="order-id" className="text-right">
                 Order ID
               </Label>
-              <p id="order-id" className="col-span-3 font-medium">{currentOrder?.id.substring(0, 8)}...</p>
+              <p id="order-id" className="col-span-3 font-medium">{currentOrder?.display_id || `${currentOrder?.id.substring(0, 8)}...`}</p>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="current-status" className="text-right">

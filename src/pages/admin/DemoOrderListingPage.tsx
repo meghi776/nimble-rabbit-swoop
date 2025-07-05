@@ -24,6 +24,7 @@ import { useSession } from '@/contexts/SessionContext';
 
 interface Order {
   id: string;
+  display_id: string | null;
   created_at: string;
   customer_name: string;
   customer_address: string;
@@ -462,7 +463,7 @@ const DemoOrderListingPage = () => {
                               aria-label={`Select order ${order.id}`}
                             />
                           </TableCell>
-                          <TableCell className="font-medium text-xs">{order.id.substring(0, 8)}...</TableCell>
+                          <TableCell className="font-medium text-xs">{order.display_id || `${order.id.substring(0, 8)}...`}</TableCell>
                           <TableCell>{format(new Date(order.created_at), 'PPP')}</TableCell>
                           <TableCell>
                             <Link to={`/admin/orders/${order.user_id}`} className="text-blue-600 hover:underline">
@@ -537,7 +538,7 @@ const DemoOrderListingPage = () => {
               <Label htmlFor="order-id" className="text-right">
                 Order ID
               </Label>
-              <p id="order-id" className="col-span-3 font-medium">{currentOrder?.id.substring(0, 8)}...</p>
+              <p id="order-id" className="col-span-3 font-medium">{currentOrder?.display_id || `${currentOrder?.id.substring(0, 8)}...`}</p>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="current-status" className="text-right">
