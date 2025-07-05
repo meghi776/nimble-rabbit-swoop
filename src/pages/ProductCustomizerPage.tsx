@@ -22,7 +22,7 @@ import {
   Download,
   Save,
   FolderOpen,
-  Blur,
+  Wand2,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -1351,7 +1351,7 @@ const ProductCustomizerPage = () => {
               </div>
               <div className="flex items-center justify-center w-full py-1 px-4 space-x-2">
                 <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={handleBlurBackground}>
-                  <Blur className="h-5 w-5" />
+                  <Wand2 className="h-5 w-5" />
                   <span className="text-xs">Blur Background</span>
                 </Button>
                 {blurredBackgroundImageUrl && (
