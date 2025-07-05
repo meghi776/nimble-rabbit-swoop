@@ -1297,7 +1297,7 @@ const ProductCustomizerPage = () => {
           className="hidden"
         />
 
-        <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-lg p-1 flex flex-wrap justify-around items-center border-t border-gray-200 dark:border-gray-700 z-10">
+        <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-lg p-1 flex flex-wrap justify-center items-center gap-1 border-t border-gray-200 dark:border-gray-700 z-10">
           {selectedElementId && designElements.find(el => el.id === selectedElementId)?.type === 'text' ? (
             <div className="flex flex-col w-full items-center">
               <div className="flex items-center justify-center w-full overflow-x-auto py-1 px-4 scrollbar-hide">
@@ -1318,7 +1318,7 @@ const ProductCustomizerPage = () => {
                 ))}
               </div>
 
-              <div className="flex items-center justify-center gap-2 p-1 w-full overflow-x-auto scrollbar-hide">
+              <div className="flex items-center justify-center gap-1 p-1 w-full overflow-x-auto scrollbar-hide">
                   {predefinedColors.map((color) => (
                       <div
                           key={color}
@@ -1349,7 +1349,7 @@ const ProductCustomizerPage = () => {
                   />
                 ))}
               </div>
-              <div className="flex items-center justify-center w-full py-1 px-4 space-x-2">
+              <div className="flex items-center justify-center w-full py-1 px-4 space-x-1">
                 <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={handleBlurBackground}>
                   <Wand2 className="h-5 w-5" />
                   <span className="text-xs">Blur Background</span>
