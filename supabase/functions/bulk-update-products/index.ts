@@ -14,29 +14,10 @@ serve(async (req) => {
 
   let requestBody;
   try {
-    // Check if there's a body to parse
-    const contentType = req.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
-      const bodyText = await req.text(); // Read as text first
-      if (bodyText) {
-        requestBody = JSON.parse(bodyText); // Then parse as JSON
-      } else {
-        console.error("Edge Function: Received application/json with empty body.");
-        return new Response(JSON.stringify({ error: 'Request body is empty. Expected JSON payload.' }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400,
-        });
-      }
-    } else {
-      console.error("Edge Function: Content-Type is not application/json or missing.");
-      return new Response(JSON.stringify({ error: 'Invalid Content-Type. Expected application/json.' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      });
-    }
-  } catch (jsonParseError) {
-    console.error("Edge Function: Error parsing JSON body:", jsonParseError);
-    return new Response(JSON.stringify({ error: `Invalid JSON format: ${jsonParseError.message}` }), {
+    requestBody = await req.json();
+  } catch (e) {
+    console.error("Error parsing JSON body:", e);
+    return new Response(JSON.stringify({ error: 'Invalid or empty JSON body' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
     });
