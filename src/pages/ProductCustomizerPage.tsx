@@ -23,7 +23,6 @@ import {
   Save,
   FolderOpen,
   Wand2,
-  Sparkles, // New icon for AI enhancement
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -119,7 +118,6 @@ const ProductCustomizerPage = () => {
   const [customerPhone, setCustomerPhone] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('COD');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
-  const [isEnhancing, setIsEnhancing] = useState(false);
 
   const [mockupOverlayData, setMockupOverlayData] = useState<MockupData | null>(null);
 
@@ -1120,41 +1118,6 @@ const ProductCustomizerPage = () => {
     showSuccess("Canvas background cleared.");
   };
 
-  const handleEnhanceImage = async () => {
-    const selectedElement = designElements.find(el => el.id === selectedElementId);
-    if (!selectedElement || selectedElement.type !== 'image' || selectedElement.value.startsWith('blob:')) {
-      showError("Please select an uploaded image to enhance.");
-      return;
-    }
-
-    setIsEnhancing(true);
-    const toastId = showLoading("Enhancing image with AI... This may take a moment.");
-
-    try {
-      const { data, error } = await supabase.functions.invoke('enhance-image', {
-        body: { imageUrl: selectedElement.value },
-      });
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      updateElement(selectedElementId!, { value: data.enhancedUrl });
-      showSuccess("Image enhanced successfully!");
-
-    } catch (err: any) {
-      console.error("Error enhancing image:", err);
-      showError(`Enhancement failed: ${err.message}`);
-    } finally {
-      setIsEnhancing(false);
-      dismissToast(toastId);
-    }
-  };
-
   const isBuyNowDisabled = loading || isPlacingOrder || (product && product.inventory !== null && product.inventory <= 0) || designElements.filter(el => el.type === 'image').length === 0 || designElements.some(el => el.type === 'image' && el.value.startsWith('blob:'));
 
   return (
@@ -1403,12 +1366,6 @@ const ProductCustomizerPage = () => {
                 <Palette className="h-5 w-5" />
                 <span className="text-xs">Back Color</span>
               </Button>
-              {selectedElementId && designElements.find(el => el.id === selectedElementId)?.type === 'image' && (
-                <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={handleEnhanceImage} disabled={isEnhancing}>
-                  {isEnhancing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
-                  <span className="text-xs">Enhance AI</span>
-                </Button>
-              )}
               {selectedElementId && (
                 <Button
                   variant="destructive"
