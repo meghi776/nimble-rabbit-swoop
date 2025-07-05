@@ -55,9 +55,10 @@ interface CustomizerModalsProps {
   handlePlaceOrder: (isDemo: boolean) => void;
   isDemoOrderModalOpen: boolean;
   setIsDemoOrderModalOpen: (isOpen: boolean) => void;
+  demoCustomerName: string;
   demoOrderPrice: string;
   demoOrderAddress: string;
-  setDemoOrderDetails: (price: string, address: string) => void;
+  setDemoOrderDetails: (name: string, price: string, address: string) => void;
   isSavedDesignsModalOpen: boolean;
   setIsSavedDesignsModalOpen: (isOpen: boolean) => void;
   currentDesignElements: DesignElement[];
@@ -83,6 +84,7 @@ const CustomizerModals: React.FC<CustomizerModalsProps> = ({
   handlePlaceOrder,
   isDemoOrderModalOpen,
   setIsDemoOrderModalOpen,
+  demoCustomerName,
   demoOrderPrice,
   demoOrderAddress,
   setDemoOrderDetails,
@@ -180,6 +182,19 @@ const CustomizerModals: React.FC<CustomizerModalsProps> = ({
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="demo-name" className="text-right">
+                Name
+              </Label>
+              <Input
+                id="demo-name"
+                type="text"
+                value={demoCustomerName}
+                onChange={(e) => setDemoOrderDetails(e.target.value, demoOrderPrice, demoOrderAddress)}
+                className="col-span-3"
+                placeholder="e.g., John Doe"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="demo-price" className="text-right">
                 Price
               </Label>
@@ -187,7 +202,7 @@ const CustomizerModals: React.FC<CustomizerModalsProps> = ({
                 id="demo-price"
                 type="number"
                 value={demoOrderPrice}
-                onChange={(e) => setDemoOrderDetails(e.target.value, demoOrderAddress)}
+                onChange={(e) => setDemoOrderDetails(demoCustomerName, e.target.value, demoOrderAddress)}
                 className="col-span-3"
                 placeholder="e.g., 19.99"
               />
@@ -199,7 +214,7 @@ const CustomizerModals: React.FC<CustomizerModalsProps> = ({
               <Textarea
                 id="demo-address"
                 value={demoOrderAddress}
-                onChange={(e) => setDemoOrderDetails(demoOrderPrice, e.target.value)}
+                onChange={(e) => setDemoOrderDetails(demoCustomerName, demoOrderPrice, e.target.value)}
                 className="col-span-3"
                 placeholder="e.g., 123 Demo St, Demo City"
               />

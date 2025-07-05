@@ -25,7 +25,7 @@ import {
   Wand2,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useSession } from '@/contexts/SessionContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -110,7 +110,7 @@ const ProductCustomizerPage = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isMobile = useIsMobile();
   const { user } = useSession();
-  const { isDemoOrderModalOpen, setIsDemoOrderModalOpen, demoOrderPrice, setDemoOrderDetails, demoOrderAddress } = useDemoOrderModal();
+  const { isDemoOrderModalOpen, setIsDemoOrderModalOpen, demoCustomerName, demoOrderPrice, setDemoOrderDetails, demoOrderAddress } = useDemoOrderModal();
 
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
   const [customerName, setCustomerName] = useState('');
@@ -285,7 +285,7 @@ const ProductCustomizerPage = () => {
           console.error("Error parsing local or database design data:", parseError);
           showError("Failed to load existing design data. It might be corrupted.");
         }
-        setDemoOrderDetails(productData.price?.toFixed(2) || '0.00', 'Demo Address, Demo City, Demo State, 00000');
+        setDemoOrderDetails('Demo User', productData.price?.toFixed(2) || '0.00', 'Demo Address, Demo City, Demo State, 00000');
       }
       setLoading(false);
     };
@@ -745,7 +745,7 @@ const ProductCustomizerPage = () => {
       return;
     }
 
-    const finalCustomerName = isDemo ? 'Demo User' : customerName;
+    const finalCustomerName = isDemo ? demoCustomerName : customerName;
     const finalCustomerAddress = isDemo ? demoOrderAddress : customerAddress;
     const finalCustomerPhone = isDemo ? '0000000000' : customerPhone;
     const finalPaymentMethod = isDemo ? 'Demo' : paymentMethod;
@@ -757,8 +757,8 @@ const ProductCustomizerPage = () => {
       showError("Please fill in all customer details.");
       return;
     }
-    if (isDemo && (!finalCustomerAddress.trim() || isNaN(finalTotalPrice))) {
-      showError("Please provide a valid price and address for the demo order.");
+    if (isDemo && (!finalCustomerName.trim() || !finalCustomerAddress.trim() || isNaN(finalTotalPrice))) {
+      showError("Please provide a valid name, price, and address for the demo order.");
       return;
     }
 
@@ -883,7 +883,7 @@ const ProductCustomizerPage = () => {
       setIsPlacingOrder(false);
       dismissToast(toastId);
     }
-  }, [product, user, customerName, customerAddress, customerPhone, paymentMethod, demoOrderPrice, demoOrderAddress, designElements, navigate, setIsDemoOrderModalOpen]);
+  }, [product, user, customerName, customerAddress, customerPhone, paymentMethod, demoCustomerName, demoOrderPrice, demoOrderAddress, designElements, navigate, setIsDemoOrderModalOpen]);
 
   const processAndUploadImage = async (file: File | Blob) => {
     if (!product) {
@@ -1428,6 +1428,7 @@ const ProductCustomizerPage = () => {
           handlePlaceOrder={handlePlaceOrder}
           isDemoOrderModalOpen={isDemoOrderModalOpen}
           setIsDemoOrderModalOpen={setIsDemoOrderModalOpen}
+          demoCustomerName={demoCustomerName}
           demoOrderPrice={demoOrderPrice}
           demoOrderAddress={demoOrderAddress}
           setDemoOrderDetails={setDemoOrderDetails}

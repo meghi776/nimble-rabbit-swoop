@@ -3,7 +3,8 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 interface DemoOrderModalContextType {
   isDemoOrderModalOpen: boolean;
   setIsDemoOrderModalOpen: (isOpen: boolean) => void;
-  setDemoOrderDetails: (price: string, address: string) => void;
+  setDemoOrderDetails: (name: string, price: string, address: string) => void;
+  demoCustomerName: string;
   demoOrderPrice: string;
   demoOrderAddress: string;
 }
@@ -12,10 +13,12 @@ const DemoOrderModalContext = createContext<DemoOrderModalContextType | undefine
 
 export const DemoOrderModalProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isDemoOrderModalOpen, setIsDemoOrderModalOpen] = useState(false);
+  const [demoCustomerName, setDemoCustomerName] = useState('');
   const [demoOrderPrice, setDemoOrderPrice] = useState('');
   const [demoOrderAddress, setDemoOrderAddress] = useState('');
 
-  const setDemoOrderDetails = useCallback((price: string, address: string) => {
+  const setDemoOrderDetails = useCallback((name: string, price: string, address: string) => {
+    setDemoCustomerName(name);
     setDemoOrderPrice(price);
     setDemoOrderAddress(address);
   }, []);
@@ -26,6 +29,7 @@ export const DemoOrderModalProvider: React.FC<{ children: React.ReactNode }> = (
         isDemoOrderModalOpen,
         setIsDemoOrderModalOpen,
         setDemoOrderDetails,
+        demoCustomerName,
         demoOrderPrice,
         demoOrderAddress,
       }}

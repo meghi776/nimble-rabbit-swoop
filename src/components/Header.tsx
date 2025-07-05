@@ -21,7 +21,7 @@ const Header = () => {
       navigate('/login');
       return;
     }
-    setDemoOrderDetails('0.00', 'Preview Address'); 
+    setDemoOrderDetails('Demo User', '0.00', 'Preview Address'); 
     setIsDemoOrderModalOpen(true);
   };
 
