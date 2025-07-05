@@ -308,9 +308,10 @@ const DemoOrderListingPage = () => {
       if (order && order.ordered_design_image_url) {
         try {
           const productName = order.products?.name || 'Unknown Product';
-          const blobWithText = await addTextToImage(order.ordered_design_image_url, productName);
+          const orderDisplayId = order.display_id || order.id;
+          const blobWithText = await addTextToImage(order.ordered_design_image_url, productName, orderDisplayId);
           
-          const fileName = `${productName}_${order.id.substring(0, 8)}_${format(new Date(order.created_at), 'yyyyMMdd')}.png`;
+          const fileName = `${orderDisplayId}.png`;
           zip.file(fileName, blobWithText);
           downloadedCount++;
         } catch (err) {

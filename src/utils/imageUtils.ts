@@ -1,6 +1,6 @@
 import { proxyImageUrl } from '@/utils/imageProxy';
 
-export const addTextToImage = (imageUrl: string, text: string): Promise<Blob> => {
+export const addTextToImage = (imageUrl: string, productName: string, orderDisplayId: string): Promise<Blob> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = 'Anonymous';
@@ -11,32 +11,37 @@ export const addTextToImage = (imageUrl: string, text: string): Promise<Blob> =>
         return reject(new Error('Could not get canvas context'));
       }
 
-      const whitespaceHeight = 60; // Height of the white space for the text
+      const whitespaceHeight = 80; // Increased height for two lines of text
+      const productNameFontSize = 24;
+      const orderIdFontSize = 20;
 
-      // New canvas dimensions to include the white bar
+      // New canvas dimensions
       canvas.width = img.width;
       canvas.height = img.height + whitespaceHeight;
 
-      // Fill the entire canvas with a white background
+      // White background
       ctx.fillStyle = 'white';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Draw the original image at the top
+      // Original image
       ctx.drawImage(img, 0, 0);
 
-      // Configure text properties for the white bar
-      const fontSize = 24;
-      ctx.font = `bold ${fontSize}px Arial`;
-      ctx.fillStyle = 'black'; // Black text on white background
+      // Common text properties
+      ctx.fillStyle = 'black';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
-      // Calculate text position within the new white space
-      const x = canvas.width / 2;
-      const y = img.height + (whitespaceHeight / 2);
+      // Draw Product Name
+      ctx.font = `bold ${productNameFontSize}px Arial`;
+      const productNameX = canvas.width / 2;
+      const productNameY = img.height + (whitespaceHeight / 2) - (productNameFontSize / 2) - 5; // Position upper line
+      ctx.fillText(productName, productNameX, productNameY);
 
-      // Draw the text
-      ctx.fillText(text, x, y);
+      // Draw Order Display ID
+      ctx.font = `normal ${orderIdFontSize}px Arial`;
+      const orderIdX = canvas.width / 2;
+      const orderIdY = img.height + (whitespaceHeight / 2) + (orderIdFontSize / 2) + 5; // Position lower line
+      ctx.fillText(orderDisplayId, orderIdX, orderIdY);
 
       canvas.toBlob((blob) => {
         if (blob) {
