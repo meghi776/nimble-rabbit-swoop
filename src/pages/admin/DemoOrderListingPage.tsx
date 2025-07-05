@@ -13,10 +13,13 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Eye, Trash2, Image as ImageIcon, ArrowDownWideNarrow, ArrowUpWideNarrow } from 'lucide-react';
+import { Checkbox } from "@/components/ui/checkbox";
+import { Loader2, Eye, Trash2, Image as ImageIcon, ArrowDownWideNarrow, ArrowUpWideNarrow, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
-import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast'; // Import toast utilities
+import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 
 interface Order {
   id: string;
@@ -46,16 +49,18 @@ const DemoOrderListingPage = () => {
   const [newStatus, setNewStatus] = useState<string>('');
   const [sortColumn, setSortColumn] = useState<string>('created_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
 
   const orderStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Demo'];
 
   const fetchOrders = async () => {
     setLoading(true);
     setError(null);
+    setSelectedOrderIds(new Set());
 
     try {
       const { data, error: invokeError } = await supabase.functions.invoke('get-orders-with-user-email', {
-        body: JSON.stringify({ sortColumn, sortDirection, orderType: 'demo' }), // Always filter by 'demo' type
+        body: JSON.stringify({ sortColumn, sortDirection, orderType: 'demo' }),
         headers: {
           'Content-Type': 'application/json',
         },
@@ -93,7 +98,7 @@ const DemoOrderListingPage = () => {
 
   useEffect(() => {
     fetchOrders();
-  }, [sortColumn, sortDirection]); // Re-fetch when sort options change
+  }, [sortColumn, sortDirection]);
 
   const openImageModal = (imageUrl: string | null) => {
     if (imageUrl) {
@@ -130,14 +135,7 @@ const DemoOrderListingPage = () => {
     setLoading(false);
   };
 
-  const handleDeleteOrder = async (id: string, imageUrl: string | null) => {
-    if (!window.confirm("Are you sure you want to delete this order? This action cannot be undone.")) {
-      return;
-    }
-
-    setLoading(true);
-    const toastId = showLoading("Deleting demo order...");
-
+  const deleteSingleOrder = async (id: string, imageUrl: string | null) => {
     if (imageUrl && imageUrl.startsWith('https://smpjbedvyqensurarrym.supabase.co/storage/v1/object/public/order-mockups/')) {
       const fileName = imageUrl.split('/').pop();
       if (fileName) {
@@ -147,9 +145,7 @@ const DemoOrderListingPage = () => {
         if (storageError) {
           console.error("Error deleting order image from storage:", storageError);
           showError(`Failed to delete demo order image from storage: ${storageError.message}`);
-          dismissToast(toastId);
-          setLoading(false);
-          return;
+          return false;
         }
       }
     }
@@ -162,13 +158,140 @@ const DemoOrderListingPage = () => {
     if (error) {
       console.error("Error deleting order:", error);
       showError(`Failed to delete demo order: ${error.message}`);
-    } else {
+      return false;
+    }
+    return true;
+  };
+
+  const handleDeleteOrder = async (id: string, imageUrl: string | null) => {
+    if (!window.confirm("Are you sure you want to delete this order? This action cannot be undone.")) {
+      return;
+    }
+    setLoading(true);
+    const toastId = showLoading("Deleting demo order...");
+    const success = await deleteSingleOrder(id, imageUrl);
+    if (success) {
       showSuccess("Demo order deleted successfully!");
       fetchOrders();
     }
     dismissToast(toastId);
     setLoading(false);
   };
+
+  const handleSelectOrder = (orderId: string, isChecked: boolean) => {
+    setSelectedOrderIds(prev => {
+      const newSelection = new Set(prev);
+      if (isChecked) {
+        newSelection.add(orderId);
+      } else {
+        newSelection.delete(orderId);
+      }
+      return newSelection;
+    });
+  };
+
+  const handleSelectAllOrders = (isChecked: boolean) => {
+    if (isChecked) {
+      const allOrderIds = new Set(orders.map(order => order.id));
+      setSelectedOrderIds(allOrderIds);
+    } else {
+      setSelectedOrderIds(new Set());
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedOrderIds.size === 0) {
+      showError("No orders selected. Please select at least one order to delete.");
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to delete ${selectedOrderIds.size} selected orders? This action cannot be undone.`)) {
+      return;
+    }
+
+    setLoading(true);
+    const toastId = showLoading(`Deleting ${selectedOrderIds.size} orders...`);
+    let successfulDeletions = 0;
+    let failedDeletions = 0;
+
+    for (const orderId of selectedOrderIds) {
+      const orderToDelete = orders.find(o => o.id === orderId);
+      if (orderToDelete) {
+        const success = await deleteSingleOrder(orderId, orderToDelete.ordered_design_image_url);
+        if (success) {
+          successfulDeletions++;
+        } else {
+          failedDeletions++;
+        }
+      }
+    }
+
+    fetchOrders();
+    dismissToast(toastId);
+    setLoading(false);
+    if (failedDeletions === 0) {
+      showSuccess(`${successfulDeletions} orders deleted successfully!`);
+    } else if (successfulDeletions > 0) {
+      showError(`${successfulDeletions} orders deleted, but ${failedDeletions} failed.`);
+    } else {
+      showError("Failed to delete any selected orders.");
+    }
+  };
+
+  const handleBulkDownloadDesigns = async () => {
+    if (selectedOrderIds.size === 0) {
+      showError("No designs selected. Please select at least one order to download its design.");
+      return;
+    }
+
+    setLoading(true);
+    const toastId = showLoading(`Preparing ${selectedOrderIds.size} designs for download...`);
+    const zip = new JSZip();
+    let downloadedCount = 0;
+    let failedCount = 0;
+
+    const downloadPromises = Array.from(selectedOrderIds).map(async (orderId) => {
+      const order = orders.find(o => o.id === orderId);
+      if (order && order.ordered_design_image_url) {
+        try {
+          const response = await fetch(order.ordered_design_image_url);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const blob = await response.blob();
+          const fileName = `${order.products?.name || 'design'}_${order.id.substring(0, 8)}_${format(new Date(order.created_at), 'yyyyMMdd')}.png`;
+          zip.file(fileName, blob);
+          downloadedCount++;
+        } catch (err) {
+          console.error(`Failed to download design for order ${order.id}:`, err);
+          failedCount++;
+        }
+      } else {
+        failedCount++;
+      }
+    });
+
+    await Promise.all(downloadPromises);
+
+    if (downloadedCount > 0) {
+      zip.generateAsync({ type: "blob" })
+        .then(function (content) {
+          saveAs(content, "selected_demo_designs.zip");
+          showSuccess(`${downloadedCount} designs downloaded successfully!`);
+        })
+        .catch(err => {
+          console.error("Error generating zip file:", err);
+          showError("Error generating zip file for download.");
+        });
+    } else {
+      showError("No designs were successfully downloaded.");
+    }
+    dismissToast(toastId);
+    setLoading(false);
+  };
+
+  const isAllSelected = orders.length > 0 && selectedOrderIds.size === orders.length;
+  const isIndeterminate = selectedOrderIds.size > 0 && selectedOrderIds.size < orders.length;
 
   return (
     <div className="p-4">
@@ -178,6 +301,26 @@ const DemoOrderListingPage = () => {
         <CardHeader className="flex flex-row justify-between items-center">
           <CardTitle>Demo Orders List</CardTitle>
           <div className="flex items-center space-x-2">
+            {selectedOrderIds.size > 0 && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={handleBulkDownloadDesigns}
+                  disabled={loading}
+                  size="sm"
+                >
+                  <Download className="mr-2 h-4 w-4" /> Download ({selectedOrderIds.size})
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleBulkDelete}
+                  disabled={loading}
+                  size="sm"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete Selected ({selectedOrderIds.size})
+                </Button>
+              </>
+            )}
             <Label htmlFor="sort-by">Sort by:</Label>
             <Select value={sortColumn} onValueChange={(value) => setSortColumn(value)}>
               <SelectTrigger id="sort-by" className="w-[180px]">
@@ -225,6 +368,13 @@ const DemoOrderListingPage = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-[30px]">
+                          <Checkbox
+                            checked={isAllSelected}
+                            onCheckedChange={handleSelectAllOrders}
+                            aria-label="Select all"
+                          />
+                        </TableHead>
                         <TableHead>Order ID</TableHead>
                         <TableHead>Date</TableHead>
                         <TableHead>Customer Name</TableHead>
@@ -239,6 +389,13 @@ const DemoOrderListingPage = () => {
                     <TableBody>
                       {orders.map((order) => (
                         <TableRow key={order.id}>
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedOrderIds.has(order.id)}
+                              onCheckedChange={(checked) => handleSelectOrder(order.id, checked as boolean)}
+                              aria-label={`Select order ${order.id}`}
+                            />
+                          </TableCell>
                           <TableCell className="font-medium text-xs">{order.id.substring(0, 8)}...</TableCell>
                           <TableCell>{format(new Date(order.created_at), 'PPP')}</TableCell>
                           <TableCell>
