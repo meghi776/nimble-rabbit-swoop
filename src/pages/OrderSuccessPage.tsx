@@ -1,10 +1,20 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CheckCircle } from 'lucide-react';
 
 const OrderSuccessPage = () => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      navigate('/');
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [navigate]);
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900">
       <Card className="w-full max-w-md mx-auto shadow-lg rounded-lg text-center animate-in fade-in-0 zoom-in-95 duration-500">
@@ -17,8 +27,11 @@ const OrderSuccessPage = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-gray-600 dark:text-gray-300 mb-6">
+          <p className="text-gray-600 dark:text-gray-300 mb-4">
             Thank you for your purchase. Your order is being processed and you can view its status in your account's order history.
+          </p>
+          <p className="text-sm text-muted-foreground mb-6">
+            You will be redirected to the homepage in 3 seconds...
           </p>
           <Link to="/">
             <Button className="w-full">Continue Shopping</Button>

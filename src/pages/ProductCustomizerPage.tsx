@@ -865,12 +865,8 @@ const ProductCustomizerPage = () => {
       setIsCheckoutModalOpen(false);
       setIsDemoOrderModalOpen(false);
       
-      if (isDemo) {
-        showSuccess("Demo order placed successfully!");
-        navigate('/admin/demo-orders');
-      } else {
-        navigate('/order-success');
-      }
+      showSuccess(isDemo ? "Demo order placed successfully!" : "Order placed successfully!");
+      navigate('/order-success');
 
     } catch (err: any) {
       console.error("Error placing order:", err);
