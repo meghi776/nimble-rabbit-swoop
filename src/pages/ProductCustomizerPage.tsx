@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import * as fabric from 'fabric';
+import { Canvas, Object as FabricObject } from 'fabric';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,14 +13,14 @@ import { supabase } from '@/integrations/supabase/client';
 type DesignElement = {
   id: string;
   type: 'text' | 'image';
-  fabricObject: fabric.Object;
+  fabricObject: FabricObject;
 };
 
 const ProductCustomizerPage = () => {
   const { productId } = useParams();
   const [product, setProduct] = useState(null);
   const canvasRef = useRef(null);
-  const [canvas, setCanvas] = useState<fabric.Canvas | null>(null);
+  const [canvas, setCanvas] = useState<Canvas | null>(null);
   const [designElements, setDesignElements] = useState<DesignElement[]>([]);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   
@@ -40,7 +40,7 @@ const ProductCustomizerPage = () => {
 
   useEffect(() => {
     if (canvasRef.current) {
-      const newCanvas = new fabric.Canvas(canvasRef.current);
+      const newCanvas = new Canvas(canvasRef.current);
       setCanvas(newCanvas);
 
       newCanvas.on('selection:created', (e) => {
