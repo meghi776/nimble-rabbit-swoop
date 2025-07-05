@@ -11,22 +11,31 @@ export const addTextToImage = (imageUrl: string, text: string): Promise<Blob> =>
         return reject(new Error('Could not get canvas context'));
       }
 
-      canvas.width = img.width;
-      canvas.height = img.height;
+      const whitespaceHeight = 60; // Height of the white space for the text
 
+      // New canvas dimensions to include the white bar
+      canvas.width = img.width;
+      canvas.height = img.height + whitespaceHeight;
+
+      // Fill the entire canvas with a white background
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw the original image at the top
       ctx.drawImage(img, 0, 0);
 
-      const fontSize = Math.max(24, img.height / 25);
+      // Configure text properties for the white bar
+      const fontSize = 24;
       ctx.font = `bold ${fontSize}px Arial`;
-      ctx.fillStyle = 'white';
+      ctx.fillStyle = 'black'; // Black text on white background
       ctx.textAlign = 'center';
-      ctx.strokeStyle = 'black';
-      ctx.lineWidth = fontSize / 8;
+      ctx.textBaseline = 'middle';
 
+      // Calculate text position within the new white space
       const x = canvas.width / 2;
-      const y = canvas.height - (fontSize / 2);
+      const y = img.height + (whitespaceHeight / 2);
 
-      ctx.strokeText(text, x, y);
+      // Draw the text
       ctx.fillText(text, x, y);
 
       canvas.toBlob((blob) => {
