@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-// import { fabric } from 'fabric'; // Removed as requested
+import { fabric } from 'fabric';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,7 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 type DesignElement = {
   id: string;
   type: 'text' | 'image';
-  fabricObject: any; // Changed from fabric.Object
+  fabricObject: fabric.Object;
 };
 
 const ProductCustomizerPage = () => {
@@ -21,7 +21,7 @@ const ProductCustomizerPage = () => {
   const [product, setProduct] = useState(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [canvas, setCanvas] = useState<any | null>(null); // Changed from fabric.Canvas
+  const [canvas, setCanvas] = useState<fabric.Canvas | null>(null);
   const [designElements, setDesignElements] = useState<DesignElement[]>([]);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   
@@ -45,18 +45,18 @@ const ProductCustomizerPage = () => {
   // Effect to initialize the canvas
   useEffect(() => {
     if (canvasRef.current) {
-      // NOTE: The following line will cause a runtime error because 'fabric' is no longer defined.
-      // const newCanvas = new fabric.Canvas(canvasRef.current, {
-      //   width: logicalWidth,
-      //   height: logicalHeight,
-      // });
-      // setCanvas(newCanvas);
-      // return () => {
-      //   if (newCanvas) {
-      //       newCanvas.dispose();
-      //   }
-      //   setCanvas(null);
-      // };
+      const newCanvas = new fabric.Canvas(canvasRef.current, {
+        width: logicalWidth,
+        height: logicalHeight,
+      });
+      setCanvas(newCanvas);
+
+      return () => {
+        if (newCanvas) {
+            newCanvas.dispose();
+        }
+        setCanvas(null);
+      };
     }
   }, []); // Runs only once on mount
 
@@ -64,7 +64,7 @@ const ProductCustomizerPage = () => {
   useEffect(() => {
     if (!canvas) return;
 
-    const onSelectionCreated = (e: any) => { // Changed from fabric.IEvent
+    const onSelectionCreated = (e: fabric.IEvent) => {
       if (e.selected && e.selected.length > 0) {
         const selectedObj = e.selected[0];
         const element = designElements.find(el => el.fabricObject === selectedObj);
