@@ -23,7 +23,6 @@ import {
   Save,
   FolderOpen,
   Wand2,
-  Sparkles, // New icon for enhancement
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -70,10 +69,6 @@ interface DesignElement {
   fontFamily?: string;
   textShadow?: boolean;
   rotation?: number;
-  // New enhancement properties
-  brightness?: number;
-  contrast?: number;
-  saturation?: number;
 }
 
 interface TouchState {
@@ -109,12 +104,6 @@ const ProductCustomizerPage = () => {
   const [blurredBackgroundImageUrl, setBlurredBackgroundImageUrl] = useState<string | null>(null);
   const [isBackColorPaletteOpen, setIsBackColorPaletteOpen] = useState(false);
   const [selectedCanvasColor, setSelectedCanvasColor] = useState<string | null>('#FFFFFF');
-
-  // New state for image enhancement controls
-  const [isEnhancePanelOpen, setIsEnhancePanelOpen] = useState(false);
-  const [currentBrightness, setCurrentBrightness] = useState<number[]>([100]);
-  const [currentContrast, setCurrentContrast] = useState<number[]>([100]);
-  const [currentSaturation, setCurrentSaturation] = useState<number[]>([100]);
 
   const designAreaRef = useRef<HTMLDivElement>(null);
   const canvasContentRef = useRef<HTMLDivElement>(null);
@@ -172,7 +161,6 @@ const ProductCustomizerPage = () => {
   ];
 
   const selectedTextElement = selectedElementId ? designElements.find(el => el.id === selectedElementId && el.type === 'text') : null;
-  const selectedImageElement = selectedElementId ? designElements.find(el => el.id === selectedElementId && el.type === 'image') : null;
   const textElementRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const lastCaretPosition = useRef<{ node: Node | null; offset: number } | null>(null);
 
@@ -330,14 +318,6 @@ const ProductCustomizerPage = () => {
       setCurrentTextShadowEnabled(false);
     }
   }, [selectedTextElement, setCurrentFontSize, setCurrentTextColor, setCurrentFontFamily, setCurrentTextShadowEnabled]);
-
-  useEffect(() => {
-    if (selectedImageElement) {
-      setCurrentBrightness([selectedImageElement.brightness ?? 100]);
-      setCurrentContrast([selectedImageElement.contrast ?? 100]);
-      setCurrentSaturation([selectedImageElement.saturation ?? 100]);
-    }
-  }, [selectedImageElement]);
 
   useEffect(() => {
     if (selectedElementId && lastCaretPosition.current) {
@@ -942,9 +922,6 @@ const ProductCustomizerPage = () => {
         width: newWidth,
         height: newHeight,
         rotation: 0,
-        brightness: 100,
-        contrast: 100,
-        saturation: 100,
       };
       setDesignElements(prev => [...prev, newElement]);
       setSelectedElementId(newElement.id);
@@ -1074,7 +1051,6 @@ const ProductCustomizerPage = () => {
     if (e.target === canvasContentRef.current || e.target === designAreaRef.current) {
       setSelectedElementId(null);
       setIsBackColorPaletteOpen(false);
-      setIsEnhancePanelOpen(false);
     }
   };
 
@@ -1160,20 +1136,6 @@ const ProductCustomizerPage = () => {
     setSelectedCanvasColor(null);
     setBlurredBackgroundImageUrl(null);
     showSuccess("Canvas background cleared.");
-  };
-
-  const handleResetEnhancements = () => {
-    if (selectedImageElement) {
-      updateElement(selectedImageElement.id, {
-        brightness: 100,
-        contrast: 100,
-        saturation: 100,
-      });
-      setCurrentBrightness([100]);
-      setCurrentContrast([100]);
-      setCurrentSaturation([100]);
-      showSuccess("Image enhancements reset.");
-    }
   };
 
   const isBuyNowDisabled = loading || isPlacingOrder || (product && product.inventory !== null && product.inventory <= 0) || designElements.filter(el => el.type === 'image').length === 0 || designElements.some(el => el.type === 'image' && el.value.startsWith('blob:'));
@@ -1291,9 +1253,6 @@ const ProductCustomizerPage = () => {
                         alt="design element"
                         className="w-full h-full object-contain"
                         crossOrigin="anonymous"
-                        style={{
-                          filter: `brightness(${el.brightness ?? 100}%) contrast(${el.contrast ?? 100}%) saturate(${el.saturation ?? 100}%)`,
-                        }}
                       />
                     )}
                   </div>
@@ -1341,7 +1300,7 @@ const ProductCustomizerPage = () => {
         />
 
         <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-lg p-1 flex flex-wrap justify-center items-center gap-1 border-t border-gray-200 dark:border-gray-700 z-10">
-          {selectedTextElement ? (
+          {selectedElementId && designElements.find(el => el.id === selectedElementId)?.type === 'text' ? (
             <div className="flex flex-col w-full items-center">
               <div className="flex items-center justify-center w-full overflow-x-auto py-1 px-4 scrollbar-hide">
                 {fontFamilies.map((font) => (
@@ -1377,25 +1336,6 @@ const ProductCustomizerPage = () => {
                   <Button variant="destructive" size="icon" onClick={() => deleteElement(selectedElementId)}>
                       <Trash2 className="h-4 w-4" />
                   </Button>
-              </div>
-            </div>
-          ) : isEnhancePanelOpen && selectedImageElement ? (
-            <div className="flex flex-col w-full items-center p-2 space-y-2">
-              <div className="w-full flex items-center space-x-2">
-                <Label htmlFor="brightness-slider" className="w-20 text-xs">Brightness</Label>
-                <Slider id="brightness-slider" value={currentBrightness} onValueChange={(value) => { setCurrentBrightness(value); updateElement(selectedImageElement.id, { brightness: value[0] }); }} max={200} step={1} />
-              </div>
-              <div className="w-full flex items-center space-x-2">
-                <Label htmlFor="contrast-slider" className="w-20 text-xs">Contrast</Label>
-                <Slider id="contrast-slider" value={currentContrast} onValueChange={(value) => { setCurrentContrast(value); updateElement(selectedImageElement.id, { contrast: value[0] }); }} max={200} step={1} />
-              </div>
-              <div className="w-full flex items-center space-x-2">
-                <Label htmlFor="saturation-slider" className="w-20 text-xs">Saturation</Label>
-                <Slider id="saturation-slider" value={currentSaturation} onValueChange={(value) => { setCurrentSaturation(value); updateElement(selectedImageElement.id, { saturation: value[0] }); }} max={200} step={1} />
-              </div>
-              <div className="flex space-x-2">
-                <Button size="sm" variant="outline" onClick={handleResetEnhancements}>Reset</Button>
-                <Button size="sm" variant="outline" onClick={() => setIsEnhancePanelOpen(false)}>Close</Button>
               </div>
             </div>
           ) : isBackColorPaletteOpen ? (
@@ -1446,12 +1386,6 @@ const ProductCustomizerPage = () => {
                 <Palette className="h-5 w-5" />
                 <span className="text-xs">Back Color</span>
               </Button>
-              {selectedImageElement && (
-                <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={() => setIsEnhancePanelOpen(true)}>
-                  <Sparkles className="h-5 w-5" />
-                  <span className="text-xs">Enhance</span>
-                </Button>
-              )}
               {selectedElementId && (
                 <Button
                   variant="destructive"
