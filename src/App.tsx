@@ -21,6 +21,7 @@ import NotFound from "./pages/NotFound"; // Import NotFound
 import { DemoOrderModalProvider } from "./contexts/DemoOrderModalContext"; // Import DemoOrderModalProvider
 import DemoUsersWithOrdersPage from "./pages/admin/DemoUsersWithOrdersPage"; // Import DemoUsersWithOrdersPage
 import ProductEditPage from "./pages/admin/ProductEditPage"; // Import ProductEditPage
+import OrderSuccessPage from "./pages/OrderSuccessPage";
 
 function App() {
   return (
@@ -37,6 +38,7 @@ function App() {
                 <Route path="/categories/:categoryId/brands/:brandId/products" element={<ProductListingPage />} />
                 <Route path="/customize-cover/:productId" element={<ProductCustomizerPage />} />
                 <Route path="/orders" element={<OrderHistoryPage />} />
+                <Route path="/order-success" element={<OrderSuccessPage />} />
               </Route>
 
               {/* Admin Routes */}

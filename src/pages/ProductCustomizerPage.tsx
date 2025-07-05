@@ -862,14 +862,14 @@ const ProductCustomizerPage = () => {
         throw new Error(`Failed to place order: ${orderInsertError.message}`);
       }
 
-      showSuccess(isDemo ? "Demo order placed successfully!" : "Your order placed successfully");
       setIsCheckoutModalOpen(false);
       setIsDemoOrderModalOpen(false);
       
       if (isDemo) {
+        showSuccess("Demo order placed successfully!");
         navigate('/admin/demo-orders');
       } else {
-        navigate('/');
+        navigate('/order-success');
       }
 
     } catch (err: any) {
@@ -1436,7 +1436,7 @@ const ProductCustomizerPage = () => {
           setIsSavedDesignsModalOpen={setIsSavedDesignsModalOpen}
           currentDesignElements={designElements}
           currentSelectedCanvasColor={selectedCanvasColor}
-          currentBlurredBackgroundImageUrl={blurredBackgroundImageUrl}
+          currentBlurredBackgroundImageUrl={currentBlurredBackgroundImageUrl}
           onLoadDesign={loadDesign}
           canvasContentRef={canvasContentRef}
         />
