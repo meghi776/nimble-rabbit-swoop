@@ -34,6 +34,7 @@ import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast
 import { useDemoOrderModal } from '@/contexts/DemoOrderModalContext';
 import { uploadFileToSupabase, deleteFileFromSupabase } from '@/utils/supabaseStorage';
 import CustomizerModals from '@/components/customizer/CustomizerModals';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 
 interface Product {
   id: string;
@@ -904,10 +905,7 @@ const ProductCustomizerPage = () => {
     }
   }, [product, user, customerName, customerAddress, customerPhone, paymentMethod, demoOrderPrice, demoOrderAddress, designElements, navigate, setIsDemoOrderModalOpen]);
 
-  const handleImageFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
+  const processAndUploadImage = async (file: File | Blob) => {
     if (!product) {
       showError("Product data not loaded. Cannot add image.");
       return;
@@ -985,6 +983,34 @@ const ProductCustomizerPage = () => {
           fileInputRef.current.value = '';
         }
       });
+  };
+
+  const handleImageFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    await processAndUploadImage(file);
+  };
+
+  const handleCapacitorImageSelect = async () => {
+    try {
+      const image = await Camera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.Uri,
+        source: CameraSource.Photos,
+      });
+  
+      if (image.webPath) {
+        const response = await fetch(image.webPath);
+        const blob = await response.blob();
+        await processAndUploadImage(blob);
+      }
+    } catch (error: any) {
+      if (error.message !== "User cancelled photos app") {
+        console.error('Error selecting image with Capacitor Camera:', error);
+        showError('Could not select image.');
+      }
+    }
   };
 
   const handleBuyNowClick = useCallback(() => {
@@ -1376,7 +1402,7 @@ const ProductCustomizerPage = () => {
                 <Text className="h-5 w-5" />
                 <span className="text-xs">Add Text</span>
               </Button>
-              <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={() => fileInputRef.current?.click()}>
+              <Button variant="ghost" className="flex flex-col h-auto p-1 transition-transform duration-200 hover:scale-105" onClick={isMobile ? handleCapacitorImageSelect : () => fileInputRef.current?.click()}>
                 <Image className="h-5 w-5" />
                 <span className="text-xs">Your Photo</span>
               </Button>
