@@ -7,48 +7,13 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  console.log("--- decrement-product-inventory: Request received ---");
-  console.log("Request method:", req.method);
-  console.log("Request headers:", Object.fromEntries(req.headers.entries()));
-
-  let rawBody;
   try {
-    rawBody = await req.text();
-    console.log(`Raw request body (length: ${rawBody.length}): "${rawBody}"`);
-  } catch (e) {
-    console.error("Error reading request body as text:", e);
-    return new Response(JSON.stringify({ error: 'Could not read request body' }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 400,
-    });
-  }
+    const { productId, quantity = 1 } = await req.json();
 
-  let requestBody;
-  try {
-    if (!rawBody) {
-      throw new Error("Request body is empty");
-    }
-    requestBody = JSON.parse(rawBody);
-    console.log("Successfully parsed JSON body:", requestBody);
-  } catch (e) {
-    console.error("Error parsing JSON body:", e.message);
-    return new Response(JSON.stringify({ error: `Invalid JSON body: ${e.message}` }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 400,
-    });
-  }
-
-  const productId = requestBody.productId;
-  const quantity = requestBody.quantity ?? 1;
-
-  console.log(`Extracted productId: ${productId}, quantity: ${quantity}`);
-
-  try {
     if (!productId || typeof quantity !== 'number' || quantity <= 0) {
       return new Response(JSON.stringify({ error: 'Invalid productId or quantity provided.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -73,57 +38,73 @@ serve(async (req) => {
     const { data: { user: invokerUser }, error: authError } = await supabaseAdmin.auth.getUser(token);
 
     if (authError || !invokerUser) {
-      console.error("Auth error:", authError);
       return new Response(JSON.stringify({ error: 'Unauthorized: Invalid token or user not found.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 401,
       });
     }
 
-    const { data: productData, error: fetchError } = await supabaseAdmin
+    // Fetch the product to get its SKU
+    const { data: product, error: fetchError } = await supabaseAdmin
       .from('products')
-      .select('inventory')
+      .select('sku, inventory')
       .eq('id', productId)
       .single();
 
-    if (fetchError || !productData) {
-      console.error("Error fetching product inventory:", fetchError);
-      return new Response(JSON.stringify({ error: 'Product not found or error fetching inventory.' }), {
+    if (fetchError || !product) {
+      console.error("Error fetching product:", fetchError);
+      return new Response(JSON.stringify({ error: 'Product not found or error fetching details.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 404,
       });
     }
 
-    const currentInventory = productData.inventory || 0;
-    if (currentInventory < quantity) {
-      return new Response(JSON.stringify({ error: 'Not enough stock available.' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 409, // Conflict
-      });
+    // If the product has a SKU, use the RPC function for atomic, multi-product update
+    if (product.sku) {
+      console.log(`Product has SKU [${product.sku}]. Using RPC to decrement inventory.`);
+      const { error: rpcError } = await supabaseAdmin
+        .rpc('decrement_inventory_by_sku', {
+          p_sku: product.sku,
+          p_quantity: quantity
+        });
+
+      if (rpcError) {
+        console.error("RPC Error:", rpcError);
+        // Check for the custom exception message from the database function
+        if (rpcError.message.includes('Not enough stock')) {
+           return new Response(JSON.stringify({ error: 'Not enough stock available for this SKU.' }), {
+             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+             status: 409, // Conflict
+           });
+        }
+        throw new Error(`Failed to update inventory via RPC: ${rpcError.message}`);
+      }
+    } else {
+      // If no SKU, decrement inventory for the single product
+      console.log(`Product has no SKU. Decrementing inventory for single product.`);
+      if ((product.inventory || 0) < quantity) {
+        return new Response(JSON.stringify({ error: 'Not enough stock available.' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 409, // Conflict
+        });
+      }
+
+      const newInventory = (product.inventory || 0) - quantity;
+      const { error: updateError } = await supabaseAdmin
+        .from('products')
+        .update({ inventory: newInventory })
+        .eq('id', productId);
+
+      if (updateError) {
+        throw new Error(`Failed to update inventory for single product: ${updateError.message}`);
+      }
     }
 
-    const newInventory = currentInventory - quantity;
-
-    const { data, error: updateError } = await supabaseAdmin
-      .from('products')
-      .update({ inventory: newInventory })
-      .eq('id', productId)
-      .select('inventory')
-      .single();
-
-    if (updateError) {
-      console.error("Error updating product inventory:", updateError);
-      return new Response(JSON.stringify({ error: updateError.message }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      });
-    }
-
-    console.log("--- decrement-product-inventory: Request successful ---");
-    return new Response(JSON.stringify({ message: 'Inventory updated successfully!', new_inventory: data.inventory }), {
+    return new Response(JSON.stringify({ message: 'Inventory updated successfully!' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
+
   } catch (error) {
     console.error("Unexpected error in decrement-product-inventory function:", error);
     return new Response(JSON.stringify({ error: error.message }), {
